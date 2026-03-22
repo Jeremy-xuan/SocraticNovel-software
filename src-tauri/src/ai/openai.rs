@@ -18,7 +18,7 @@ impl OpenAiClient {
             ),
             "deepseek" => (
                 "https://api.deepseek.com/v1/chat/completions".to_string(),
-                "deepseek-chat".to_string(),
+                "deepseek-reasoner".to_string(),
             ),
             "google" => (
                 "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
@@ -157,8 +157,14 @@ impl OpenAiClient {
         let mut request_body = serde_json::json!({
             "model": self.model,
             "messages": oai_messages,
-            "max_tokens": 8192,
         });
+
+        // deepseek-reasoner uses different token limit param
+        if self.model == "deepseek-reasoner" {
+            // Don't set max_tokens for reasoner — it manages its own limits
+        } else {
+            request_body["max_tokens"] = serde_json::json!(8192);
+        }
 
         if let Some(ref tools_val) = oai_tools {
             if !tools_val.is_empty() {
@@ -207,6 +213,9 @@ impl OpenAiClient {
 
         let message = &choice["message"];
         let mut content_blocks: Vec<ContentBlock> = Vec::new();
+
+        // Note: deepseek-reasoner returns reasoning_content (chain of thought)
+        // We intentionally skip it — only use the final content
 
         // Extract text content
         if let Some(text) = message["content"].as_str() {
