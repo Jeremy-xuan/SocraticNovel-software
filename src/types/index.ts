@@ -74,6 +74,13 @@ export interface CanvasItem {
   timestamp: number;
 }
 
+// Group chat message (WeChat-style)
+export interface GroupChatMessage {
+  sender: string;
+  time?: string;
+  text: string;
+}
+
 // Settings
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';

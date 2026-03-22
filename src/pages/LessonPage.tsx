@@ -15,7 +15,7 @@ function getWorkspacePath(): string {
 
 export default function LessonPage() {
   const navigate = useNavigate();
-  const { messages, addMessage, isStreaming, isInClass, setInClass, canvasItems } = useAppStore();
+  const { messages, addMessage, isStreaming, isInClass, setInClass, canvasItems, groupChatMessages } = useAppStore();
   const { initSession, sendMessage: aiSendMessage } = useAiAgent();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [rightPanel, setRightPanel] = useState<'canvas' | 'chat'>('canvas');
@@ -23,6 +23,13 @@ export default function LessonPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Auto-switch to group chat tab when new messages arrive
+  useEffect(() => {
+    if (groupChatMessages.length > 0) {
+      setRightPanel('chat');
+    }
+  }, [groupChatMessages.length]);
 
   const handleStartClass = async () => {
     setInClass(true);
@@ -179,8 +186,34 @@ export default function LessonPage() {
             {rightPanel === 'canvas' ? (
               <CanvasPanel items={canvasItems} />
             ) : (
-              <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                课后解锁群聊
+              <div className="flex h-full flex-col">
+                <div className="flex-1 space-y-3 overflow-y-auto p-2">
+                  {groupChatMessages.length === 0 ? (
+                    <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                      群聊消息将在此显示
+                    </div>
+                  ) : (
+                    groupChatMessages.map((msg, i) => {
+                      const isStudent = msg.sender === '宇轩';
+                      return (
+                        <div key={i} className={`flex flex-col ${isStudent ? 'items-end' : 'items-start'}`}>
+                          <span className="mb-0.5 text-[10px] text-slate-400">
+                            {msg.sender} {msg.time || ''}
+                          </span>
+                          <div
+                            className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                              isStudent
+                                ? 'bg-green-500 text-white'
+                                : 'bg-white text-slate-700 shadow-sm dark:bg-slate-700 dark:text-slate-200'
+                            }`}
+                          >
+                            {msg.text}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             )}
           </div>

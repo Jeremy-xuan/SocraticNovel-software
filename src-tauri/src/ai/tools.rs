@@ -104,6 +104,38 @@ pub fn get_tool_definitions() -> Vec<ToolDefinition> {
                 "required": ["content"]
             }),
         },
+        ToolDefinition {
+            name: "show_group_chat".to_string(),
+            description: "Display group chat messages in the dedicated group chat panel (right sidebar). Use this when showing WeChat group ('没有名字的群') messages — both for the initial ice-breaking conversation and for showing unread messages when the student says '看看微信'. Each message should include sender name, timestamp, and message text. The messages will be displayed in a chat-style UI, NOT in the main conversation area.".to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "messages": {
+                        "type": "array",
+                        "description": "Array of group chat messages to display",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "sender": {
+                                    "type": "string",
+                                    "description": "Name of the sender (e.g., '蒼崎凛', '鳴海律', '霧島朔', '宇轩')"
+                                },
+                                "time": {
+                                    "type": "string",
+                                    "description": "Timestamp (e.g., '17:50')"
+                                },
+                                "text": {
+                                    "type": "string",
+                                    "description": "Message content"
+                                }
+                            },
+                            "required": ["sender", "text"]
+                        }
+                    }
+                },
+                "required": ["messages"]
+            }),
+        },
     ]
 }
 
@@ -172,6 +204,14 @@ pub fn execute_tool(
                 ("Error: content is required for render_canvas".to_string(), true)
             } else {
                 (format!("[Canvas rendered: {}]", title), false)
+            }
+        }
+        "show_group_chat" => {
+            // show_group_chat is handled on the frontend side via events
+            let messages = input["messages"].as_array();
+            match messages {
+                Some(msgs) => (format!("[Group chat displayed: {} messages]", msgs.len()), false),
+                None => ("Error: messages array is required".to_string(), true),
             }
         }
         _ => (format!("Unknown tool: {}", tool_name), true),

@@ -1,4 +1,5 @@
 use super::claude::ClaudeClient;
+use super::openai::OpenAiClient;
 use super::tools;
 use super::types::*;
 use tauri::{Emitter, AppHandle};
@@ -6,24 +7,38 @@ use tauri::{Emitter, AppHandle};
 const MAX_TOOL_LOOPS: usize = 20;
 
 /// Run the full AI agent loop:
-/// 1. Send messages to Claude
-/// 2. If Claude returns tool_use → execute tools → feed results back → repeat
-/// 3. If Claude returns text (end_turn) → emit to frontend → done
+/// 1. Send messages to the AI provider
+/// 2. If AI returns tool_use → execute tools → feed results back → repeat
+/// 3. If AI returns text (end_turn) → emit to frontend → done
 pub async fn run_agent_turn(
     app: &AppHandle,
     api_key: &str,
+    provider: &str,
     workspace_path: &str,
     system_prompt: &str,
     mut messages: Vec<Message>,
 ) -> Result<Vec<Message>, String> {
-    let client = ClaudeClient::new(api_key.to_string());
     let tool_defs = tools::get_tool_definitions();
 
     for iteration in 0..MAX_TOOL_LOOPS {
-        // Send to Claude (non-streaming for tool-use reliability)
-        let (content_blocks, stop_reason) = client
-            .send_message(system_prompt, messages.clone(), Some(tool_defs.clone()))
-            .await?;
+        // Send to AI provider (non-streaming for tool-use reliability)
+        let (content_blocks, stop_reason) = match provider {
+            "anthropic" => {
+                let client = ClaudeClient::new(api_key.to_string());
+                client
+                    .send_message(system_prompt, messages.clone(), Some(tool_defs.clone()))
+                    .await?
+            }
+            "openai" | "deepseek" | "google" => {
+                let client = OpenAiClient::new(api_key.to_string(), provider);
+                client
+                    .send_message(system_prompt, messages.clone(), Some(tool_defs.clone()))
+                    .await?
+            }
+            _ => {
+                return Err(format!("Unsupported provider: {}", provider));
+            }
+        };
 
         // Collect text and tool calls from response
         let mut full_text = String::new();
@@ -47,6 +62,15 @@ pub async fn run_agent_turn(
                         let title = input["title"].as_str().unwrap_or("Canvas").to_string();
                         let content = input["content"].as_str().unwrap_or("").to_string();
                         canvas_events.push((title, content));
+                    }
+
+                    // Check if this is a show_group_chat call
+                    if name == "show_group_chat" {
+                        if let Some(messages) = input["messages"].as_array() {
+                            let _ = app.emit("group-chat-event", serde_json::json!({
+                                "messages": messages,
+                            }));
+                        }
                     }
 
                     let _ = app.emit("agent-event", AgentEvent::ToolCallStart {

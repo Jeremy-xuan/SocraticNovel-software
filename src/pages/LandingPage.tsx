@@ -3,6 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
 import { initBuiltinWorkspace, hasApiKey } from '../lib/tauri';
 
+const PROVIDER_LABELS: Record<string, string> = {
+  anthropic: 'Anthropic (Claude)',
+  openai: 'OpenAI',
+  google: 'Google (Gemini)',
+  deepseek: 'DeepSeek',
+};
+
+function providerLabel(id: string) {
+  return PROVIDER_LABELS[id] || id;
+}
+
 export default function LandingPage() {
   const navigate = useNavigate();
   const { settings, updateSettings } = useAppStore();
@@ -72,7 +83,7 @@ export default function LandingPage() {
       {/* API key warning */}
       {!loading && !settings.apiKeyConfigured && (
         <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-600 dark:bg-amber-900/30 dark:text-amber-300">
-          ⚠️ 尚未配置 API Key —{' '}
+          ⚠️ 当前提供商 <strong>{providerLabel(settings.aiProvider)}</strong> 尚未配置 API Key —{' '}
           <button
             onClick={() => navigate('/settings')}
             className="font-medium underline hover:no-underline"

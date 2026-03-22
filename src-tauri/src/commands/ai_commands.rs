@@ -9,6 +9,7 @@ pub struct ConversationState {
     pub messages: Mutex<Vec<Message>>,
     pub system_prompt: Mutex<String>,
     pub workspace_path: Mutex<String>,
+    pub provider: Mutex<String>,
 }
 
 impl Default for ConversationState {
@@ -17,23 +18,32 @@ impl Default for ConversationState {
             messages: Mutex::new(Vec::new()),
             system_prompt: Mutex::new(String::new()),
             workspace_path: Mutex::new(String::new()),
+            provider: Mutex::new("anthropic".to_string()),
         }
     }
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StartSessionPayload {
     pub workspace_path: String,
     pub system_prompt: String,
+    #[serde(default = "default_provider")]
+    pub provider: String,
+}
+
+fn default_provider() -> String {
+    "anthropic".to_string()
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SendMessagePayload {
     pub text: String,
     pub api_key: String,
 }
 
-/// Start a new AI session — set system prompt and workspace, clear history
+/// Start a new AI session — set system prompt, workspace, and provider; clear history
 #[tauri::command]
 pub fn start_ai_session(
     state: tauri::State<'_, ConversationState>,
@@ -42,10 +52,12 @@ pub fn start_ai_session(
     let mut messages = state.messages.lock().map_err(|e| e.to_string())?;
     let mut system_prompt = state.system_prompt.lock().map_err(|e| e.to_string())?;
     let mut workspace_path = state.workspace_path.lock().map_err(|e| e.to_string())?;
+    let mut provider = state.provider.lock().map_err(|e| e.to_string())?;
 
     messages.clear();
     *system_prompt = payload.system_prompt;
     *workspace_path = payload.workspace_path;
+    *provider = payload.provider;
 
     Ok(())
 }
@@ -68,6 +80,11 @@ pub async fn send_chat_message(
         .lock()
         .map_err(|e| e.to_string())?
         .clone();
+    let provider = state
+        .provider
+        .lock()
+        .map_err(|e| e.to_string())?
+        .clone();
 
     // Add user message
     let user_msg = Message {
@@ -87,6 +104,7 @@ pub async fn send_chat_message(
     let updated_messages = runtime::run_agent_turn(
         &app,
         &payload.api_key,
+        &provider,
         &workspace_path,
         &system_prompt,
         current_messages,

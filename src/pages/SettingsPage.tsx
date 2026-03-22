@@ -49,9 +49,12 @@ export default function SettingsPage() {
       <div className="mx-auto w-full max-w-lg flex-1 overflow-y-auto p-8">
         {/* AI Provider */}
         <section className="mb-8">
-          <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-slate-100">
-            AI 提供商
+          <h2 className="mb-2 text-lg font-semibold text-slate-800 dark:text-slate-100">
+            默认 AI 提供商
           </h2>
+          <p className="mb-4 text-xs text-slate-400">
+            上课时将使用选中的提供商。请确保该提供商已配置 API Key。
+          </p>
           <div className="grid grid-cols-2 gap-3">
             {(['anthropic', 'openai', 'google', 'deepseek'] as const).map((provider) => (
               <button

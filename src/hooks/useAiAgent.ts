@@ -1,11 +1,11 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '../stores/appStore';
-import { startAiSession, sendChatMessage, onAgentEvent, onCanvasEvent } from '../lib/ai';
+import { startAiSession, sendChatMessage, onAgentEvent, onCanvasEvent, onGroupChatEvent } from '../lib/ai';
 import { getApiKey } from '../lib/tauri';
 import type { ChatMessage, CanvasItem } from '../types';
 
 export function useAiAgent() {
-  const { addMessage, updateLastAssistantMessage, setStreaming, addCanvasItem } = useAppStore();
+  const { addMessage, updateLastAssistantMessage, setStreaming, addCanvasItem, addGroupChatMessages } = useAppStore();
   const unlistenRef = useRef<Array<() => void>>([]);
 
   useEffect(() => {
@@ -61,7 +61,11 @@ export function useAiAgent() {
         addCanvasItem(item);
       });
 
-      unlistenRef.current = [unlisten1, unlisten2];
+      const unlisten3 = await onGroupChatEvent((event) => {
+        addGroupChatMessages(event.messages);
+      });
+
+      unlistenRef.current = [unlisten1, unlisten2, unlisten3];
     };
 
     setup();
@@ -72,7 +76,8 @@ export function useAiAgent() {
   }, []);
 
   const initSession = useCallback(async (workspacePath: string, systemPrompt: string) => {
-    await startAiSession({ workspacePath, systemPrompt });
+    const settings = useAppStore.getState().settings;
+    await startAiSession({ workspacePath, systemPrompt, provider: settings.aiProvider });
   }, []);
 
   const sendMessage = useCallback(async (text: string) => {

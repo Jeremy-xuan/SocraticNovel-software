@@ -4,6 +4,7 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 export interface StartSessionParams {
   workspacePath: string;
   systemPrompt: string;
+  provider: string;
 }
 
 export interface SendMessageParams {
@@ -25,6 +26,16 @@ export interface CanvasEvent {
   content: string;
 }
 
+export interface GroupChatMessage {
+  sender: string;
+  time?: string;
+  text: string;
+}
+
+export interface GroupChatEvent {
+  messages: GroupChatMessage[];
+}
+
 export async function startAiSession(params: StartSessionParams): Promise<void> {
   return invoke('start_ai_session', { payload: params });
 }
@@ -39,4 +50,8 @@ export function onAgentEvent(callback: (event: AgentEvent) => void): Promise<Unl
 
 export function onCanvasEvent(callback: (event: CanvasEvent) => void): Promise<UnlistenFn> {
   return listen<CanvasEvent>('canvas-event', (e) => callback(e.payload));
+}
+
+export function onGroupChatEvent(callback: (event: GroupChatEvent) => void): Promise<UnlistenFn> {
+  return listen<GroupChatEvent>('group-chat-event', (e) => callback(e.payload));
 }
