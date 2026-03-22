@@ -1,239 +1,205 @@
-# SocraticNovel Desktop — 项目状态文档
+# SocraticNovel — 项目状态文档
 
-> 面向 AI 的上下文文档。用于在新会话中快速恢复项目状态。
-> 最后更新：2026-07-26
+> 最后更新：2025-03-22
+> 当前版本：Phase 1 MVP（开发中）
 
----
+## 项目概述
 
-## 项目简介
+SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小说叙事结合，创造沉浸式 AI 家教体验。学习者通过与虚拟角色的对话学习 AP Physics C: EM，教学过程被文学性的环境描写、角色情感和故事线包裹。
 
-SocraticNovel Desktop 是一个桌面应用，让用户安装后就能使用 SocraticNovel 沉浸式 AI 教学系统。核心特点：
+**核心理念**：教学不是信息传递——是四个人共享空间、共同成长的故事。
 
-- **AI 驱动的苏格拉底教学**：AI 扮演轻小说角色，通过苏格拉底问答法教授学科知识
-- **文件系统即状态**：15+ 个 Markdown 文件构成教学系统的持久状态（角色记忆、进度、故事线等）
-- **Tool Use 架构**：AI 通过 tool_use API 读写本地文件，而非解析文本指令
-- **完全本地**：数据不出用户电脑，用户自带 API Key
+## 技术架构
 
 ### 技术栈
+- **桌面框架**：Tauri 2.0（Rust 后端 + WebView 前端）
+- **前端**：React 19 + TypeScript + Tailwind CSS 4 + Zustand
+- **AI**：多提供商支持（Claude / DeepSeek / OpenAI / Google）
+- **渲染**：react-markdown + remark-math + rehype-katex（数学公式）+ SVG（白板）
+- **存储**：macOS Keychain（API Key）+ localStorage（设置）+ 文件系统（workspace）
 
-| 组件 | 选型 |
-|------|------|
-| 桌面框架 | Tauri 2.0 (Rust 后端) |
-| 前端 | React 19 + TypeScript + Tailwind CSS 4 |
-| 状态管理 | Zustand |
-| 路由 | React Router DOM |
-| AI API | Claude Messages API (reqwest, 直接 HTTP) |
-| 本地存储 | 文件系统 (workspaces) + macOS Keychain (API Key) |
-| 渲染 | react-markdown + remark-math + rehype-katex + @tailwindcss/typography |
-
-### 关键架构决策
-
-1. **App 不硬编码加载逻辑**：CLAUDE.md 作为 system prompt 注入，AI 自己通过 read_file 决定读什么
-2. **沙箱化文件访问**：所有文件操作限制在 workspace 目录内，路径验证防止目录穿越
-3. **Tool-use 循环引擎**：用户消息 → Claude API → tool_call? → 执行 → 结果喂回 → 继续循环 → text? → 展示
-4. **Tauri 事件系统**：Rust 后端通过 `app.emit()` 向前端推送 agent-event / canvas-event
-5. **API Key 存储**：macOS Keychain（通过 `security` CLI 命令），不使用 Tauri Stronghold
-
----
-
-## 项目位置
-
+### 三层架构（源自教学系统设计）
 ```
-~/socratic-novel/           ← 项目根目录
-├── src/                    ← 前端 (React + TS)
-├── src-tauri/              ← 后端 (Rust)
-├── package.json
-├── tsconfig.json
-├── vite.config.ts
-└── PROJECT_STATUS.md       ← 本文件
+┌─────────────────────────────────┐
+│        叙事层 (Narrative)        │  story.md, characters/, story_progression.md
+│   角色、环境、情感、故事线推进     │
+├─────────────────────────────────┤
+│        教学层 (Teaching)         │  system.md, curriculum.md, knowledge_points.md
+│   苏格拉底教学法、知识点覆盖      │
+├─────────────────────────────────┤
+│        运行时层 (Runtime)        │  progress.md, session_log.md, wechat_group.md
+│   进度追踪、复习队列、群聊历史     │
+└─────────────────────────────────┘
 ```
 
-### 架构设计文档
+### 后端模块（Rust, src-tauri/src/）
 
-完整的产品和技术架构设计在：
+| 模块 | 文件 | 功能 |
+|------|------|------|
+| **AI Runtime** | `ai/runtime.rs` | Tool-use 循环引擎：发送消息 → 处理工具调用 → 喂回结果 → 重复 |
+| **Claude Client** | `ai/claude.rs` | Anthropic Messages API 客户端（非流式） |
+| **OpenAI Client** | `ai/openai.rs` | OpenAI 兼容客户端（DeepSeek/OpenAI/Google） |
+| **Tools** | `ai/tools.rs` | 工具定义 + 执行器（8 个工具） |
+| **Types** | `ai/types.rs` | 共享类型（Message, ContentBlock, ToolDefinition 等） |
+| **AI Commands** | `commands/ai_commands.rs` | Tauri 命令：start_ai_session, send_chat_message |
+| **FS Commands** | `commands/fs_commands.rs` | 沙箱化文件操作 + workspace 初始化 |
+| **Settings** | `commands/settings_commands.rs` | macOS Keychain 存取 API Key |
+
+### 前端模块（TypeScript, src/）
+
+| 模块 | 文件 | 功能 |
+|------|------|------|
+| **路由** | `App.tsx` | 首次启动检测 → Setup Wizard / Landing / Lesson / Settings |
+| **Landing** | `pages/LandingPage.tsx` | 主页：workspace 状态、开始上课、API Key 检查 |
+| **Lesson** | `pages/LessonPage.tsx` | 三栏布局：对话 + 白板/群聊 |
+| **Settings** | `pages/SettingsPage.tsx` | API Key 管理、提供商切换 |
+| **Setup Wizard** | `pages/SetupWizardPage.tsx` | 5 步首次启动向导 |
+| **Chat UI** | `components/chat/` | 消息气泡（Markdown + KaTeX）+ 输入框 |
+| **Canvas** | `components/canvas/CanvasPanel.tsx` | SVG 白板渲染 |
+| **AI Hook** | `hooks/useAiAgent.ts` | 事件监听（agent/canvas/group-chat）+ 会话管理 |
+| **Store** | `stores/appStore.ts` | Zustand 全局状态 + localStorage 持久化 |
+| **AI Lib** | `lib/ai.ts` | Tauri invoke 封装 + 事件订阅 |
+
+### 可用工具（AI Agent）
+
+| 工具名 | 用途 |
+|--------|------|
+| `read_file` | 读取 workspace 内文件 |
+| `write_file` | 写入文件（创建或覆盖） |
+| `append_file` | 追加内容到文件末尾 |
+| `list_files` | 列出目录内容 |
+| `search_file` | 在文件中搜索文本 |
+| `render_canvas` | 在白板面板渲染 SVG 图表 |
+| `show_group_chat` | 在右侧群聊面板显示微信消息 |
+| `think` | AI 内部笔记（静默消费，不显示给用户） |
+
+## 已完成的功能
+
+### Phase 1 MVP — ✅ 核心流程可用
+
+1. **✅ 项目搭建** — Tauri 2.0 + React 19 + TW4 + Zustand，基础路由
+2. **✅ 文件系统** — 沙箱化读写、路径验证（防目录穿越）、workspace 管理
+3. **✅ AI Agent Runtime** — Tool-use 循环引擎，多轮工具调用
+4. **✅ 多提供商支持** — Claude / DeepSeek(reasoner) / OpenAI / Google
+5. **✅ 设置管理** — API Key Keychain 存储、localStorage 持久化
+6. **✅ Landing Page** — workspace 信息、API Key 状态、自动初始化
+7. **✅ 课堂面板** — 三栏布局、对话 + 白板 + 群聊
+8. **✅ Markdown + KaTeX** — 数学公式渲染、prose 排版
+9. **✅ Setup Wizard** — 5 步首次启动向导
+10. **✅ 内置 workspace** — AP Physics EM 从 ~/AP_Physics_EM 递归复制
+11. **✅ 群聊面板** — show_group_chat 工具路由到右侧面板，WeChat 风格气泡
+12. **✅ think 工具** — AI 内部笔记不显示给用户
+13. **✅ 错误恢复** — 网络断开后 UI 不卡死，5 分钟超时安全网
+
+### 教学系统 Prompt 更新
+
+- ✅ 移除 `temp_math.md` 引用（app 有 KaTeX，不需要临时文件）
+- ✅ 移除 `pdftotext` 引用（教材已转 Markdown）
+- ✅ 添加桌面应用环境说明（system.md 顶部）
+- ✅ 群聊通过 `show_group_chat` 工具发送
+- ✅ 内部准备通过 `think` 工具完成
+- ✅ 苏格拉底规则强化：提问后必须停止
+- ✅ 首次破冰改为叙事场景（不在群聊中）
+
+## 未完成 / 需要改进
+
+### 优先级高（影响使用体验）
+
+1. **AI 一次性讲完问题** — 尽管 prompt 已强化"提问后停止"规则，deepseek-reasoner 仍可能一次输出过多内容。可能需要：
+   - 在 runtime.rs 中加入输出长度检测，超过阈值时强制截断
+   - 或在 system prompt 的 JSON schema 中限制单次输出
+   - 或切换到更遵循指令的模型
+
+2. **内部准备内容泄露** — AI 有时仍将课前准备（读文件列表、知识点清单）输出为文本。`think` 工具已添加但 AI 不一定用它。可能需要：
+   - 在 runtime.rs 中过滤以特定模式开头的文本（如"正在读取"、"课前准备"）
+   - 或在 OpenAI client 中对 reasoning_content 做更彻底的过滤
+
+3. **流式输出** — 目前是非流式（整个回复生成完才显示）。用户体验差，尤其是 deepseek-reasoner 生成时间长。需要：
+   - 实现 SSE 流式解析
+   - 前端逐字显示
+   - 工具调用中间状态展示
+
+4. **会话持久化** — 当前关闭 app 后对话历史丢失。需要：
+   - 将 ConversationState 序列化到文件或 SQLite
+   - 启动时恢复上次对话
+
+### 优先级中
+
+5. **复习功能** — Landing Page 的"复习"卡片是占位符
+6. **课后笔记 / 日记查看** — 底部 tab 未实现
+7. **学习进度展示** — progress.md 解析 + 可视化
+8. **深色模式** — TW4 dark: 变体已准备，但未实现切换
+9. **Workspace 选择器** — 目前硬编码路径，需要 UI 选择
+10. **模型选择器** — 用户应能在设置中选择具体模型（不只是提供商）
+
+### 优先级低
+
+11. **Windows/Linux 适配** — API Key 存储需适配（目前仅 macOS Keychain）
+12. **打包发布** — Tauri bundle 配置
+13. **教材 PDF 支持** — 如果 workspace 包含 PDF，需要 pdftotext 集成
+14. **多 workspace 管理** — 创建、导入、删除
+15. **课后自动更新** — "下课"按钮触发 AI 更新 progress/session_log 等
+16. **render_canvas 改进** — 更丰富的图表类型、交互式图表
+
+## 关键文件路径
+
+### 应用代码
 ```
-~/Desktop/SocraticNovel_Desktop_Architecture.md
-```
-这份文档 (~1000+ 行) 包含：产品概述、分层架构、UI 设计、AI Agent Runtime 设计、复习模式设计、文件结构、数据库 Schema、开发路线图、已确认事项等。
-
----
-
-## 文件结构
-
-### 前端 (src/)
-
-```
-src/
-├── App.tsx                     # 路由入口 (BrowserRouter)
-├── App.css                     # Tailwind v4 入口 (@import "tailwindcss" + @plugin typography)
-├── main.tsx                    # React 挂载点
-├── pages/
-│   ├── LandingPage.tsx         # 首页：自动初始化 workspace + API Key 检测 + 双卡片
-│   ├── LessonPage.tsx          # 课堂：三栏布局 (导航|对话|白板)
-│   └── SettingsPage.tsx        # 设置：API Key (Keychain) + 主题 + Workspace
-├── components/
-│   ├── chat/
-│   │   ├── ChatMessageBubble.tsx  # Markdown/KaTeX 渲染 (react-markdown + remark-math + rehype-katex)
-│   │   └── ChatInput.tsx          # 输入框 (Enter 发送, Shift+Enter 换行)
-│   └── canvas/
-│       └── CanvasPanel.tsx        # 白板面板 (SVG 渲染)
-├── hooks/
-│   └── useAiAgent.ts           # AI Agent hook (监听事件, 管理会话, Keychain API Key)
-├── stores/
-│   └── appStore.ts             # Zustand 全局状态 (session, messages, canvas, settings)
-├── lib/
-│   ├── tauri.ts                # Tauri IPC 封装 (文件系统 + workspace + Keychain)
-│   └── ai.ts                   # AI 命令封装 (startSession, sendMessage, events)
-└── types/
-    └── index.ts                # TypeScript 类型定义
+~/socratic-novel/                    # 项目根目录
+├── src/                             # 前端 (React + TS)
+├── src-tauri/src/                   # 后端 (Rust)
+├── package.json                     # 前端依赖
+├── src-tauri/Cargo.toml             # 后端依赖
+└── PROJECT_STATUS.md                # 本文件
 ```
 
-### 后端 (src-tauri/src/)
-
+### 教学系统 Workspace
 ```
-src-tauri/src/
-├── main.rs                     # 入口
-├── lib.rs                      # Tauri Builder 配置 (插件, 命令注册, 状态管理)
-├── commands/
-│   ├── mod.rs                  # 模块导出
-│   ├── fs_commands.rs          # 文件系统命令 (沙箱化) + workspace 管理
-│   │   ├── read_file, write_file, append_file, list_files, search_file
-│   │   ├── list_workspaces, create_workspace
-│   │   └── init_builtin_workspace  # 从 ~/AP_Physics_EM 复制 1.3MB MD 文件
-│   ├── ai_commands.rs          # AI 会话命令
-│   │   ├── start_ai_session    # 初始化会话 (设 system prompt + workspace)
-│   │   ├── send_chat_message   # 发送消息 (触发 agent loop)
-│   │   └── get_conversation_history
-│   └── settings_commands.rs    # macOS Keychain 命令
-│       ├── set_api_key, get_api_key, has_api_key, delete_api_key
-│       └── (通过 `security` CLI 操作 Keychain)
-└── ai/
-    ├── mod.rs                  # 模块导出
-    ├── types.rs                # Claude API 类型定义
-    ├── claude.rs               # Claude API 客户端 (非流式 + 流式)
-    ├── tools.rs                # 6 个工具定义 + 执行器
-    └── runtime.rs              # Agent 循环引擎 (最多 20 轮)
+~/SocraticNovel/workspaces/ap-physics-em/    # 运行时 workspace（AI 读写此目录）
+~/AP_Physics_EM/                             # 源模板（init_builtin_workspace 复制源）
 ```
 
----
+### 关键配置
+```
+~/SocraticNovel/workspaces/ap-physics-em/
+├── CLAUDE.md                        # AI 启动入口（启动顺序 + 桌面环境说明）
+├── teacher/config/system.md         # 系统总指令（~550 行，核心 prompt）
+├── teacher/config/curriculum.md     # 课程大纲
+├── teacher/config/learner_profile.md # 学习者档案
+├── teacher/story.md                 # 故事背景（序章 + 世界观）
+├── teacher/story_progression.md     # 故事进度表
+├── teacher/characters/*.md          # 角色文档（凛/律/朔）
+└── teacher/runtime/*.md             # 运行时状态（进度/日志/群聊等）
+```
 
-## 已完成 (Phase 1 — 8/9)
-
-### 1. ✅ 项目搭建 (scaffold)
-- Tauri 2.0 + React + TypeScript 脚手架
-- Tailwind CSS 4 (via @tailwindcss/vite 插件) + @tailwindcss/typography
-- React Router DOM 路由
-- Zustand 状态管理
-- Release build 成功 (binary 8.3MB)
-
-### 2. ✅ 文件系统操作 (fs-ops)
-- 8 个 Tauri 命令，全部沙箱化
-- 路径验证：canonicalize + starts_with 检查，防止目录穿越
-- Workspace 管理：list / create / init_builtin（真实复制逻辑）
-
-### 3. ✅ AI Agent Runtime (agent-runtime)
-- Claude Messages API 集成 (reqwest HTTP 客户端)
-- 非流式 + 流式两种模式 (当前 tool-use 循环用非流式)
-- 6 个工具定义 (read_file, write_file, append_file, list_files, search_file, render_canvas)
-- Tool-use 循环引擎 (最多 20 轮自动循环)
-- Tauri 事件推送 (agent-event + canvas-event)
-
-### 4. ✅ 设置与存储 (settings)
-- macOS Keychain 集成 (通过 `security` CLI 命令)
-- API Key 加密存取 (set/get/has/delete)
-- 前端 SettingsPage 接通 Keychain
-
-### 5. ✅ Landing Page (landing)
-- 双卡片 (📖上课 / 🔄复习) + 底部导航 + 设置入口
-- 自动初始化 builtin workspace + API Key 状态检测
-- API Key 缺失时显示警告 banner
-
-### 6. ✅ 课堂面板 (lesson-panel)
-- 三栏布局 (导航|对话|白板/群聊)
-- Markdown + KaTeX 数学公式渲染 (react-markdown + remark-math + rehype-katex)
-- prose 排版样式 (@tailwindcss/typography)
-- "开始上课" → 读 CLAUDE.md → initSession → sendMessage 完整流程
-- Canvas SVG 白板 + 群聊 tab
-
-### 7. ✅ 设置页 (settings-page)
-- AI 提供商选择 (Anthropic / OpenAI / Google / DeepSeek)
-- API Key 输入/保存到 Keychain
-- 主题切换 (浅色/深色/跟随系统)
-- Workspace 信息展示
-
-### 8. ✅ 内置 AP Physics (builtin)
-- init_builtin_workspace: 从 ~/AP_Physics_EM/ 递归复制所有 Markdown 文件
-- 过滤 .git / .claude / .vscode / .pdf / MAINTAINER.md / 参考资料
-- 目标: ~/SocraticNovel/workspaces/ap-physics-em/ (~1.3MB)
-- 已存在时跳过 (幂等)
-
----
-
-## 未完成
-
-### 9. 🔲 Setup Wizard (wizard) — Phase 1 最后一项
-- [ ] 首次启动检测 (localStorage/store 标记)
-- [ ] 引导流程: 欢迎 → 选 AI 提供商 → 输 API Key → 选 workspace 来源
-- [ ] "体验 AP Physics" / "从零创建" / "导入" 三选一
-
-### 待做 (Phase 2+)
-- [ ] 流式输出优化 (streaming 已实现但未启用)
-- [ ] 下课流程 (发结束信号 → AI 写 8 个运行时文件 → 切群聊)
-- [ ] 群聊面板 (读 wechat_group.md, 独立会话)
-- [ ] 深色模式切换逻辑
-- [ ] 对话历史持久化 (SQLite)
-- [ ] 复习模式 (Review page + onboarding)
-- [ ] Meta Prompt 创建向导
-- [ ] 自动更新
-- [ ] workspace path 动态获取 (当前部分硬编码)
-
----
-
-## 如何继续开发
-
-### 端到端跑通的最短路径
-
-1. 设置 → 输入 Claude API Key (保存到 Keychain)
-2. 回首页 → 点"开始上课"
-3. 验证 AI 能读 CLAUDE.md、通过 tool_use 读写文件、教学、写白板
-
-### 开发命令
+## 开发环境
 
 ```bash
+# 启动开发服务器
+export PATH="$HOME/.cargo/bin:$PATH"
 cd ~/socratic-novel
-export PATH="/opt/homebrew/bin:$HOME/.cargo/bin:$PATH"
-
-# 开发模式 (首次编译 ~5min, 增量 ~6s)
 npm run tauri dev
 
-# 构建 release
-npm run tauri build -- --no-bundle
+# 仅前端
+npm run dev
 
-# 只检查 TypeScript
+# 仅后端检查
+cd src-tauri && ~/.cargo/bin/cargo check
+
+# TypeScript 类型检查
 npx tsc --noEmit
-
-# 只构建 Rust
-cd src-tauri && cargo build
-
-# 只构建前端
-npx vite build
 ```
 
-### Git
+- Vite dev server: http://localhost:1420
+- Tauri 监听 src-tauri/ 变化自动重编译 Rust（增量 ~5s）
+- Vite HMR 前端热更新
 
-```
-main branch, 2 commits:
-- bee094c: Initial scaffolding + full Phase 1 implementation
-- ec00e2d: Markdown/KaTeX rendering, real workspace copy, landing page init flow
-```
+## 设计决策记录
 
-### 关键依赖版本
-
-```
-Node.js: v25.8.0
-Rust: 1.94.0
-Tauri: 2.x
-React: 19.x
-TypeScript: 5.x
-Tailwind CSS: 4.x
-```
+1. **非流式 API 调用** — 为了 tool-use 可靠性选择非流式。流式 + tool-use 组合处理复杂，MVP 阶段先用非流式。
+2. **文件系统即状态** — 所有教学状态存储为 Markdown 文件，AI 通过工具读写。不用数据库，保持简单透明。
+3. **Provider 抽象** — 内部类型统一为 Claude 格式（ContentBlock::Text/ToolUse/ToolResult），OpenAI 客户端负责双向翻译。
+4. **think 工具** — 让 AI 有明确的"内部笔记"通道，避免准备过程泄露到对话中。
+5. **show_group_chat 工具** — 群聊路由到专用面板，保持主对话区纯粹。
+6. **deepseek-reasoner** — 用户选择的默认模型。reasoning_content 被过滤不显示。
+7. **macOS Keychain** — API Key 不存文件，通过 `security` CLI 命令存取。
