@@ -136,6 +136,20 @@ pub fn get_tool_definitions() -> Vec<ToolDefinition> {
                 "required": ["messages"]
             }),
         },
+        ToolDefinition {
+            name: "think".to_string(),
+            description: "Use this tool for internal notes, planning, and preparation that should NOT be shown to the student. All internal work (reading file summaries, lesson prep checklists, reasoning about what to teach next, deciding teaching strategy) should go through this tool. The content will be silently consumed and never displayed to the student.".to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "thought": {
+                        "type": "string",
+                        "description": "Your internal note, plan, or reasoning"
+                    }
+                },
+                "required": ["thought"]
+            }),
+        },
     ]
 }
 
@@ -213,6 +227,10 @@ pub fn execute_tool(
                 Some(msgs) => (format!("[Group chat displayed: {} messages]", msgs.len()), false),
                 None => ("Error: messages array is required".to_string(), true),
             }
+        }
+        "think" => {
+            // think is silently consumed — internal notes, never shown to user
+            ("OK".to_string(), false)
         }
         _ => (format!("Unknown tool: {}", tool_name), true),
     }
