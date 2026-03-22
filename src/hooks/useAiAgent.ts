@@ -107,12 +107,16 @@ export function useAiAgent() {
     try {
       await sendChatMessage({ text, apiKey });
     } catch (err) {
-      addMessage({
-        id: crypto.randomUUID(),
-        role: 'system',
-        text: `❌ 发送失败: ${err}`,
-        timestamp: Date.now(),
-      });
+      // Check if the error message is already shown via agent-event
+      const errMsg = String(err);
+      if (!errMsg.includes('HTTP request failed') && !errMsg.includes('API error')) {
+        addMessage({
+          id: crypto.randomUUID(),
+          role: 'system',
+          text: `❌ 发送失败: ${err}`,
+          timestamp: Date.now(),
+        });
+      }
       setStreaming(false);
     }
   }, []);

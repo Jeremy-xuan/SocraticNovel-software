@@ -101,7 +101,7 @@ pub async fn send_chat_message(
     };
 
     // Run agent loop (this may involve multiple API calls if tool_use)
-    let updated_messages = runtime::run_agent_turn(
+    let result = runtime::run_agent_turn(
         &app,
         &payload.api_key,
         &provider,
@@ -109,15 +109,25 @@ pub async fn send_chat_message(
         &system_prompt,
         current_messages,
     )
-    .await?;
+    .await;
 
-    // Update conversation state with full history
-    {
-        let mut messages = state.messages.lock().map_err(|e| e.to_string())?;
-        *messages = updated_messages;
+    match result {
+        Ok(updated_messages) => {
+            // Update conversation state with full history
+            let mut messages = state.messages.lock().map_err(|e| e.to_string())?;
+            *messages = updated_messages;
+            Ok(())
+        }
+        Err(e) => {
+            // Emit error event so frontend can recover
+            use tauri::Emitter;
+            let _ = app.emit("agent-event", crate::ai::types::AgentEvent::Error {
+                message: e.clone(),
+            });
+            let _ = app.emit("agent-event", crate::ai::types::AgentEvent::TurnComplete);
+            Err(e)
+        }
     }
-
-    Ok(())
 }
 
 /// Get current conversation history (for debugging / persistence)

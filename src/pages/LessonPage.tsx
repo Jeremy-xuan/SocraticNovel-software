@@ -31,6 +31,24 @@ export default function LessonPage() {
     }
   }, [groupChatMessages.length]);
 
+  // Safety net: auto-reset streaming state after 5 min timeout
+  useEffect(() => {
+    if (!isStreaming) return;
+    const timer = setTimeout(() => {
+      const { setStreaming, addMessage } = useAppStore.getState();
+      if (useAppStore.getState().isStreaming) {
+        setStreaming(false);
+        addMessage({
+          id: crypto.randomUUID(),
+          role: 'system',
+          text: '⚠️ 响应超时，请重试',
+          timestamp: Date.now(),
+        });
+      }
+    }, 300_000); // 5 minutes
+    return () => clearTimeout(timer);
+  }, [isStreaming]);
+
   const handleStartClass = async () => {
     setInClass(true);
     const sysMsg: ChatMessage = {
