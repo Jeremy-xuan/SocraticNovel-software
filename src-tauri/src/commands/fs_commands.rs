@@ -203,24 +203,70 @@ pub fn init_builtin_workspace() -> Result<WorkspaceInfo, String> {
         });
     }
 
-    // Create the workspace directory structure
+    // Source: the AP_Physics_EM directory in user's home
+    let home = dirs::home_dir().ok_or("Cannot find home directory")?;
+    let source = home.join("AP_Physics_EM");
+
+    if !source.exists() {
+        return Err(
+            "AP_Physics_EM source not found. Please ensure ~/AP_Physics_EM/ exists.".to_string(),
+        );
+    }
+
+    // Create target directory
     fs::create_dir_all(&target).map_err(|e| format!("Failed to create workspace: {}", e))?;
 
-    // TODO: Copy builtin workspace files from app resources
-    // For now, create a placeholder CLAUDE.md
-    let placeholder = "# AP Physics C: E&M — SocraticNovel\n\n> 此为占位文件。请从 SocraticNovel 项目复制完整的 workspace 文件。\n";
-    fs::write(target.join("CLAUDE.md"), placeholder)
-        .map_err(|e| format!("Failed to write CLAUDE.md: {}", e))?;
-
-    fs::create_dir_all(target.join("teacher/runtime")).map_err(|e| format!("{}", e))?;
-    fs::create_dir_all(target.join("teacher/config")).map_err(|e| format!("{}", e))?;
-    fs::create_dir_all(target.join("teacher/characters")).map_err(|e| format!("{}", e))?;
-    fs::create_dir_all(target.join("materials")).map_err(|e| format!("{}", e))?;
+    // Copy all non-PDF, non-git content files
+    copy_dir_recursive(&source, &target, &|path: &Path| {
+        let path_str = path.to_string_lossy();
+        !path_str.contains(".git")
+            && !path_str.contains(".claude")
+            && !path_str.contains(".vscode")
+            && !path_str.contains(".DS_Store")
+            && !path_str.ends_with(".pdf")
+            && !path_str.contains("MAINTAINER.md")
+            && !path_str.contains("参考资料")
+    })?;
 
     Ok(WorkspaceInfo {
         id: "ap-physics-em".to_string(),
         name: "ap-physics-em".to_string(),
         path: target.to_string_lossy().to_string(),
-        has_claude_md: true,
+        has_claude_md: target.join("CLAUDE.md").exists(),
     })
+}
+
+fn copy_dir_recursive(
+    src: &Path,
+    dst: &Path,
+    filter: &dyn Fn(&Path) -> bool,
+) -> Result<(), String> {
+    if !src.is_dir() {
+        return Ok(());
+    }
+
+    fs::create_dir_all(dst).map_err(|e| format!("Failed to create dir {:?}: {}", dst, e))?;
+
+    let entries =
+        fs::read_dir(src).map_err(|e| format!("Failed to read dir {:?}: {}", src, e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let src_path = entry.path();
+
+        if !filter(&src_path) {
+            continue;
+        }
+
+        let dst_path = dst.join(entry.file_name());
+
+        if src_path.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path, filter)?;
+        } else {
+            fs::copy(&src_path, &dst_path)
+                .map_err(|e| format!("Failed to copy {:?}: {}", src_path, e))?;
+        }
+    }
+
+    Ok(())
 }

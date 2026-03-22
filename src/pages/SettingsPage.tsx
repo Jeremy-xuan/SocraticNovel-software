@@ -1,22 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
+import { setApiKey, hasApiKey } from '../lib/tauri';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { settings, updateSettings } = useAppStore();
-  const [apiKey, setApiKey] = useState('');
+  const [apiKeyInput, setApiKeyInput] = useState('');
   const [saved, setSaved] = useState(false);
+  const [keyExists, setKeyExists] = useState(false);
+
+  useEffect(() => {
+    // Check if key exists for current provider
+    hasApiKey(settings.aiProvider).then((exists) => {
+      setKeyExists(exists);
+      updateSettings({ apiKeyConfigured: exists });
+    });
+  }, [settings.aiProvider]);
 
   const handleSaveKey = async () => {
-    if (!apiKey.trim()) return;
+    if (!apiKeyInput.trim()) return;
     try {
-      const { setApiKey: saveKey } = await import('../lib/tauri');
-      await saveKey(settings.aiProvider, apiKey.trim());
+      await setApiKey(settings.aiProvider, apiKeyInput.trim());
       updateSettings({ apiKeyConfigured: true });
+      setKeyExists(true);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-      setApiKey('');
+      setApiKeyInput('');
     } catch (err) {
       console.error('Failed to save API key:', err);
     }
@@ -67,12 +77,17 @@ export default function SettingsPage() {
           <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-slate-100">
             API Key
           </h2>
+          {keyExists && (
+            <p className="mb-3 text-sm text-green-600 dark:text-green-400">
+              ✓ 已保存 {settings.aiProvider} API Key（存储在 macOS Keychain 中）
+            </p>
+          )}
           <div className="flex gap-2">
             <input
               type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder={`输入 ${settings.aiProvider} API Key...`}
+              value={apiKeyInput}
+              onChange={(e) => setApiKeyInput(e.target.value)}
+              placeholder={keyExists ? '输入新 Key 覆盖...' : `输入 ${settings.aiProvider} API Key...`}
               className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
             />
             <button

@@ -1,11 +1,39 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
+import { initBuiltinWorkspace, hasApiKey } from '../lib/tauri';
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const settings = useAppStore((s) => s.settings);
+  const { settings, updateSettings } = useAppStore();
+  const [workspaceReady, setWorkspaceReady] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // On mount: ensure workspace exists + check API key
+    const init = async () => {
+      try {
+        const ws = await initBuiltinWorkspace();
+        updateSettings({ currentWorkspaceId: ws.id });
+        setWorkspaceReady(true);
+
+        const keyOk = await hasApiKey(settings.aiProvider);
+        updateSettings({ apiKeyConfigured: keyOk });
+      } catch (err) {
+        setInitError(String(err));
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
+  }, []);
 
   const handleStartLesson = () => {
+    if (!settings.apiKeyConfigured) {
+      navigate('/settings');
+      return;
+    }
     navigate('/lesson');
   };
 
@@ -24,12 +52,35 @@ export default function LandingPage() {
         <p className="text-lg text-slate-500 dark:text-slate-400">
           沉浸式 AI 苏格拉底教学
         </p>
-        {settings.currentWorkspaceId && (
+        {workspaceReady && (
           <p className="mt-2 text-sm text-slate-400 dark:text-slate-500">
-            AP Physics C: E&M
+            📚 AP Physics C: E&M
           </p>
         )}
       </div>
+
+      {/* Loading / Error */}
+      {loading && (
+        <p className="mb-6 text-sm text-slate-500 animate-pulse">正在初始化 workspace...</p>
+      )}
+      {initError && (
+        <p className="mb-6 max-w-md text-center text-sm text-red-500">
+          ⚠️ {initError}
+        </p>
+      )}
+
+      {/* API key warning */}
+      {!loading && !settings.apiKeyConfigured && (
+        <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-600 dark:bg-amber-900/30 dark:text-amber-300">
+          ⚠️ 尚未配置 API Key —{' '}
+          <button
+            onClick={() => navigate('/settings')}
+            className="font-medium underline hover:no-underline"
+          >
+            前往设置
+          </button>
+        </div>
+      )}
 
       {/* Main cards */}
       <div className="flex gap-6">

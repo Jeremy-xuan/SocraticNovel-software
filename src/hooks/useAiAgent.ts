@@ -1,14 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '../stores/appStore';
 import { startAiSession, sendChatMessage, onAgentEvent, onCanvasEvent } from '../lib/ai';
+import { getApiKey } from '../lib/tauri';
 import type { ChatMessage, CanvasItem } from '../types';
-
-// Temporary — will be replaced by Keychain storage
-const TEMP_API_KEY_STORAGE = 'socratic-novel-api-key';
-
-function getApiKey(): string {
-  return localStorage.getItem(TEMP_API_KEY_STORAGE) || '';
-}
 
 export function useAiAgent() {
   const { addMessage, updateLastAssistantMessage, setStreaming, addCanvasItem } = useAppStore();
@@ -82,7 +76,8 @@ export function useAiAgent() {
   }, []);
 
   const sendMessage = useCallback(async (text: string) => {
-    const apiKey = getApiKey();
+    const settings = useAppStore.getState().settings;
+    const apiKey = await getApiKey(settings.aiProvider);
     if (!apiKey) {
       addMessage({
         id: crypto.randomUUID(),
