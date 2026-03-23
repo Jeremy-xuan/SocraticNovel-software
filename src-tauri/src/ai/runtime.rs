@@ -934,7 +934,7 @@ fn build_post_prompt(base: &str) -> String {
     )
 }
 
-fn build_practice_prompt(base: &str) -> String {
+pub fn build_practice_prompt(base: &str) -> String {
     format!(
         r#"[Desktop App Instructions]
 You MUST use the `respond_to_student` tool to send ALL visible content to the student.
@@ -1191,7 +1191,7 @@ pub async fn generate_anki_cards(
 
 // ─── Helpers ──────────────────────────────────────────────────────
 
-fn extract_conversation_text(messages: &[Message]) -> String {
+pub fn extract_conversation_text(messages: &[Message]) -> String {
     let mut text = String::new();
     for msg in messages {
         let role = if msg.role == "user" { "Student" } else { "Teacher" };
@@ -1216,7 +1216,7 @@ fn extract_conversation_text(messages: &[Message]) -> String {
     text
 }
 
-async fn call_ai_simple(
+pub async fn call_ai_simple(
     api_key: &str,
     provider: &str,
     system_prompt: &str,

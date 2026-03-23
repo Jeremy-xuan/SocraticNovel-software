@@ -81,6 +81,16 @@ export function useAiAgent() {
             });
             setStreaming(false);
             setHasError(true);
+            // Clear isStreaming on any pending assistant message
+            useAppStore.setState((state) => {
+              const msgs = [...state.messages];
+              const lastIdx = msgs.findLastIndex((m) => m.role === 'assistant');
+              if (lastIdx >= 0 && msgs[lastIdx].isStreaming) {
+                msgs[lastIdx] = { ...msgs[lastIdx], isStreaming: false };
+                return { messages: msgs };
+              }
+              return {};
+            });
             addAgentLog({
               id: crypto.randomUUID(),
               timestamp: Date.now(),
@@ -93,6 +103,16 @@ export function useAiAgent() {
           case 'turn_complete':
             setStreaming(false);
             setThinkingStatus('');
+            // Clear isStreaming flag on the last assistant message (stops the cursor)
+            useAppStore.setState((state) => {
+              const msgs = [...state.messages];
+              const lastIdx = msgs.findLastIndex((m) => m.role === 'assistant');
+              if (lastIdx >= 0 && msgs[lastIdx].isStreaming) {
+                msgs[lastIdx] = { ...msgs[lastIdx], isStreaming: false };
+                return { messages: msgs };
+              }
+              return {};
+            });
             useAppStore.getState().saveSessionToStorage();
             addAgentLog({
               id: crypto.randomUUID(),

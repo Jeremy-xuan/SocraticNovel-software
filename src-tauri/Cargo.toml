@@ -4,10 +4,15 @@ version = "0.1.0"
 description = "SocraticNovel — Immersive AI Tutoring Desktop App"
 authors = ["SocraticNovel"]
 edition = "2021"
+default-run = "socratic-novel"
 
 [lib]
 name = "socratic_novel_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "dev_test"
+path = "src/bin/dev_test.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

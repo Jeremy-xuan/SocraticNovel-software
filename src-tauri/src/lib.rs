@@ -1,4 +1,4 @@
-mod ai;
+pub mod ai;
 mod commands;
 
 use commands::ai_commands;
