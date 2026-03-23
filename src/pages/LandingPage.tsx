@@ -141,14 +141,17 @@ export default function LandingPage() {
         >
           📝 课后笔记
         </button>
-        {['💬 查看群聊', '📊 学习进度'].map((label) => (
-          <button
-            key={label}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-          >
-            {label}
-          </button>
-        ))}
+        <button
+          className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+        >
+          💬 查看群聊
+        </button>
+        <button
+          onClick={() => navigate('/progress')}
+          className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+        >
+          📊 学习进度
+        </button>
       </div>
 
       {/* Settings */}

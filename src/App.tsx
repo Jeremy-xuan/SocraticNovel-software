@@ -5,6 +5,7 @@ import LandingPage from './pages/LandingPage';
 import LessonPage from './pages/LessonPage';
 import PracticePage from './pages/PracticePage';
 import NotesPage from './pages/NotesPage';
+import ProgressPage from './pages/ProgressPage';
 import SettingsPage from './pages/SettingsPage';
 import SetupWizardPage from './pages/SetupWizardPage';
 
@@ -26,6 +27,7 @@ function AppRoutes() {
       <Route path="/lesson" element={<LessonPage />} />
       <Route path="/review" element={<PracticePage />} />
       <Route path="/notes" element={<NotesPage />} />
+      <Route path="/progress" element={<ProgressPage />} />
       <Route path="/settings" element={<SettingsPage />} />
     </Routes>
   );
