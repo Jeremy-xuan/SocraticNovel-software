@@ -1,7 +1,7 @@
 # SocraticNovel — 项目状态文档
 
-> 最后更新：2025-07-19
-> 当前版本：Phase 1 MVP（核心可用）
+> 最后更新：2025-07-20
+> 当前版本：Phase 2（练习模式 + 笔记系统）
 
 ## 项目概述
 
@@ -44,6 +44,8 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 | **AI Commands** | `commands/ai_commands.rs` | Tauri 命令 + 会话持久化（save/restore/clear） |
 | **FS Commands** | `commands/fs_commands.rs` | 沙箱化文件操作 + workspace 初始化 |
 | **Settings** | `commands/settings_commands.rs` | macOS Keychain 存取 API Key |
+| **CLI Practice** | `bin/cli_practice.rs` | 交互式命令行练习模式（无 GUI 测试用） |
+| **Dev Test** | `bin/dev_test.rs` | 后端单元测试二进制 |
 
 ### 前端模块（TypeScript, src/）
 
@@ -59,6 +61,10 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 | **AI Hook** | `hooks/useAiAgent.ts` | 事件监听 + 会话保存 |
 | **Store** | `stores/appStore.ts` | Zustand 全局状态 + localStorage 持久化 + 会话管理 |
 | **AI Lib** | `lib/ai.ts` + `lib/tauri.ts` | Tauri invoke 封装 + 会话持久化 API |
+| **Notes Templates** | `lib/notesTemplates.ts` | PDF 导出模板（手记风 / 极简风） |
+| **Practice** | `pages/PracticePage.tsx` | 练习/刷题模式页面 |
+| **Notes** | `pages/NotesPage.tsx` | AI 笔记生成 + Anki 导出 + PDF 导出 |
+| **Agent Log** | `components/debug/AgentLogPanel.tsx` | Agent 活动日志查看器 |
 
 ### 可用工具（AI Agent）
 
@@ -159,20 +165,59 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
     - **Grace period 降为 1**：respond 后最多 1 轮额外迭代（给 group_chat/canvas 机会），然后强制停止
     - 文件：`src-tauri/src/ai/runtime.rs`（`run_phase_loop()` 函数）
 
+### Phase 2 — ✅ 练习模式 + 笔记系统
+
+26. **✅ 练习/刷题模式（AnimaTutor 方案）** — 学生甩题 → AI 角色在極光走廊场景中苏格拉底式引导解题
+    - 新增 `AgentPhase::Practice`，复用 `run_phase_loop()` 引擎
+    - 练习工具集：respond_to_student + render_canvas + think + read_file + search_file
+    - AnimaTutor 风格 prompt：叙事场景化教学 + 文学性规则 + 反廉价角色扮演规则
+    - Tauri 命令：`send_practice_message` + `set_practice_prompt`
+    - 前端：PracticePage（简化版 LessonPage，无 Prep 阶段，即时对话）
+    - 路由：Landing Page → /review → PracticePage
+27. **✅ Agent 活动日志查看器** — 实时查看所有 Agent 阶段的工具调用
+    - AgentLogPanel 组件，监听 `agent-event` 事件流
+    - 显示 tool_call_start / tool_call_result / phase_change 等事件
+    - 集成到 LessonPage 右侧面板 tab
+28. **✅ 笔记生成系统** — AI 分析对话内容，生成结构化学习笔记
+    - 后端：`generate_notes()` + `generate_anki_cards()`，使用 `call_ai_simple()` 非流式调用
+    - 笔记 Prompt 包含 5 个板块：核心概念、关键公式、解题方法、**你的弱点**（个人错误分析）、**举一反三**（针对性练习题）
+    - 前端：NotesPage，ReactMarkdown + KaTeX 数学公式渲染
+29. **✅ Anki 卡片导出** — 从对话生成间隔复习卡片
+    - TSV 格式下载（可直接导入 Anki）
+    - AnkiConnect 一键推送（需本地运行 Anki + AnkiConnect 插件）
+30. **✅ PDF 笔记导出** — 两种风格模板
+    - 手记风（✒️）：笔记本纸背景 + 手写字体（Long Cang / Ma Shan Zheng）+ 荧光笔高亮
+    - 极简风（📐）：大留白 + 衬线标题（Source Serif 4）+ 灰阶层级
+    - 导出流程：提取渲染 HTML → 包裹模板样式 → 新窗口打印为 PDF
+31. **✅ CLI 交互式练习模式** — 无 GUI 环境下的完整练习体验
+    - `cli_practice.rs` 二进制：终端交互 + 非流式 API 调用
+    - 支持 /notes, /anki, /debug, /quit 命令
+    - 已通过端到端测试（3 轮高斯定律对话 + 笔记 + Anki 生成）
+
+### Bug 修复 — ✅ Phase 2 相关
+
+32. **✅ 流式光标残留修复** — `message.isStreaming` 在流式完成后未被设为 false
+    - 修复：在 `turn_complete` 和 `error` 事件处理中显式清除 isStreaming 状态
+33. **✅ PracticePage 会话清理时机** — "结束练习"按钮过早清空状态导致 UI 异常
+    - 修复：移除 handleEnd 中的 clearSession() 调用
+34. **✅ UTF-8 边界 panic** — `&notes[..300]` 在中文文本上切到多字节字符中间
+    - 修复：改用 `notes.chars().take(300).collect()`
+35. **✅ Cargo default-run** — 添加二进制后 cargo run 歧义
+    - 修复：Cargo.toml 添加 `default-run = "socratic-novel"`
+
 ## 未完成 / 需要改进
 
 ### 优先级高
 
-0. **Prep Agent 后台进度查看器** — 多Agent模式下，Prep Agent 需要约 1-2 分钟读取文件并生成 lesson_brief。需要一个 UI 面板/弹窗让用户查看 Prep Agent 的实时进度（当前在读哪个文件、思考了什么、生成了什么 brief）。类似"开发者工具"的 Network 面板概念。可通过监听 `agent-event` 中 Prep 阶段的 `tool_call_start`/`tool_call_result` 事件实现。
+0. **✅ Prep Agent 后台进度查看器** — 已通过 AgentLogPanel 实现（agent-event 事件流实时显示）
 
 ### 优先级中
 
-1. **复习功能** — Landing Page 的"复习"卡片是占位符
-2. **课后笔记 / 日记查看** — 底部 tab 未实现
-3. **学习进度展示** — progress.md 解析 + 可视化
-4. **深色模式** — TW4 dark: 变体已准备，但未实现切换
-5. **Workspace 选择器** — 目前硬编码路径，需要 UI 选择
-6. **模型选择器** — 用户应能在设置中选择具体模型（不只是提供商）
+1. **学习进度展示** — progress.md 解析 + 可视化
+2. **深色模式** — TW4 dark: 变体已准备，但未实现切换
+3. **Workspace 选择器** — 目前硬编码路径，需要 UI 选择
+4. **模型选择器** — 用户应能在设置中选择具体模型（不只是提供商）
+5. **极简风笔记模板重新设计** — 当前极简风用户不太满意，需要重新设计
 
 ### 优先级低
 
@@ -228,6 +273,13 @@ cd src-tauri && ~/.cargo/bin/cargo check
 
 # TypeScript 类型检查
 npx tsc --noEmit
+
+# CLI 练习模式（无 GUI 测试）
+cd src-tauri
+API_KEY=<your-key> PROVIDER=deepseek cargo run --bin cli_practice
+
+# 后端单元测试
+API_KEY=<your-key> PROVIDER=deepseek cargo run --bin dev_test
 ```
 
 - Vite dev server: http://localhost:1420
@@ -247,3 +299,6 @@ npx tsc --noEmit
 9. **多 Agent 架构** — Prep → Teaching → Post 三阶段流水线。Teaching Agent 只有 ~5K tokens prompt（不含教材/文件内容），教学指令遵循度大幅提升。Prep Agent 负责读文件并生成 lesson_brief，Post Agent 负责课后更新。各阶段有独立工具集，互不干扰。
 10. **Phase Loop 复用** — `run_phase_loop()` 通用循环函数，通过 `AgentPhase` enum 控制阶段行为（grace period、stop trigger、event emission），避免代码重复。
 11. **respond_to_student 去重机制** — Teaching Phase 中，respond_to_student 调用后立即从可用工具列表（`active_tools`）中移除。这从根本上防止 AI 在 grace period 期间重复调用，确保每个教学回合只有一次学生可见输出。Grace period 从 3 降至 1，仅保留给 show_group_chat/render_canvas 等后续操作。
+12. **Practice Mode 复用架构** — 练习模式直接复用 `run_phase_loop()` + `AgentPhase::Practice`，仅需新增 tools 和 prompt 函数，不需要新循环逻辑。CLI 二进制进一步验证了后端与 UI 的解耦。
+13. **笔记生成策略** — 使用 `call_ai_simple()` 非流式调用生成结构化 Markdown，前端用 ReactMarkdown + KaTeX 渲染。PDF 导出采用 HTML 模板 + 新窗口打印方案（比 headless Chrome CLI 更可靠，不需要额外依赖）。
+14. **个性化错误分析** — NOTES_PROMPT 包含「你的弱点」和「举一反三」板块，AI 分析学生在对话中的具体错误并生成针对性练习题，使笔记不只是知识总结而是个人学习诊断报告。
