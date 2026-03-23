@@ -39,35 +39,29 @@ impl OpenAiClient {
         }
     }
 
-    /// Send a non-streaming request using OpenAI-compatible format.
-    /// Translates from/to our internal Claude-style types for compatibility.
-    pub async fn send_message(
+    /// Build the OpenAI-format request body from our internal types.
+    fn build_request_body(
         &self,
         system: &str,
-        messages: Vec<Message>,
-        tools: Option<Vec<ToolDefinition>>,
-    ) -> Result<(Vec<ContentBlock>, Option<String>), String> {
-        // Build OpenAI-format messages
+        messages: &[Message],
+        tools: Option<&[ToolDefinition]>,
+    ) -> serde_json::Value {
         let mut oai_messages: Vec<serde_json::Value> = Vec::new();
 
-        // System message
         oai_messages.push(serde_json::json!({
             "role": "system",
             "content": system,
         }));
 
-        // Convert our internal messages to OpenAI format
-        for msg in &messages {
+        for msg in messages {
             match msg.role.as_str() {
                 "user" => {
-                    // Check if this is a tool_result message
                     let has_tool_results = msg
                         .content
                         .iter()
                         .any(|b| matches!(b, ContentBlock::ToolResult { .. }));
 
                     if has_tool_results {
-                        // Each tool result becomes a separate "tool" role message
                         for block in &msg.content {
                             if let ContentBlock::ToolResult {
                                 tool_use_id,
@@ -83,7 +77,6 @@ impl OpenAiClient {
                             }
                         }
                     } else {
-                        // Regular user message — extract text
                         let text: String = msg
                             .content
                             .iter()
@@ -136,10 +129,9 @@ impl OpenAiClient {
             }
         }
 
-        // Convert tool definitions to OpenAI format
         let oai_tools: Option<Vec<serde_json::Value>> = tools.map(|defs| {
             defs.iter()
-                .filter(|t| t.name != "render_canvas") // render_canvas is internal
+                .filter(|t| t.name != "render_canvas")
                 .map(|t| {
                     serde_json::json!({
                         "type": "function",
@@ -153,17 +145,13 @@ impl OpenAiClient {
                 .collect()
         });
 
-        // Build request body
         let mut request_body = serde_json::json!({
             "model": self.model,
             "messages": oai_messages,
         });
 
-        // deepseek-reasoner uses different token limit param
-        if self.model == "deepseek-reasoner" {
-            // Don't set max_tokens for reasoner — it manages its own limits
-        } else {
-            request_body["max_tokens"] = serde_json::json!(8192);
+        if self.model != "deepseek-reasoner" {
+            request_body["max_tokens"] = serde_json::json!(4096);
         }
 
         if let Some(ref tools_val) = oai_tools {
@@ -172,7 +160,19 @@ impl OpenAiClient {
             }
         }
 
-        // Send request
+        request_body
+    }
+
+    /// Send a non-streaming request (fallback).
+    #[allow(dead_code)]
+    pub async fn send_message(
+        &self,
+        system: &str,
+        messages: Vec<Message>,
+        tools: Option<Vec<ToolDefinition>>,
+    ) -> Result<(Vec<ContentBlock>, Option<String>), String> {
+        let request_body = self.build_request_body(system, &messages, tools.as_deref());
+
         let response = self
             .client
             .post(&self.base_url)
@@ -196,28 +196,20 @@ impl OpenAiClient {
         let parsed: serde_json::Value =
             serde_json::from_str(&body).map_err(|e| format!("Failed to parse response: {}", e))?;
 
-        // Parse OpenAI response into our internal types
         let choice = parsed["choices"]
             .as_array()
             .and_then(|c| c.first())
             .ok_or("No choices in response")?;
 
-        let finish_reason = choice["finish_reason"].as_str().map(|s| {
-            // Map OpenAI finish reasons to Claude-compatible ones
-            match s {
-                "stop" => "end_turn".to_string(),
-                "tool_calls" => "tool_use".to_string(),
-                other => other.to_string(),
-            }
+        let finish_reason = choice["finish_reason"].as_str().map(|s| match s {
+            "stop" => "end_turn".to_string(),
+            "tool_calls" => "tool_use".to_string(),
+            other => other.to_string(),
         });
 
         let message = &choice["message"];
         let mut content_blocks: Vec<ContentBlock> = Vec::new();
 
-        // Note: deepseek-reasoner returns reasoning_content (chain of thought)
-        // We intentionally skip it — only use the final content
-
-        // Extract text content
         if let Some(text) = message["content"].as_str() {
             if !text.is_empty() {
                 content_blocks.push(ContentBlock::Text {
@@ -226,7 +218,6 @@ impl OpenAiClient {
             }
         }
 
-        // Extract tool calls
         if let Some(tool_calls) = message["tool_calls"].as_array() {
             for tc in tool_calls {
                 let id = tc["id"].as_str().unwrap_or("").to_string();
@@ -234,12 +225,10 @@ impl OpenAiClient {
                 let args_str = tc["function"]["arguments"].as_str().unwrap_or("{}");
                 let input: serde_json::Value =
                     serde_json::from_str(args_str).unwrap_or(serde_json::json!({}));
-
                 content_blocks.push(ContentBlock::ToolUse { id, name, input });
             }
         }
 
-        // If no content at all, add empty text
         if content_blocks.is_empty() {
             content_blocks.push(ContentBlock::Text {
                 text: String::new(),
@@ -247,5 +236,37 @@ impl OpenAiClient {
         }
 
         Ok((content_blocks, finish_reason))
+    }
+
+    /// Start a streaming request and return the HTTP response for incremental processing.
+    pub async fn start_streaming(
+        &self,
+        system: &str,
+        messages: Vec<Message>,
+        tools: Option<Vec<ToolDefinition>>,
+    ) -> Result<reqwest::Response, String> {
+        let mut request_body = self.build_request_body(system, &messages, tools.as_deref());
+        request_body["stream"] = serde_json::json!(true);
+
+        let response = self
+            .client
+            .post(&self.base_url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| format!("HTTP request failed: {}", e))?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let body = response
+                .text()
+                .await
+                .map_err(|e| format!("Failed to read error: {}", e))?;
+            return Err(format!("API error ({}): {}", status, body));
+        }
+
+        Ok(response)
     }
 }

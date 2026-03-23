@@ -1,155 +1,231 @@
 use super::types::ToolDefinition;
 use serde_json::json;
 
-/// Returns the tool definitions to send to Claude API.
+// ─── Tool Definitions ─────────────────────────────────────────────
+
+fn tool_respond_to_student() -> ToolDefinition {
+    ToolDefinition {
+        name: "respond_to_student".to_string(),
+        description: "Send a message to the student. This is the ONLY way to communicate with the student. Any text you want the student to see MUST go through this tool. Direct text output will NOT be shown — it is treated as internal thinking. When you have composed your response, call this tool with the full content.".to_string(),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "description": "The message content to display to the student. Supports Markdown and LaTeX ($...$ or $$...$$)."
+                }
+            },
+            "required": ["content"]
+        }),
+    }
+}
+
+fn tool_read_file() -> ToolDefinition {
+    ToolDefinition {
+        name: "read_file".to_string(),
+        description: "Read the contents of a file in the workspace. Use this to load configuration files, student progress, teaching materials, etc. PDF files are automatically extracted to text.".to_string(),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Relative path within the workspace (e.g., 'teacher/runtime/progress.md')"
+                }
+            },
+            "required": ["path"]
+        }),
+    }
+}
+
+fn tool_write_file() -> ToolDefinition {
+    ToolDefinition {
+        name: "write_file".to_string(),
+        description: "Write content to a file in the workspace. Creates the file if it doesn't exist, overwrites if it does.".to_string(),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "path": { "type": "string", "description": "Relative path within the workspace" },
+                "content": { "type": "string", "description": "The full content to write to the file" }
+            },
+            "required": ["path", "content"]
+        }),
+    }
+}
+
+fn tool_append_file() -> ToolDefinition {
+    ToolDefinition {
+        name: "append_file".to_string(),
+        description: "Append content to the end of an existing file. Use this for logs, session records, or any file where you want to add without overwriting.".to_string(),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "path": { "type": "string", "description": "Relative path within the workspace" },
+                "content": { "type": "string", "description": "Content to append to the file" }
+            },
+            "required": ["path", "content"]
+        }),
+    }
+}
+
+fn tool_list_files() -> ToolDefinition {
+    ToolDefinition {
+        name: "list_files".to_string(),
+        description: "List files and directories in a given directory path within the workspace.".to_string(),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "path": { "type": "string", "description": "Relative directory path within the workspace" }
+            },
+            "required": ["path"]
+        }),
+    }
+}
+
+fn tool_search_file() -> ToolDefinition {
+    ToolDefinition {
+        name: "search_file".to_string(),
+        description: "Search for a text query within a specific file. Returns matching lines with line numbers.".to_string(),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "path": { "type": "string", "description": "Relative path to the file to search in" },
+                "query": { "type": "string", "description": "Text to search for (case-insensitive)" }
+            },
+            "required": ["path", "query"]
+        }),
+    }
+}
+
+fn tool_render_canvas() -> ToolDefinition {
+    ToolDefinition {
+        name: "render_canvas".to_string(),
+        description: "Render a visual element (SVG diagram, chart) on the student's whiteboard/canvas panel.".to_string(),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "title": { "type": "string", "description": "A short title for the canvas item" },
+                "content": { "type": "string", "description": "SVG markup string to render on the canvas" }
+            },
+            "required": ["content"]
+        }),
+    }
+}
+
+fn tool_show_group_chat() -> ToolDefinition {
+    ToolDefinition {
+        name: "show_group_chat".to_string(),
+        description: "Display group chat messages in the dedicated group chat panel. Each message includes sender name, timestamp, and text.".to_string(),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "messages": {
+                    "type": "array",
+                    "description": "Array of group chat messages to display",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "sender": { "type": "string", "description": "Name of the sender" },
+                            "time": { "type": "string", "description": "Timestamp (e.g., '17:50')" },
+                            "text": { "type": "string", "description": "Message content" }
+                        },
+                        "required": ["sender", "text"]
+                    }
+                }
+            },
+            "required": ["messages"]
+        }),
+    }
+}
+
+fn tool_think() -> ToolDefinition {
+    ToolDefinition {
+        name: "think".to_string(),
+        description: "Use this tool for internal notes, planning, and reasoning that should NOT be shown to the student.".to_string(),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "thought": { "type": "string", "description": "Your internal note, plan, or reasoning" }
+            },
+            "required": ["thought"]
+        }),
+    }
+}
+
+fn tool_submit_lesson_brief() -> ToolDefinition {
+    ToolDefinition {
+        name: "submit_lesson_brief".to_string(),
+        description: "Submit the completed lesson brief. Call this ONCE after you have finished reading all files and preparing the lesson plan. This ends the prep phase.".to_string(),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "brief": {
+                    "type": "string",
+                    "description": "The complete lesson brief containing: teacher name, chapter, key concepts, knowledge gaps, story nodes, character voice rules, teaching plan, and any other context the teaching agent needs."
+                }
+            },
+            "required": ["brief"]
+        }),
+    }
+}
+
+// ─── Phase-specific Tool Sets ─────────────────────────────────────
+
+/// All tools (legacy compatibility)
 pub fn get_tool_definitions() -> Vec<ToolDefinition> {
     vec![
-        ToolDefinition {
-            name: "read_file".to_string(),
-            description: "Read the contents of a file in the workspace. Use this to load configuration files, student progress, teaching materials, etc.".to_string(),
-            input_schema: json!({
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Relative path within the workspace (e.g., 'teacher/runtime/progress.md')"
-                    }
-                },
-                "required": ["path"]
-            }),
-        },
-        ToolDefinition {
-            name: "write_file".to_string(),
-            description: "Write content to a file in the workspace. Creates the file if it doesn't exist, overwrites if it does. Use this to update progress, save session logs, write notes, etc.".to_string(),
-            input_schema: json!({
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Relative path within the workspace"
-                    },
-                    "content": {
-                        "type": "string",
-                        "description": "The full content to write to the file"
-                    }
-                },
-                "required": ["path", "content"]
-            }),
-        },
-        ToolDefinition {
-            name: "append_file".to_string(),
-            description: "Append content to the end of an existing file. Use this for logs, session records, or any file where you want to add without overwriting.".to_string(),
-            input_schema: json!({
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Relative path within the workspace"
-                    },
-                    "content": {
-                        "type": "string",
-                        "description": "Content to append to the file"
-                    }
-                },
-                "required": ["path", "content"]
-            }),
-        },
-        ToolDefinition {
-            name: "list_files".to_string(),
-            description: "List files and directories in a given directory path within the workspace.".to_string(),
-            input_schema: json!({
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Relative directory path within the workspace (e.g., 'teacher/runtime/')"
-                    }
-                },
-                "required": ["path"]
-            }),
-        },
-        ToolDefinition {
-            name: "search_file".to_string(),
-            description: "Search for a text query within a specific file. Returns matching lines with line numbers.".to_string(),
-            input_schema: json!({
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Relative path to the file to search in"
-                    },
-                    "query": {
-                        "type": "string",
-                        "description": "Text to search for (case-insensitive)"
-                    }
-                },
-                "required": ["path", "query"]
-            }),
-        },
-        ToolDefinition {
-            name: "render_canvas".to_string(),
-            description: "Render a visual element (SVG diagram, chart, formula visualization) on the student's whiteboard/canvas panel. Use this to show physics diagrams, electric field lines, circuit diagrams, coordinate systems, graphs, etc. The content should be valid SVG markup.".to_string(),
-            input_schema: json!({
-                "type": "object",
-                "properties": {
-                    "title": {
-                        "type": "string",
-                        "description": "A short title for the canvas item"
-                    },
-                    "content": {
-                        "type": "string",
-                        "description": "SVG markup string to render on the canvas"
-                    }
-                },
-                "required": ["content"]
-            }),
-        },
-        ToolDefinition {
-            name: "show_group_chat".to_string(),
-            description: "Display group chat messages in the dedicated group chat panel (right sidebar). Use this when showing WeChat group ('没有名字的群') messages — both for the initial ice-breaking conversation and for showing unread messages when the student says '看看微信'. Each message should include sender name, timestamp, and message text. The messages will be displayed in a chat-style UI, NOT in the main conversation area.".to_string(),
-            input_schema: json!({
-                "type": "object",
-                "properties": {
-                    "messages": {
-                        "type": "array",
-                        "description": "Array of group chat messages to display",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "sender": {
-                                    "type": "string",
-                                    "description": "Name of the sender (e.g., '蒼崎凛', '鳴海律', '霧島朔', '宇轩')"
-                                },
-                                "time": {
-                                    "type": "string",
-                                    "description": "Timestamp (e.g., '17:50')"
-                                },
-                                "text": {
-                                    "type": "string",
-                                    "description": "Message content"
-                                }
-                            },
-                            "required": ["sender", "text"]
-                        }
-                    }
-                },
-                "required": ["messages"]
-            }),
-        },
-        ToolDefinition {
-            name: "think".to_string(),
-            description: "Use this tool for internal notes, planning, and preparation that should NOT be shown to the student. All internal work (reading file summaries, lesson prep checklists, reasoning about what to teach next, deciding teaching strategy) should go through this tool. The content will be silently consumed and never displayed to the student.".to_string(),
-            input_schema: json!({
-                "type": "object",
-                "properties": {
-                    "thought": {
-                        "type": "string",
-                        "description": "Your internal note, plan, or reasoning"
-                    }
-                },
-                "required": ["thought"]
-            }),
-        },
+        tool_respond_to_student(),
+        tool_read_file(),
+        tool_write_file(),
+        tool_append_file(),
+        tool_list_files(),
+        tool_search_file(),
+        tool_render_canvas(),
+        tool_show_group_chat(),
+        tool_think(),
+    ]
+}
+
+/// Prep Phase tools: read files + think + submit_lesson_brief
+pub fn get_prep_tools() -> Vec<ToolDefinition> {
+    vec![
+        tool_read_file(),
+        tool_list_files(),
+        tool_search_file(),
+        tool_think(),
+        tool_submit_lesson_brief(),
+    ]
+}
+
+/// Teaching Phase tools: respond + show + render + think (NO file I/O)
+pub fn get_teaching_tools() -> Vec<ToolDefinition> {
+    vec![
+        tool_respond_to_student(),
+        tool_show_group_chat(),
+        tool_render_canvas(),
+        tool_think(),
+    ]
+}
+
+/// Post-Lesson Phase tools: file I/O + show_group_chat + think
+pub fn get_post_tools() -> Vec<ToolDefinition> {
+    vec![
+        tool_read_file(),
+        tool_write_file(),
+        tool_append_file(),
+        tool_list_files(),
+        tool_show_group_chat(),
+        tool_think(),
+    ]
+}
+
+/// Practice Phase tools: respond + render + think + file read (for reference materials)
+pub fn get_practice_tools() -> Vec<ToolDefinition> {
+    vec![
+        tool_respond_to_student(),
+        tool_render_canvas(),
+        tool_think(),
+        tool_read_file(),
+        tool_search_file(),
     ]
 }
 
@@ -228,8 +304,16 @@ pub fn execute_tool(
                 None => ("Error: messages array is required".to_string(), true),
             }
         }
+        "respond_to_student" => {
+            // Content emission is handled in runtime.rs — just acknowledge here
+            ("OK".to_string(), false)
+        }
         "think" => {
             // think is silently consumed — internal notes, never shown to user
+            ("OK".to_string(), false)
+        }
+        "submit_lesson_brief" => {
+            // Lesson brief extraction handled in runtime.rs — just acknowledge
             ("OK".to_string(), false)
         }
         _ => (format!("Unknown tool: {}", tool_name), true),

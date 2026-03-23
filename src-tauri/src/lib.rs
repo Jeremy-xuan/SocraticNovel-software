@@ -25,6 +25,20 @@ pub fn run() {
             ai_commands::start_ai_session,
             ai_commands::send_chat_message,
             ai_commands::get_conversation_history,
+            ai_commands::has_saved_session,
+            ai_commands::restore_ai_session,
+            ai_commands::clear_saved_session,
+            // AI: Multi-agent phases
+            ai_commands::run_prep_phase,
+            ai_commands::send_teaching_message,
+            ai_commands::run_post_lesson,
+            ai_commands::set_teaching_prompt,
+            // AI: Practice mode
+            ai_commands::send_practice_message,
+            ai_commands::set_practice_prompt,
+            // AI: Note generation
+            ai_commands::generate_lesson_notes,
+            ai_commands::generate_anki_cards,
             // Settings
             settings_commands::set_api_key,
             settings_commands::get_api_key,

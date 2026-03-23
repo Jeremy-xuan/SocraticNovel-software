@@ -54,7 +54,26 @@ fn resolve_sandboxed_path(workspace_path: &str, file_path: &str) -> Result<PathB
 #[tauri::command]
 pub fn read_file(workspace_path: &str, file_path: &str) -> Result<String, String> {
     let path = resolve_sandboxed_path(workspace_path, file_path)?;
-    fs::read_to_string(&path).map_err(|e| format!("Failed to read file: {}", e))
+
+    // PDF files: use pdftotext for extraction
+    if path.extension().and_then(|e| e.to_str()) == Some("pdf") {
+        let output = std::process::Command::new("pdftotext")
+            .arg("-layout")
+            .arg(&path)
+            .arg("-")
+            .output()
+            .map_err(|e| format!("Failed to run pdftotext: {}", e))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(format!("pdftotext failed: {}", stderr));
+        }
+
+        String::from_utf8(output.stdout)
+            .map_err(|e| format!("pdftotext output not valid UTF-8: {}", e))
+    } else {
+        fs::read_to_string(&path).map_err(|e| format!("Failed to read file: {}", e))
+    }
 }
 
 #[tauri::command]

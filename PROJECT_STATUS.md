@@ -1,7 +1,7 @@
 # SocraticNovel — 项目状态文档
 
-> 最后更新：2025-03-22
-> 当前版本：Phase 1 MVP（开发中）
+> 最后更新：2025-07-19
+> 当前版本：Phase 1 MVP（核心可用）
 
 ## 项目概述
 
@@ -16,7 +16,7 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 - **前端**：React 19 + TypeScript + Tailwind CSS 4 + Zustand
 - **AI**：多提供商支持（Claude / DeepSeek / OpenAI / Google）
 - **渲染**：react-markdown + remark-math + rehype-katex（数学公式）+ SVG（白板）
-- **存储**：macOS Keychain（API Key）+ localStorage（设置）+ 文件系统（workspace）
+- **存储**：macOS Keychain（API Key）+ localStorage（设置 + 会话）+ 文件系统（workspace + 后端会话）
 
 ### 三层架构（源自教学系统设计）
 ```
@@ -36,12 +36,12 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 
 | 模块 | 文件 | 功能 |
 |------|------|------|
-| **AI Runtime** | `ai/runtime.rs` | Tool-use 循环引擎：发送消息 → 处理工具调用 → 喂回结果 → 重复 |
-| **Claude Client** | `ai/claude.rs` | Anthropic Messages API 客户端（非流式） |
-| **OpenAI Client** | `ai/openai.rs` | OpenAI 兼容客户端（DeepSeek/OpenAI/Google） |
-| **Tools** | `ai/tools.rs` | 工具定义 + 执行器（8 个工具） |
-| **Types** | `ai/types.rs` | 共享类型（Message, ContentBlock, ToolDefinition 等） |
-| **AI Commands** | `commands/ai_commands.rs` | Tauri 命令：start_ai_session, send_chat_message |
+| **AI Runtime** | `ai/runtime.rs` | Tool-use 循环引擎 + SSE 流式处理 + respond_to_student 增量内容提取 |
+| **Claude Client** | `ai/claude.rs` | Anthropic Messages API 客户端（流式 + 非流式） |
+| **OpenAI Client** | `ai/openai.rs` | OpenAI 兼容客户端（流式 + 非流式，支持 DeepSeek/OpenAI/Google） |
+| **Tools** | `ai/tools.rs` | 工具定义 + 执行器（9 个工具，含 respond_to_student） |
+| **Types** | `ai/types.rs` | 共享类型（Message, ContentBlock, StreamEvent 等） |
+| **AI Commands** | `commands/ai_commands.rs` | Tauri 命令 + 会话持久化（save/restore/clear） |
 | **FS Commands** | `commands/fs_commands.rs` | 沙箱化文件操作 + workspace 初始化 |
 | **Settings** | `commands/settings_commands.rs` | macOS Keychain 存取 API Key |
 
@@ -51,19 +51,20 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 |------|------|------|
 | **路由** | `App.tsx` | 首次启动检测 → Setup Wizard / Landing / Lesson / Settings |
 | **Landing** | `pages/LandingPage.tsx` | 主页：workspace 状态、开始上课、API Key 检查 |
-| **Lesson** | `pages/LessonPage.tsx` | 三栏布局：对话 + 白板/群聊 |
+| **Lesson** | `pages/LessonPage.tsx` | 三栏布局：对话 + 白板/群聊 + 会话恢复 |
 | **Settings** | `pages/SettingsPage.tsx` | API Key 管理、提供商切换 |
 | **Setup Wizard** | `pages/SetupWizardPage.tsx` | 5 步首次启动向导 |
 | **Chat UI** | `components/chat/` | 消息气泡（Markdown + KaTeX）+ 输入框 |
 | **Canvas** | `components/canvas/CanvasPanel.tsx` | SVG 白板渲染 |
-| **AI Hook** | `hooks/useAiAgent.ts` | 事件监听（agent/canvas/group-chat）+ 会话管理 |
-| **Store** | `stores/appStore.ts` | Zustand 全局状态 + localStorage 持久化 |
-| **AI Lib** | `lib/ai.ts` | Tauri invoke 封装 + 事件订阅 |
+| **AI Hook** | `hooks/useAiAgent.ts` | 事件监听 + 会话保存 |
+| **Store** | `stores/appStore.ts` | Zustand 全局状态 + localStorage 持久化 + 会话管理 |
+| **AI Lib** | `lib/ai.ts` + `lib/tauri.ts` | Tauri invoke 封装 + 会话持久化 API |
 
 ### 可用工具（AI Agent）
 
 | 工具名 | 用途 |
 |--------|------|
+| `respond_to_student` | **必用** — AI 通过此工具发送所有可见内容给学生 |
 | `read_file` | 读取 workspace 内文件 |
 | `write_file` | 写入文件（创建或覆盖） |
 | `append_file` | 追加内容到文件末尾 |
@@ -91,6 +92,28 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 12. **✅ think 工具** — AI 内部笔记不显示给用户
 13. **✅ 错误恢复** — 网络断开后 UI 不卡死，5 分钟超时安全网
 
+### 新增功能 — ✅ 高优先级问题修复
+
+14. **✅ respond_to_student 工具** — AI 必须通过此工具发送可见内容，直接文本输出视为内部思考（静默）
+    - 系统 prompt 自动增强：强制要求使用 respond_to_student
+    - 输出型工具优化：respond_to_student/think/render_canvas/show_group_chat 不触发额外 API 调用
+    - 后备机制：AI 若未使用该工具但产生了文本，仍会显示原始文本
+15. **✅ 流式输出（Claude）** — SSE 流式 + RespondContentStreamer 增量 JSON 内容提取
+    - respond_to_student 内容逐字符推送到前端（不等待完整 JSON 解析）
+    - 文本块（内部思考）流式累积但不显示
+    - 工具调用块完成后立即处理（canvas/group_chat 事件）
+16. **✅ 流式输出（OpenAI/DeepSeek/Google）** — OpenAI 格式 SSE 流式
+    - tool_calls delta 累积 + 增量 respond_to_student 流式
+    - DeepSeek-reasoner reasoning_content 自动忽略
+    - finish_reason 映射（stop → end_turn, tool_calls → tool_use）
+17. **✅ 会话持久化** — 关闭 app 后对话不丢失
+    - 后端：每轮完成后保存到 `{workspace}/.app_session.json`
+    - 前端：ChatMessage/CanvasItem/GroupChatMessage 保存到 localStorage
+    - LessonPage 启动自动恢复、"下课"清空会话
+18. **✅ AI 输出长度控制** — 防止 AI 一次讲太多
+    - 系统 prompt 增强：300 字符/次限制、提问后必须停止、单次单问题
+    - 运行时监控：超 1500 字符或提问后继续 >200 字符触发警告日志
+
 ### 教学系统 Prompt 更新
 
 - ✅ 移除 `temp_math.md` 引用（app 有 KaTeX，不需要临时文件）
@@ -100,46 +123,63 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 - ✅ 内部准备通过 `think` 工具完成
 - ✅ 苏格拉底规则强化：提问后必须停止
 - ✅ 首次破冰改为叙事场景（不在群聊中）
+- ✅ respond_to_student 指令自动注入（runtime.rs 层面）
+- ✅ 输出长度规则注入（300 字符限制 + 单次单问题）
+
+### 多 Agent 架构 — ✅ 三阶段流水线
+
+19. **✅ system.md 拆分** — 原 19K 单文件拆为 6 个专用文件
+    - system_core.md（教学规则 → Teaching Agent）
+    - system_narrative.md（叙事规则 → Teaching Agent）
+    - system_prep.md（课前准备 → Prep Agent）
+    - system_post.md（课后更新 → Post Agent）
+    - system_review.md（复习系统 → 共享）
+    - system_chat.md（群聊规则 → Post Agent）
+20. **✅ Prep Agent（Phase 1）** — 课前读取所有文件，生成结构化 lesson_brief
+    - 工具：read_file, list_files, search_file, think, submit_lesson_brief
+    - lesson_brief 包含：老师、章节、关键概念、知识漏洞、故事节点、教学计划
+21. **✅ Teaching Agent（Phase 2）** — 精简 prompt（~5K tokens）+ lesson_brief 上下文
+    - 工具：respond_to_student, show_group_chat, render_canvas, think（无文件 I/O）
+    - 教学指令遵循度大幅提升（上下文不再被教材 PDF 稀释）
+22. **✅ Post-Lesson Agent（Phase 3）** — 课后自动更新运行时文件
+    - 工具：read/write/append_file, show_group_chat, think
+    - 自动生成对话摘要作为 Post Agent 输入
+23. **✅ 通用 Phase Loop** — `run_phase_loop()` 统一处理所有阶段
+    - Grace period 机制（respond_to_student 后 1 轮停）
+    - **respond_to_student 去重**：调用后立即从工具列表中移除，防止 AI 在 grace 期间重复调用
+    - submit_lesson_brief 触发立即停止
+    - 错误状态不污染共享会话（user message 延迟提交）
+24. **✅ Legacy 降级** — 无 lesson_brief 时自动退回单 Agent 模式
+
+### Bug 修复 — ✅ Teaching Agent 重复发言
+
+25. **✅ respond_to_student 重复调用 Bug 修复** — AI 在一个教学回合中多次调用 respond_to_student，导致学生没机会回答
+    - **根因**：Grace period=3 意味着 respond_to_student 后 AI 还有 3 轮迭代机会。DeepSeek 在这些迭代中再次调用 respond_to_student（因为没看到学生新消息），导致一个 turn 输出 3-4 段内容
+    - **修复**：respond_to_student 调用后立即从 `active_tools` 中移除（`retain()`），AI 下一轮迭代只能用 think/show_group_chat/render_canvas
+    - **Grace period 降为 1**：respond 后最多 1 轮额外迭代（给 group_chat/canvas 机会），然后强制停止
+    - 文件：`src-tauri/src/ai/runtime.rs`（`run_phase_loop()` 函数）
 
 ## 未完成 / 需要改进
 
-### 优先级高（影响使用体验）
+### 优先级高
 
-1. **AI 一次性讲完问题** — 尽管 prompt 已强化"提问后停止"规则，deepseek-reasoner 仍可能一次输出过多内容。可能需要：
-   - 在 runtime.rs 中加入输出长度检测，超过阈值时强制截断
-   - 或在 system prompt 的 JSON schema 中限制单次输出
-   - 或切换到更遵循指令的模型
-
-2. **内部准备内容泄露** — AI 有时仍将课前准备（读文件列表、知识点清单）输出为文本。`think` 工具已添加但 AI 不一定用它。可能需要：
-   - 在 runtime.rs 中过滤以特定模式开头的文本（如"正在读取"、"课前准备"）
-   - 或在 OpenAI client 中对 reasoning_content 做更彻底的过滤
-
-3. **流式输出** — 目前是非流式（整个回复生成完才显示）。用户体验差，尤其是 deepseek-reasoner 生成时间长。需要：
-   - 实现 SSE 流式解析
-   - 前端逐字显示
-   - 工具调用中间状态展示
-
-4. **会话持久化** — 当前关闭 app 后对话历史丢失。需要：
-   - 将 ConversationState 序列化到文件或 SQLite
-   - 启动时恢复上次对话
+0. **Prep Agent 后台进度查看器** — 多Agent模式下，Prep Agent 需要约 1-2 分钟读取文件并生成 lesson_brief。需要一个 UI 面板/弹窗让用户查看 Prep Agent 的实时进度（当前在读哪个文件、思考了什么、生成了什么 brief）。类似"开发者工具"的 Network 面板概念。可通过监听 `agent-event` 中 Prep 阶段的 `tool_call_start`/`tool_call_result` 事件实现。
 
 ### 优先级中
 
-5. **复习功能** — Landing Page 的"复习"卡片是占位符
-6. **课后笔记 / 日记查看** — 底部 tab 未实现
-7. **学习进度展示** — progress.md 解析 + 可视化
-8. **深色模式** — TW4 dark: 变体已准备，但未实现切换
-9. **Workspace 选择器** — 目前硬编码路径，需要 UI 选择
-10. **模型选择器** — 用户应能在设置中选择具体模型（不只是提供商）
+1. **复习功能** — Landing Page 的"复习"卡片是占位符
+2. **课后笔记 / 日记查看** — 底部 tab 未实现
+3. **学习进度展示** — progress.md 解析 + 可视化
+4. **深色模式** — TW4 dark: 变体已准备，但未实现切换
+5. **Workspace 选择器** — 目前硬编码路径，需要 UI 选择
+6. **模型选择器** — 用户应能在设置中选择具体模型（不只是提供商）
 
 ### 优先级低
 
-11. **Windows/Linux 适配** — API Key 存储需适配（目前仅 macOS Keychain）
-12. **打包发布** — Tauri bundle 配置
-13. **教材 PDF 支持** — 如果 workspace 包含 PDF，需要 pdftotext 集成
-14. **多 workspace 管理** — 创建、导入、删除
-15. **课后自动更新** — "下课"按钮触发 AI 更新 progress/session_log 等
-16. **render_canvas 改进** — 更丰富的图表类型、交互式图表
+7. **Windows/Linux 适配** — API Key 存储需适配（目前仅 macOS Keychain）
+8. **打包发布** — Tauri bundle 配置
+9. **多 workspace 管理** — 创建、导入、删除
+10. **render_canvas 改进** — 更丰富的图表类型、交互式图表
 
 ## 关键文件路径
 
@@ -196,10 +236,14 @@ npx tsc --noEmit
 
 ## 设计决策记录
 
-1. **非流式 API 调用** — 为了 tool-use 可靠性选择非流式。流式 + tool-use 组合处理复杂，MVP 阶段先用非流式。
-2. **文件系统即状态** — 所有教学状态存储为 Markdown 文件，AI 通过工具读写。不用数据库，保持简单透明。
-3. **Provider 抽象** — 内部类型统一为 Claude 格式（ContentBlock::Text/ToolUse/ToolResult），OpenAI 客户端负责双向翻译。
-4. **think 工具** — 让 AI 有明确的"内部笔记"通道，避免准备过程泄露到对话中。
-5. **show_group_chat 工具** — 群聊路由到专用面板，保持主对话区纯粹。
-6. **deepseek-reasoner** — 用户选择的默认模型。reasoning_content 被过滤不显示。
-7. **macOS Keychain** — API Key 不存文件，通过 `security` CLI 命令存取。
+1. **respond_to_student 工具** — AI 必须通过此工具发送可见内容。直接文本输出视为内部思考。这从根本上解决了内部准备内容泄露问题，比正则过滤更可靠。
+2. **流式 API** — Claude 用原生 SSE 格式，OpenAI/DeepSeek/Google 用 OpenAI 兼容 SSE 格式。RespondContentStreamer 实现增量 JSON 内容提取，在部分 JSON 到达时就能逐字符推送到前端。
+3. **文件系统即状态** — 所有教学状态存储为 Markdown 文件，AI 通过工具读写。不用数据库，保持简单透明。
+4. **Provider 抽象** — 内部类型统一为 Claude 格式（ContentBlock::Text/ToolUse/ToolResult），OpenAI 客户端负责双向翻译。
+5. **输出型工具优化** — respond_to_student/think/render_canvas/show_group_chat 不触发额外 API 调用，减少延迟和成本。
+6. **会话双层持久化** — 后端保存完整 AI 上下文（Message[]）到 JSON 文件，前端保存 UI 状态到 localStorage。恢复时两层同步加载。
+7. **deepseek-reasoner** — 用户选择的默认模型。reasoning_content 被过滤不显示。
+8. **macOS Keychain** — API Key 不存文件，通过 `security` CLI 命令存取。
+9. **多 Agent 架构** — Prep → Teaching → Post 三阶段流水线。Teaching Agent 只有 ~5K tokens prompt（不含教材/文件内容），教学指令遵循度大幅提升。Prep Agent 负责读文件并生成 lesson_brief，Post Agent 负责课后更新。各阶段有独立工具集，互不干扰。
+10. **Phase Loop 复用** — `run_phase_loop()` 通用循环函数，通过 `AgentPhase` enum 控制阶段行为（grace period、stop trigger、event emission），避免代码重复。
+11. **respond_to_student 去重机制** — Teaching Phase 中，respond_to_student 调用后立即从可用工具列表（`active_tools`）中移除。这从根本上防止 AI 在 grace period 期间重复调用，确保每个教学回合只有一次学生可见输出。Grace period 从 3 降至 1，仅保留给 show_group_chat/render_canvas 等后续操作。

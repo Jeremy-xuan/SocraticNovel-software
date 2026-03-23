@@ -49,7 +49,10 @@ export default function LandingPage() {
   };
 
   const handleStartReview = () => {
-    // TODO: Phase 2 — review mode
+    if (!settings.apiKeyConfigured) {
+      navigate('/settings');
+      return;
+    }
     navigate('/review');
   };
 
@@ -122,17 +125,23 @@ export default function LandingPage() {
             复习 / 刷题
           </span>
           <span className="mb-4 text-sm text-slate-500 dark:text-slate-400">
-            间隔复习 + 场景化练习
+            甩题即练，AI 引导解题
           </span>
           <span className="mt-auto text-sm font-medium text-emerald-600 group-hover:text-emerald-700 dark:text-emerald-400">
-            ▶ 开始复习
+            ▶ 开始刷题
           </span>
         </button>
       </div>
 
       {/* Bottom navigation */}
       <div className="mt-10 flex gap-4">
-        {['📝 课后笔记', '💬 查看群聊', '📊 学习进度'].map((label) => (
+        <button
+          onClick={() => navigate('/notes')}
+          className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+        >
+          📝 课后笔记
+        </button>
+        {['💬 查看群聊', '📊 学习进度'].map((label) => (
           <button
             key={label}
             className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"

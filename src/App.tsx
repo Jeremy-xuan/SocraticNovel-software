@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import './App.css';
 import LandingPage from './pages/LandingPage';
 import LessonPage from './pages/LessonPage';
+import PracticePage from './pages/PracticePage';
+import NotesPage from './pages/NotesPage';
 import SettingsPage from './pages/SettingsPage';
 import SetupWizardPage from './pages/SetupWizardPage';
 
@@ -22,6 +24,8 @@ function AppRoutes() {
       <Route path="/" element={setupDone ? <LandingPage /> : <Navigate to="/setup" replace />} />
       <Route path="/setup" element={<SetupWizardPage />} />
       <Route path="/lesson" element={<LessonPage />} />
+      <Route path="/review" element={<PracticePage />} />
+      <Route path="/notes" element={<NotesPage />} />
       <Route path="/settings" element={<SettingsPage />} />
     </Routes>
   );

@@ -1,2 +1,54 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
+/* Print styles for PDF export */
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Clean up the notes page for printing */
+  .prose {
+    max-width: none;
+    font-size: 11pt;
+    line-height: 1.6;
+    color: black;
+  }
+
+  .prose h2 {
+    page-break-after: avoid;
+    margin-top: 1.5em;
+  }
+
+  .prose h3 {
+    page-break-after: avoid;
+  }
+
+  .prose pre,
+  .prose table,
+  .prose figure {
+    page-break-inside: avoid;
+  }
+
+  /* KaTeX formulas */
+  .katex-display {
+    page-break-inside: avoid;
+    margin: 0.5em 0;
+  }
+
+  /* SVG diagrams */
+  .svg-container {
+    page-break-inside: avoid;
+    max-width: 100%;
+  }
+
+  .svg-container svg {
+    max-width: 100%;
+    height: auto;
+  }
+}

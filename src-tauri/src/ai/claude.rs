@@ -1,5 +1,4 @@
 use super::types::*;
-use futures_util::StreamExt;
 use reqwest::Client;
 
 const CLAUDE_API_URL: &str = "https://api.anthropic.com/v1/messages";
@@ -21,8 +20,8 @@ impl ClaudeClient {
         }
     }
 
-    /// Send a non-streaming request to Claude Messages API.
-    /// Returns the full response with all content blocks.
+    /// Send a non-streaming request to Claude Messages API (fallback).
+    #[allow(dead_code)]
     pub async fn send_message(
         &self,
         system: &str,
@@ -31,7 +30,7 @@ impl ClaudeClient {
     ) -> Result<(Vec<ContentBlock>, Option<String>), String> {
         let request = MessagesRequest {
             model: self.model.clone(),
-            max_tokens: 8192,
+            max_tokens: 4096,
             system: system.to_string(),
             messages,
             tools,
@@ -87,17 +86,16 @@ impl ClaudeClient {
         Ok((content_blocks, stop_reason))
     }
 
-    /// Send a streaming request to Claude. Returns a stream of SSE events.
-    /// We parse these into our StreamEvent type.
-    pub async fn send_message_streaming(
+    /// Start a streaming request and return the HTTP response for incremental processing.
+    pub async fn start_streaming(
         &self,
         system: &str,
         messages: Vec<Message>,
         tools: Option<Vec<ToolDefinition>>,
-    ) -> Result<Vec<StreamEvent>, String> {
+    ) -> Result<reqwest::Response, String> {
         let request = MessagesRequest {
             model: self.model.clone(),
-            max_tokens: 8192,
+            max_tokens: 4096,
             system: system.to_string(),
             messages,
             tools,
@@ -124,41 +122,6 @@ impl ClaudeClient {
             return Err(format!("Claude API error ({}): {}", status, body));
         }
 
-        let mut events = Vec::new();
-        let mut stream = response.bytes_stream();
-        let mut buffer = String::new();
-
-        while let Some(chunk) = stream.next().await {
-            let chunk = chunk.map_err(|e| format!("Stream error: {}", e))?;
-            buffer.push_str(&String::from_utf8_lossy(&chunk));
-
-            // Parse SSE events from buffer
-            while let Some(event_end) = buffer.find("\n\n") {
-                let event_str = buffer[..event_end].to_string();
-                buffer = buffer[event_end + 2..].to_string();
-
-                // Parse SSE format: "event: type\ndata: json"
-                let mut data_line = None;
-                for line in event_str.lines() {
-                    if let Some(data) = line.strip_prefix("data: ") {
-                        data_line = Some(data.to_string());
-                    }
-                }
-
-                if let Some(data) = data_line {
-                    if data == "[DONE]" {
-                        continue;
-                    }
-                    match serde_json::from_str::<StreamEvent>(&data) {
-                        Ok(event) => events.push(event),
-                        Err(_e) => {
-                            // Skip unparseable events (like [DONE])
-                        }
-                    }
-                }
-            }
-        }
-
-        Ok(events)
+        Ok(response)
     }
 }

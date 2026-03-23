@@ -81,6 +81,17 @@ export interface GroupChatMessage {
   text: string;
 }
 
+// Agent activity log entry
+export interface AgentLogEntry {
+  id: string;
+  timestamp: number;
+  type: 'tool_start' | 'tool_result' | 'text_delta' | 'response' | 'error' | 'turn_complete' | 'info';
+  toolName?: string;
+  toolId?: string;
+  text?: string;
+  isError?: boolean;
+}
+
 // Settings
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';

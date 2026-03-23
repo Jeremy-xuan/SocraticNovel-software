@@ -3,12 +3,15 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import type { ChatMessage } from '../../types';
+import { useAppStore } from '../../stores/appStore';
 
 interface Props {
   message: ChatMessage;
 }
 
 export default function ChatMessageBubble({ message }: Props) {
+  const thinkingStatus = useAppStore((s) => s.thinkingStatus);
+
   if (message.role === 'system') {
     return (
       <div className="my-3 flex justify-center">
@@ -20,6 +23,7 @@ export default function ChatMessageBubble({ message }: Props) {
   }
 
   const isUser = message.role === 'user';
+  const showThinking = message.isStreaming && !message.text && thinkingStatus;
 
   return (
     <div className={`my-3 flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -30,15 +34,22 @@ export default function ChatMessageBubble({ message }: Props) {
             : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
         }`}
       >
+        {/* Thinking status — shown while AI is working but no text yet */}
+        {showThinking && (
+          <div className="flex flex-col gap-1">
+            <span className="animate-pulse">{thinkingStatus}</span>
+          </div>
+        )}
+
         {isUser ? (
           <p className="whitespace-pre-wrap">{message.text}</p>
-        ) : (
+        ) : message.text ? (
           <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-pre:my-2 prose-blockquote:my-2">
             <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
               {message.text}
             </ReactMarkdown>
           </div>
-        )}
+        ) : null}
 
         {/* Tool calls indicator */}
         {message.toolCalls && message.toolCalls.length > 0 && (
@@ -52,8 +63,8 @@ export default function ChatMessageBubble({ message }: Props) {
           </div>
         )}
 
-        {/* Streaming indicator */}
-        {message.isStreaming && (
+        {/* Streaming cursor */}
+        {message.isStreaming && message.text && (
           <span className="ml-1 inline-block animate-pulse">▊</span>
         )}
       </div>

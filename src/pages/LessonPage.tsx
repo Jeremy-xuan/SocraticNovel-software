@@ -5,8 +5,9 @@ import { useAiAgent } from '../hooks/useAiAgent';
 import ChatMessageBubble from '../components/chat/ChatMessageBubble';
 import ChatInput from '../components/chat/ChatInput';
 import CanvasPanel from '../components/canvas/CanvasPanel';
+import AgentLogPanel from '../components/debug/AgentLogPanel';
 import type { ChatMessage } from '../types';
-import { readFile } from '../lib/tauri';
+import { readFile, hasSavedSession, restoreAiSession, clearSavedSession } from '../lib/tauri';
 
 function getWorkspacePath(): string {
   // TODO: resolve from settings/workspace selector
@@ -15,10 +16,35 @@ function getWorkspacePath(): string {
 
 export default function LessonPage() {
   const navigate = useNavigate();
-  const { messages, addMessage, isStreaming, isInClass, setInClass, canvasItems, groupChatMessages } = useAppStore();
-  const { initSession, sendMessage: aiSendMessage } = useAiAgent();
+  const { messages, addMessage, isStreaming, isInClass, setInClass, canvasItems, groupChatMessages, hasError, agentLogs } = useAppStore();
+  const { initSession, sendMessage: aiSendMessage, sendTeaching, runPrep, runPostLesson } = useAiAgent();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [rightPanel, setRightPanel] = useState<'canvas' | 'chat'>('canvas');
+  const [rightPanel, setRightPanel] = useState<'canvas' | 'chat' | 'log'>('canvas');
+  const [useMultiAgent] = useState(true); // Multi-agent mode (future: add UI toggle)
+  const [prepComplete, setPrepComplete] = useState(false);
+
+  // Restore saved session on mount
+  useEffect(() => {
+    const tryRestore = async () => {
+      const workspacePath = getWorkspacePath();
+      try {
+        const hasSaved = await hasSavedSession(workspacePath);
+        if (hasSaved) {
+          const restored = useAppStore.getState().loadSessionFromStorage();
+          if (restored) {
+            await restoreAiSession(workspacePath);
+            setInClass(true);
+            setPrepComplete(true); // Restored sessions skip prep
+          }
+        }
+      } catch {
+        // Restore failed — start fresh
+      }
+    };
+    if (!isInClass && messages.length === 0) {
+      tryRestore();
+    }
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -45,27 +71,104 @@ export default function LessonPage() {
           timestamp: Date.now(),
         });
       }
-    }, 300_000); // 5 minutes
+    }, 300_000);
     return () => clearTimeout(timer);
   }, [isStreaming]);
 
   const handleStartClass = async () => {
     setInClass(true);
-    const sysMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'system',
-      text: '正在启动课堂...',
-      timestamp: Date.now(),
-    };
-    addMessage(sysMsg);
+    const workspacePath = getWorkspacePath();
 
     try {
-      const workspacePath = getWorkspacePath();
-      // Read CLAUDE.md as system prompt
+      // Check if first launch
+      const wechatGroup = await readFile(workspacePath, 'teacher/runtime/wechat_group.md');
+      const isFirstLaunch = !wechatGroup.trim() || wechatGroup.includes('（暂无记录）');
+
+      if (isFirstLaunch) {
+        // Pre-render prologue from story.md
+        try {
+          const storyContent = await readFile(workspacePath, 'teacher/story.md');
+          const prologueMatch = storyContent.match(/## 序章\n\n([\s\S]*?群聊。)/);
+          if (prologueMatch) {
+            const sections = prologueMatch[1].split(/\n---\n/).map(s => s.trim()).filter(Boolean);
+            for (const section of sections) {
+              addMessage({
+                id: crypto.randomUUID(),
+                role: 'assistant',
+                text: section,
+                timestamp: Date.now(),
+              });
+            }
+          }
+        } catch {
+          // story.md missing — not fatal
+        }
+      }
+
+      // Read CLAUDE.md as base system prompt
       const systemPrompt = await readFile(workspacePath, 'CLAUDE.md');
       await initSession(workspacePath, systemPrompt);
-      // Send the hidden trigger message
-      await aiSendMessage('请开始今天的课程。');
+
+      if (useMultiAgent) {
+        // ─── Multi-Agent Flow ─────────────────────────────────
+        addMessage({
+          id: crypto.randomUUID(),
+          role: 'system',
+          text: '📋 正在准备课程…（Prep Agent 读取文件中）',
+          timestamp: Date.now(),
+        });
+
+        // Phase 1: Prep Agent generates lesson brief
+        const brief = await runPrep(workspacePath);
+
+        if (brief) {
+          setPrepComplete(true);
+          addMessage({
+            id: crypto.randomUUID(),
+            role: 'system',
+            text: '✅ 课程准备完成，开始教学',
+            timestamp: Date.now(),
+          });
+
+          // Phase 2: First teaching message
+          if (isFirstLaunch) {
+            await sendTeaching('[系统：序章已由应用展示给学习者。请直接生成群聊消息（使用 show_group_chat），然后开始第一节课。]');
+          } else {
+            await sendTeaching('请开始今天的课程。');
+          }
+        } else {
+          // Prep failed — fall back to legacy
+          console.warn('Prep phase returned empty brief, falling back to legacy');
+          addMessage({
+            id: crypto.randomUUID(),
+            role: 'system',
+            text: '⚠️ 课程准备失败，使用传统模式启动…',
+            timestamp: Date.now(),
+          });
+          setPrepComplete(true);
+          if (isFirstLaunch) {
+            await aiSendMessage('[系统：序章已由应用展示给学习者，学习者已读完序章。请直接生成群聊消息（使用 show_group_chat 工具），然后开始第一节课。]');
+          } else {
+            await aiSendMessage('请开始今天的课程。');
+          }
+        }
+      } else {
+        // ─── Legacy Flow ──────────────────────────────────────
+        if (!isFirstLaunch) {
+          addMessage({
+            id: crypto.randomUUID(),
+            role: 'system',
+            text: '正在启动课堂...',
+            timestamp: Date.now(),
+          });
+        }
+        setPrepComplete(true);
+        if (isFirstLaunch) {
+          await aiSendMessage('[系统：序章已由应用展示给学习者，学习者已读完序章。请直接生成群聊消息（使用 show_group_chat 工具），然后开始第一节课。]');
+        } else {
+          await aiSendMessage('请开始今天的课程。');
+        }
+      }
     } catch (err) {
       addMessage({
         id: crypto.randomUUID(),
@@ -77,16 +180,57 @@ export default function LessonPage() {
     }
   };
 
-  const handleEndClass = () => {
+  const handleEndClass = async () => {
     const sysMsg: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'system',
-      text: '正在结束课堂，AI 正在更新文件...',
+      text: '正在结束课堂…',
       timestamp: Date.now(),
     };
     addMessage(sysMsg);
     setRightPanel('chat');
-    // TODO: trigger AI end-of-class routine
+
+    if (useMultiAgent) {
+      // Phase 3: Post-Lesson Agent updates files
+      addMessage({
+        id: crypto.randomUUID(),
+        role: 'system',
+        text: '📝 Post-Lesson Agent 正在更新文件…',
+        timestamp: Date.now(),
+      });
+      try {
+        await runPostLesson();
+      } catch (err) {
+        console.warn('Post-lesson phase failed:', err);
+      }
+    } else {
+      // Legacy: tell AI to end class
+      try {
+        await aiSendMessage('今天到这里吧，下课。');
+      } catch (err) {
+        console.warn('End-of-class AI routine failed:', err);
+      }
+    }
+
+    // Clear saved session
+    try {
+      await clearSavedSession(getWorkspacePath());
+    } catch {}
+    useAppStore.getState().clearSession();
+    setPrepComplete(false);
+  };
+
+  const handleRetry = async () => {
+    const lastUserMsg = messages.findLast((m) => m.role === 'user');
+    if (lastUserMsg) {
+      if (useMultiAgent && prepComplete) {
+        await sendTeaching(lastUserMsg.text);
+      } else {
+        await aiSendMessage(lastUserMsg.text);
+      }
+    } else {
+      await handleStartClass();
+    }
   };
 
   const handleSend = async (text: string) => {
@@ -97,7 +241,13 @@ export default function LessonPage() {
       timestamp: Date.now(),
     };
     addMessage(msg);
-    await aiSendMessage(text);
+
+    // Use multi-agent teaching if prep is complete, otherwise legacy
+    if (useMultiAgent && prepComplete) {
+      await sendTeaching(text);
+    } else {
+      await aiSendMessage(text);
+    }
   };
 
   return (
@@ -114,6 +264,14 @@ export default function LessonPage() {
           AP Physics C: E&M — 课堂
         </span>
         <div className="flex gap-2">
+          {isInClass && messages.length > 0 && (
+            <button
+              onClick={() => navigate('/notes')}
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+            >
+              📝 笔记
+            </button>
+          )}
           {!isInClass ? (
             <button
               onClick={handleStartClass}
@@ -170,6 +328,17 @@ export default function LessonPage() {
             {messages.map((msg) => (
               <ChatMessageBubble key={msg.id} message={msg} />
             ))}
+            {/* Retry button — shown when an error occurred */}
+            {isInClass && !isStreaming && hasError && (
+              <div className="my-3 flex justify-center">
+                <button
+                  onClick={handleRetry}
+                  className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  🔄 重试
+                </button>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
           <ChatInput onSend={handleSend} disabled={!isInClass || isStreaming} />
@@ -199,10 +368,22 @@ export default function LessonPage() {
             >
               💬 群聊
             </button>
+            <button
+              onClick={() => setRightPanel('log')}
+              className={`flex-1 text-xs font-medium ${
+                rightPanel === 'log'
+                  ? 'border-b-2 border-blue-500 text-blue-600'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              🔧 日志
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto p-3">
             {rightPanel === 'canvas' ? (
               <CanvasPanel items={canvasItems} />
+            ) : rightPanel === 'log' ? (
+              <AgentLogPanel logs={agentLogs} />
             ) : (
               <div className="flex h-full flex-col">
                 <div className="flex-1 space-y-3 overflow-y-auto p-2">

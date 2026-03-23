@@ -57,3 +57,16 @@ export async function sendMessage(
 ): Promise<string> {
   return invoke('send_message', { workspacePath, systemPrompt, messages, provider });
 }
+
+// Session persistence
+export async function hasSavedSession(workspacePath: string): Promise<boolean> {
+  return invoke('has_saved_session', { workspacePath });
+}
+
+export async function restoreAiSession(workspacePath: string): Promise<number> {
+  return invoke('restore_ai_session', { workspacePath });
+}
+
+export async function clearSavedSession(workspacePath: string): Promise<void> {
+  return invoke('clear_saved_session', { workspacePath });
+}

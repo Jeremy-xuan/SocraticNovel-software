@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ChatMessage, CanvasItem, SessionType, AppSettings, GroupChatMessage } from '../types';
+import type { ChatMessage, CanvasItem, SessionType, AppSettings, GroupChatMessage, AgentLogEntry } from '../types';
 
 interface AppState {
   // Session
@@ -9,12 +9,17 @@ interface AppState {
   // Messages
   messages: ChatMessage[];
   isStreaming: boolean;
+  thinkingStatus: string;
+  hasError: boolean;
 
   // Canvas
   canvasItems: CanvasItem[];
 
   // Group chat
   groupChatMessages: GroupChatMessage[];
+
+  // Agent activity log
+  agentLogs: AgentLogEntry[];
 
   // Settings
   settings: AppSettings;
@@ -28,6 +33,8 @@ interface AppState {
   addMessage: (msg: ChatMessage) => void;
   updateLastAssistantMessage: (text: string) => void;
   setStreaming: (streaming: boolean) => void;
+  setThinkingStatus: (status: string) => void;
+  setHasError: (hasError: boolean) => void;
   clearMessages: () => void;
 
   // Actions — Canvas
@@ -38,8 +45,17 @@ interface AppState {
   addGroupChatMessages: (msgs: GroupChatMessage[]) => void;
   clearGroupChat: () => void;
 
+  // Actions — Agent Log
+  addAgentLog: (entry: AgentLogEntry) => void;
+  clearAgentLogs: () => void;
+
   // Actions — Settings
   updateSettings: (partial: Partial<AppSettings>) => void;
+
+  // Actions — Session Persistence
+  saveSessionToStorage: () => void;
+  loadSessionFromStorage: () => boolean;
+  clearSession: () => void;
 }
 
 // Load persisted settings from localStorage
@@ -58,8 +74,11 @@ export const useAppStore = create<AppState>((set) => ({
   isInClass: false,
   messages: [],
   isStreaming: false,
+  thinkingStatus: '',
+  hasError: false,
   canvasItems: [],
   groupChatMessages: [],
+  agentLogs: [],
   settings: {
     theme: 'light',
     currentWorkspaceId: null,
@@ -85,6 +104,8 @@ export const useAppStore = create<AppState>((set) => ({
       return { messages: msgs };
     }),
   setStreaming: (streaming) => set({ isStreaming: streaming }),
+  setThinkingStatus: (status) => set({ thinkingStatus: status }),
+  setHasError: (hasError) => set({ hasError }),
   clearMessages: () => set({ messages: [] }),
 
   // Canvas
@@ -96,6 +117,11 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => ({ groupChatMessages: [...state.groupChatMessages, ...msgs] })),
   clearGroupChat: () => set({ groupChatMessages: [] }),
 
+  // Agent Log
+  addAgentLog: (entry) =>
+    set((state) => ({ agentLogs: [...state.agentLogs, entry] })),
+  clearAgentLogs: () => set({ agentLogs: [] }),
+
   // Settings
   updateSettings: (partial) =>
     set((state) => {
@@ -105,4 +131,52 @@ export const useAppStore = create<AppState>((set) => ({
       localStorage.setItem('socratic-novel-settings', JSON.stringify(toPersist));
       return { settings: newSettings };
     }),
+
+  // Session Persistence
+  saveSessionToStorage: () => {
+    const { messages, canvasItems, groupChatMessages } = useAppStore.getState();
+    try {
+      localStorage.setItem(
+        'socratic-novel-session',
+        JSON.stringify({
+          messages: messages.map((m) => ({ ...m, isStreaming: false })),
+          canvasItems,
+          groupChatMessages,
+          timestamp: Date.now(),
+        }),
+      );
+    } catch {
+      // localStorage might be full — silently ignore
+    }
+  },
+
+  loadSessionFromStorage: () => {
+    try {
+      const saved = localStorage.getItem('socratic-novel-session');
+      if (!saved) return false;
+      const data = JSON.parse(saved);
+      if (!data.messages?.length) return false;
+      set({
+        messages: data.messages || [],
+        canvasItems: data.canvasItems || [],
+        groupChatMessages: data.groupChatMessages || [],
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  clearSession: () => {
+    localStorage.removeItem('socratic-novel-session');
+    set({
+      messages: [],
+      canvasItems: [],
+      groupChatMessages: [],
+      agentLogs: [],
+      isInClass: false,
+      isStreaming: false,
+      hasError: false,
+    });
+  },
 }));
