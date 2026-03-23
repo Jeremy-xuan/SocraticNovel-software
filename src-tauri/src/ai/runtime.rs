@@ -1105,26 +1105,52 @@ pub async fn run_practice_turn(
 
 // ─── Note Generation (non-streaming, single call) ─────────────────
 
-const NOTES_PROMPT: &str = r#"You are a study notes generator. Analyze the conversation below and produce structured review notes in Markdown format.
+const NOTES_PROMPT: &str = r#"You are a personalized study notes generator. Analyze the tutoring conversation below — pay special attention to where the student struggled, answered incorrectly, or needed hints.
 
 # Output Format Requirements:
-- Use proper Markdown with headers (##, ###), bullet points, and bold text
-- Use LaTeX math notation wrapped in $ for inline and $$ for display equations
-- Organize by topic/concept, not chronologically
-- Include these sections:
-  1. **核心概念** (Core Concepts) — key ideas covered, with concise explanations
-  2. **关键公式** (Key Formulas) — all formulas mentioned, properly typeset in LaTeX
-  3. **解题方法** (Problem-Solving Methods) — step-by-step approaches discussed
-  4. **易错点** (Common Pitfalls) — mistakes made or warned about during the session
-  5. **例题摘要** (Example Problems) — key problems discussed with brief solution outlines
+- Use proper Markdown with headers (##), bullet points, and bold text
+- Use LaTeX math notation: $ for inline, $$ for display equations
+- Organize by topic/concept, NOT chronologically
+
+# Required Sections (in this exact order):
+
+## 核心概念
+Key ideas covered, with concise explanations. 2-4 items max.
+
+## 关键公式
+All formulas mentioned, properly typeset in LaTeX. Each formula gets its own line with a brief one-sentence explanation.
+
+## 解题方法
+Step-by-step approach for the main problem type discussed. Numbered list.
+
+## 你的弱点
+**THIS IS THE MOST IMPORTANT SECTION.** Analyze the conversation for moments where the student:
+- Answered incorrectly or incompletely
+- Hesitated or needed multiple hints
+- Made conceptual errors
+- Skipped steps or used wrong methods
+
+For EACH weakness found, write:
+- **错在哪**: Quote or paraphrase the student's mistake (引用原文)
+- **为什么错**: Root cause analysis — what concept was misunderstood?
+- **正确思路**: The correct reasoning, step by step
+- **防踩坑**: A memorable tip or mnemonic to avoid this mistake next time
+
+If the student made NO errors in the conversation, write "本次对话中没有明显错误 ✓" and instead list concepts that were close to being wrong or could be confusing in harder variants.
+
+## 举一反三
+Based on the problems discussed AND the student's weaknesses, generate 2-3 practice problems that:
+- Target the same concepts but with slight variations
+- Specifically test the weak points identified above
+- Include brief solution outlines (2-3 lines each)
 
 # Rules:
-- Be CONCISE. These are review notes, not a textbook.
+- Be CONCISE. Review notes, not a textbook.
 - Every formula must use LaTeX notation.
-- Use Chinese for section headers and explanations.
-- Skip pleasantries, meta-commentary, and narrative elements — pure knowledge content.
-- If diagrams were discussed, describe them briefly in text (the actual SVGs will be added separately).
-- Do NOT include a title — the frontend will add the title with date and topic."#;
+- Use Chinese for all text.
+- Skip pleasantries, narrative elements, and meta-commentary.
+- Do NOT include a title — the frontend adds it.
+- The 你的弱点 section should be the longest section if errors were found."#;
 
 /// Generate structured review notes from conversation messages (non-streaming).
 pub async fn generate_notes(

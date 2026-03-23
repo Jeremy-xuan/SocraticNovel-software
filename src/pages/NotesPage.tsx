@@ -8,6 +8,7 @@ import 'katex/dist/katex.min.css';
 import { useAppStore } from '../stores/appStore';
 import { generateLessonNotes, generateAnkiCards } from '../lib/ai';
 import { getApiKey } from '../lib/tauri';
+import { exportNotesPdf, type NoteStyle } from '../lib/notesTemplates';
 
 interface AnkiCard {
   front: string;
@@ -65,6 +66,8 @@ export default function NotesPage() {
   const [ankiLoading, setAnkiLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ankiStatus, setAnkiStatus] = useState<string | null>(null);
+  const [pdfStyle, setPdfStyle] = useState<NoteStyle>('journal');
+  const [showStylePicker, setShowStylePicker] = useState(false);
   const notesRef = useRef<HTMLDivElement>(null);
 
   const handleGenerate = async () => {
@@ -87,8 +90,11 @@ export default function NotesPage() {
     }
   };
 
-  const handleExportPdf = () => {
-    window.print();
+  const handleExportPdf = (style?: NoteStyle) => {
+    if (!notesRef.current) return;
+    const contentHtml = notesRef.current.querySelector('article')?.innerHTML || '';
+    exportNotesPdf(contentHtml, style || pdfStyle);
+    setShowStylePicker(false);
   };
 
   const handleCopyMarkdown = () => {
@@ -171,11 +177,40 @@ export default function NotesPage() {
                 📋 复制 Markdown
               </button>
               <button
-                onClick={handleExportPdf}
+                onClick={() => handleExportPdf()}
                 className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                title="使用当前风格导出 PDF"
               >
                 📄 导出 PDF
               </button>
+              {/* Style picker dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowStylePicker(!showStylePicker)}
+                  className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-500 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-400"
+                  title="选择 PDF 风格"
+                >
+                  🎨
+                </button>
+                {showStylePicker && (
+                  <div className="absolute right-0 top-full mt-1 w-44 rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800 z-50">
+                    <button
+                      onClick={() => { setPdfStyle('journal'); setShowStylePicker(false); handleExportPdf('journal'); }}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-slate-50 dark:hover:bg-slate-700 ${pdfStyle === 'journal' ? 'text-blue-600 font-medium' : 'text-slate-600 dark:text-slate-300'}`}
+                    >
+                      ✒️ 手记风
+                      <span className="ml-auto text-[10px] text-slate-400">手写字体 · 笔记本纸</span>
+                    </button>
+                    <button
+                      onClick={() => { setPdfStyle('minimal'); setShowStylePicker(false); handleExportPdf('minimal'); }}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-slate-50 dark:hover:bg-slate-700 border-t border-slate-100 dark:border-slate-700 ${pdfStyle === 'minimal' ? 'text-blue-600 font-medium' : 'text-slate-600 dark:text-slate-300'}`}
+                    >
+                      📐 极简风
+                      <span className="ml-auto text-[10px] text-slate-400">衬线标题 · 大留白</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>
