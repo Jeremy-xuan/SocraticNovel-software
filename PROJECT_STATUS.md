@@ -1,7 +1,7 @@
 # SocraticNovel — 项目状态文档
 
 > 最后更新：2026-07-22
-> 当前版本：Phase 2（练习模式 + 笔记系统 + 学习进度页 + Meta Prompt + 间隔复习 + PDF 导入）
+> 当前版本：Phase 2 ✅ 完成（练习模式 + 笔记系统 + 学习进度页 + Meta Prompt + 间隔复习 + PDF 导入 + 章节大纲）
 
 ## 项目概述
 
@@ -68,6 +68,8 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 | **Notes** | `pages/NotesPage.tsx` | AI 笔记生成 + Anki 导出 + PDF 导出 |
 | **Review** | `pages/ReviewPage.tsx` | SM-2 间隔复习卡片翻转 UI + 键盘快捷键 |
 | **PDF Import** | `pages/PdfImportPage.tsx` | PDF 导入：文件选择 → 预览 → AI 增强 → 保存 |
+| **Chapter Outline** | `components/layout/ChapterOutline.tsx` | LessonPage 左侧课程大纲树 |
+| **Curriculum Parser** | `lib/curriculumParser.ts` | 解析 curriculum.md / progress.md 为结构化数据 |
 | **Agent Log** | `components/debug/AgentLogPanel.tsx` | Agent 活动日志查看器 |
 
 ### 可用工具（AI Agent）
@@ -215,7 +217,7 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 35. **✅ Cargo default-run** — 添加二进制后 cargo run 歧义
     - 修复：Cargo.toml 添加 `default-run = "socratic-novel"`
 
-### Phase 2 续 — ✅ Meta Prompt + 间隔复习 + PDF 导入
+### Phase 2 续 — ✅ Meta Prompt + 间隔复习 + PDF 导入 + 章节大纲
 
 37. **✅ Meta Prompt 引导式 Workspace 创建** — AI 引导用户创建自定义教学系统
     - 新增 `AgentPhase::MetaPrompt`，复用 `run_phase_loop()` 引擎
@@ -247,6 +249,13 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
     - `pdftoppm` 自动 fallback（系统安装 poppler 即可）
     - `scripts/download-pdfium.sh`：从 `bblanchon/pdfium-binaries` 下载
     - Tauri bundling 配置：`tauri.conf.json` resources 打包 libs/
+42. **✅ 左侧栏章节大纲** — LessonPage 左侧动态课程大纲替代硬编码占位
+    - 解析 `curriculum.md`：按 Unit 分组，提取课次/章节/主题/教材文件
+    - 解析 `progress.md`：标记已完成章节 ✅，识别当前章节 📖
+    - `ChapterOutline` 组件：可折叠单元树 + 全局/单元进度条
+    - 当前章节蓝色高亮，自动展开所在单元
+    - 无 curriculum.md 时显示简化状态信息（兼容自定义 workspace）
+    - `curriculumParser.ts`：通用 Markdown 表格解析器
 
 ## 未完成 / 需要改进
 
@@ -261,8 +270,7 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 3. **Workspace 选择器** — 路径现已从 Rust 动态返回（不再硬编码），但 UI 仍无法手动切换 workspace
 4. **✅ 模型选择器** — Settings 页面按提供商显示可选模型列表（Anthropic×4 / OpenAI×4 / DeepSeek×2 / Google×3）；切换提供商自动重置模型；`null` 表示使用 Rust 侧默认值；model 通过 `startAiSession` payload 传入后端
 5. **极简风笔记模板重新设计** — 当前极简风用户不太满意，需要重新设计
-6. **左侧栏章节大纲** — 课堂页面左侧显示章节目录树，快速跳转
-7. **课后自动生成复习卡片** — Post Agent 课后自动向间隔复习队列添加卡片
+6. **课后自动生成复习卡片** — Post Agent 课后自动向间隔复习队列添加卡片
 
 ### 优先级低
 
