@@ -783,6 +783,11 @@ async fn run_phase_loop(
                     phase_label, iteration + 1);
                 // Remove respond_to_student from available tools to prevent repeat calls
                 active_tools.retain(|t| t.name != "respond_to_student");
+
+                // MetaPrompt: stop immediately after respond_to_student (no grace period needed)
+                if matches!(phase, AgentPhase::MetaPrompt) {
+                    should_stop = true;
+                }
             }
 
             let (result, is_error) = tools::execute_tool(workspace_path, tool_name, input);
@@ -1023,7 +1028,9 @@ fn build_meta_prompt_prompt(base: &str) -> String {
     format!(
         "[Desktop App Instructions]\n\
         You MUST use the `respond_to_student` tool to send ALL visible content to the user. \
-        Direct text output is treated as silent internal thinking and will NOT be shown.\n\n\
+        Direct text output is treated as silent internal thinking and will NOT be shown.\n\
+        CRITICAL: Call `respond_to_student` exactly ONCE per turn. After calling it, STOP — do NOT call it again in the same response. \
+        Combine all your visible output into a single respond_to_student call.\n\n\
         [Mode: Meta Prompt — Teaching System Generator]\n\
         You are a SocraticNovel system generator running inside a desktop app.\n\
         Follow the META_PROMPT instructions below to guide the user through creating a complete teaching system.\n\n\
@@ -1038,7 +1045,8 @@ fn build_meta_prompt_prompt(base: &str) -> String {
         - File paths: use forward slashes (e.g., teacher/config/system_core.md).\n\
         - The entry file should be named `CLAUDE.md` (not copilot-instructions.md) — the app reads this file on startup.\n\
         - After generating each major file, tell the user what you created and ask for confirmation before proceeding.\n\
-        - Keep respond_to_student messages concise but informative.\n\n\
+        - Keep respond_to_student messages concise but informative.\n\
+        - You may call write_file multiple times per turn, but call respond_to_student only ONCE at the end.\n\n\
         [META_PROMPT Content]\n\
         {}\n\n\
         {}", META_PROMPT_CONTENT, base
