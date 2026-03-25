@@ -30,15 +30,15 @@ export default function StepSubject({ data, onChange }: Props) {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="mb-1 text-2xl font-bold text-slate-800 dark:text-slate-100">📋 基础信息</h2>
-        <p className="text-sm text-slate-500">告诉我们你想学什么</p>
+        <h2 className="mb-1 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">📋 基础信息</h2>
+        <p className="text-aux text-text-sub">告诉我们你想学什么</p>
       </div>
 
       {/* Subject */}
       <section className="space-y-4">
-        <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">学科与教材</h3>
+        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">学科与教材</h3>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">
+          <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">
             学科名称 <span className="text-red-400">*</span>
           </label>
           <input
@@ -46,11 +46,11 @@ export default function StepSubject({ data, onChange }: Props) {
             value={subject.subjectName}
             onChange={e => setSubject({ subjectName: e.target.value })}
             placeholder="例：AP Physics C: E&M、线性代数、日语 N2"
-            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+            className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">
+          <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">
             教材名称（如有）
           </label>
           <input
@@ -58,21 +58,21 @@ export default function StepSubject({ data, onChange }: Props) {
             value={subject.textbook}
             onChange={e => setSubject({ textbook: e.target.value })}
             placeholder="例：Griffiths Introduction to Electrodynamics 4th"
-            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+            className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
         </div>
         <div className="flex gap-4">
           <div className="flex-1">
-            <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">教材格式</label>
+            <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">教材格式</label>
             <div className="flex flex-wrap gap-2">
               {FORMAT_OPTIONS.map(opt => (
                 <button
                   key={opt.value}
                   onClick={() => setSubject({ textbookFormat: opt.value })}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`rounded-full border px-3 py-1.5 text-tag tracking-[0.04em] font-medium transition-colors ${
                     subject.textbookFormat === opt.value
                       ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/30 dark:text-blue-300'
-                      : 'border-slate-200 text-slate-500 hover:border-slate-300 dark:border-slate-600 dark:text-slate-400'
+                      : 'border-border-light text-text-sub hover:border-border-light dark:border-slate-600 dark:text-text-placeholder'
                   }`}
                 >
                   {opt.label}
@@ -81,7 +81,7 @@ export default function StepSubject({ data, onChange }: Props) {
             </div>
           </div>
           <div className="flex items-end">
-            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+            <label className="flex items-center gap-2 text-aux text-text-sub dark:text-text-main-dark">
               <input
                 type="checkbox"
                 checked={subject.hasWorkbook}
@@ -96,10 +96,10 @@ export default function StepSubject({ data, onChange }: Props) {
 
       {/* Course structure */}
       <section className="space-y-4">
-        <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">课程结构</h3>
+        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">课程结构</h3>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">
+            <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">
               总章节数 <span className="text-red-400">*</span>
             </label>
             <input
@@ -109,22 +109,22 @@ export default function StepSubject({ data, onChange }: Props) {
               value={course.totalChapters || ''}
               onChange={e => setCourse({ totalChapters: parseInt(e.target.value) || 0 })}
               placeholder="如 30"
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+              className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">学习周期</label>
+            <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">学习周期</label>
             <input
               type="text"
               value={course.learningPeriod}
               onChange={e => setCourse({ learningPeriod: e.target.value })}
               placeholder="一学期 / 三个月 / 不确定"
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+              className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
             />
           </div>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">
+          <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">
             已完成的章节（如有）
           </label>
           <input
@@ -132,24 +132,24 @@ export default function StepSubject({ data, onChange }: Props) {
             value={course.completedChapters}
             onChange={e => setCourse({ completedChapters: e.target.value })}
             placeholder="例：Ch.1-5 已完成"
-            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+            className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">主题概览</label>
+          <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">主题概览</label>
           <textarea
             value={course.topicOverview}
             onChange={e => setCourse({ topicOverview: e.target.value })}
             placeholder="简要描述课程涵盖的主要主题..."
             rows={3}
-            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+            className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
         </div>
       </section>
 
       {/* Character count */}
       <section className="space-y-4">
-        <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">角色数量</h3>
+        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">角色数量</h3>
         <div className="grid grid-cols-3 gap-3">
           {CHAR_COUNT_OPTIONS.map(opt => (
             <button
@@ -158,14 +158,14 @@ export default function StepSubject({ data, onChange }: Props) {
                 characterCount: opt.value as 1 | 2 | 3,
                 characters: data.characters.slice(0, opt.value),
               })}
-              className={`rounded-xl border p-4 text-left transition-colors ${
+              className={`rounded-card border p-4 text-left transition-colors ${
                 characterCount === opt.value
                   ? 'border-blue-300 bg-blue-50 dark:border-blue-600 dark:bg-blue-900/20'
-                  : 'border-slate-200 hover:border-slate-300 dark:border-slate-600 dark:hover:border-slate-500'
+                  : 'border-border-light hover:border-border-light dark:border-slate-600 dark:hover:border-slate-500'
               }`}
             >
-              <div className="mb-1 text-lg font-bold text-slate-700 dark:text-slate-200">{opt.label}</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">{opt.desc}</div>
+              <div className="mb-1 text-subtitle font-medium text-text-main dark:text-text-main-dark">{opt.label}</div>
+              <div className="text-tag tracking-[0.04em] text-text-sub dark:text-text-placeholder">{opt.desc}</div>
             </button>
           ))}
         </div>

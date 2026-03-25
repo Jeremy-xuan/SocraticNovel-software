@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { listen } from '@tauri-apps/api/event';
 import { useAppStore } from '../stores/appStore';
 import { useAiAgent } from '../hooks/useAiAgent';
 import ChatMessageBubble from '../components/chat/ChatMessageBubble';
@@ -11,7 +12,6 @@ import type { ChatMessage } from '../types';
 import { readFile, hasSavedSession, restoreAiSession, clearSavedSession } from '../lib/tauri';
 
 function getWorkspacePath(): string {
-  // TODO: resolve from settings/workspace selector
   const path = useAppStore.getState().settings.currentWorkspacePath;
   if (!path) throw new Error('Workspace path not initialized');
   return path;
@@ -23,10 +23,9 @@ export default function LessonPage() {
   const { initSession, sendMessage: aiSendMessage, sendTeaching, runPrep, runPostLesson } = useAiAgent();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [rightPanel, setRightPanel] = useState<'canvas' | 'chat' | 'log'>('canvas');
-  const [useMultiAgent] = useState(true); // Multi-agent mode (future: add UI toggle)
+  const [useMultiAgent] = useState(true);
   const [prepComplete, setPrepComplete] = useState(false);
 
-  // Restore saved session on mount
   useEffect(() => {
     const tryRestore = async () => {
       const workspacePath = getWorkspacePath();
@@ -37,12 +36,10 @@ export default function LessonPage() {
           if (restored) {
             await restoreAiSession(workspacePath);
             setInClass(true);
-            setPrepComplete(true); // Restored sessions skip prep
+            setPrepComplete(true);
           }
         }
-      } catch {
-        // Restore failed — start fresh
-      }
+      } catch { }
     };
     if (!isInClass && messages.length === 0) {
       tryRestore();
@@ -53,14 +50,12 @@ export default function LessonPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Auto-switch to group chat tab when new messages arrive
   useEffect(() => {
     if (groupChatMessages.length > 0) {
       setRightPanel('chat');
     }
   }, [groupChatMessages.length]);
 
-  // Safety net: auto-reset streaming state after 5 min timeout
   useEffect(() => {
     if (!isStreaming) return;
     const timer = setTimeout(() => {
@@ -78,147 +73,90 @@ export default function LessonPage() {
     return () => clearTimeout(timer);
   }, [isStreaming]);
 
+  useEffect(() => {
+    const unlisten = listen<{ count: number }>('review-cards-generated', (event) => {
+      const { count } = event.payload;
+      if (count > 0) {
+        useAppStore.getState().addMessage({
+          id: crypto.randomUUID(),
+          role: 'system',
+          text: `📚 已自动生成 ${count} 张复习卡片`,
+          timestamp: Date.now(),
+        });
+      }
+    });
+    return () => { unlisten.then(fn => fn()); };
+  }, []);
+
   const handleStartClass = async () => {
     setInClass(true);
     const workspacePath = getWorkspacePath();
 
     try {
-      // Check if first launch
       const wechatGroup = await readFile(workspacePath, 'teacher/runtime/wechat_group.md');
       const isFirstLaunch = !wechatGroup.trim() || wechatGroup.includes('（暂无记录）');
 
       if (isFirstLaunch) {
-        // Pre-render prologue from story.md
         try {
           const storyContent = await readFile(workspacePath, 'teacher/story.md');
           const prologueMatch = storyContent.match(/## 序章\n\n([\s\S]*?群聊。)/);
           if (prologueMatch) {
             const sections = prologueMatch[1].split(/\n---\n/).map(s => s.trim()).filter(Boolean);
             for (const section of sections) {
-              addMessage({
-                id: crypto.randomUUID(),
-                role: 'assistant',
-                text: section,
-                timestamp: Date.now(),
-              });
+              addMessage({ id: crypto.randomUUID(), role: 'assistant', text: section, timestamp: Date.now() });
             }
           }
-        } catch {
-          // story.md missing — not fatal
-        }
+        } catch { }
       }
 
-      // Read CLAUDE.md as base system prompt
       const systemPrompt = await readFile(workspacePath, 'CLAUDE.md');
       await initSession(workspacePath, systemPrompt);
 
       if (useMultiAgent) {
-        // ─── Multi-Agent Flow ─────────────────────────────────
-        addMessage({
-          id: crypto.randomUUID(),
-          role: 'system',
-          text: '📋 正在准备课程…（Prep Agent 读取文件中）',
-          timestamp: Date.now(),
-        });
-
-        // Phase 1: Prep Agent generates lesson brief
+        addMessage({ id: crypto.randomUUID(), role: 'system', text: '📋 正在准备课程…（Prep Agent 读取文件中）', timestamp: Date.now() });
         const brief = await runPrep(workspacePath);
-
         if (brief) {
           setPrepComplete(true);
-          addMessage({
-            id: crypto.randomUUID(),
-            role: 'system',
-            text: '✅ 课程准备完成，开始教学',
-            timestamp: Date.now(),
-          });
-
-          // Phase 2: First teaching message
+          addMessage({ id: crypto.randomUUID(), role: 'system', text: '✅ 课程准备完成，开始教学', timestamp: Date.now() });
           if (isFirstLaunch) {
             await sendTeaching('[系统：序章已由应用展示给学习者。请直接生成群聊消息（使用 show_group_chat），然后开始第一节课。]');
           } else {
             await sendTeaching('请开始今天的课程。');
           }
         } else {
-          // Prep failed — fall back to legacy
-          console.warn('Prep phase returned empty brief, falling back to legacy');
-          addMessage({
-            id: crypto.randomUUID(),
-            role: 'system',
-            text: '⚠️ 课程准备失败，使用传统模式启动…',
-            timestamp: Date.now(),
-          });
           setPrepComplete(true);
           if (isFirstLaunch) {
-            await aiSendMessage('[系统：序章已由应用展示给学习者，学习者已读完序章。请直接生成群聊消息（使用 show_group_chat 工具），然后开始第一节课。]');
+            await aiSendMessage('[系统：序章已由应用展示给学习者。请直接生成群聊消息（使用 show_group_chat 工具），然后开始第一节课。]');
           } else {
             await aiSendMessage('请开始今天的课程。');
           }
         }
       } else {
-        // ─── Legacy Flow ──────────────────────────────────────
-        if (!isFirstLaunch) {
-          addMessage({
-            id: crypto.randomUUID(),
-            role: 'system',
-            text: '正在启动课堂...',
-            timestamp: Date.now(),
-          });
-        }
         setPrepComplete(true);
         if (isFirstLaunch) {
-          await aiSendMessage('[系统：序章已由应用展示给学习者，学习者已读完序章。请直接生成群聊消息（使用 show_group_chat 工具），然后开始第一节课。]');
+          await aiSendMessage('[系统：序章已由应用展示给学习者。请直接生成群聊消息（使用 show_group_chat 工具），然后开始第一节课。]');
         } else {
           await aiSendMessage('请开始今天的课程。');
         }
       }
     } catch (err) {
-      addMessage({
-        id: crypto.randomUUID(),
-        role: 'system',
-        text: `❌ 启动失败: ${err}`,
-        timestamp: Date.now(),
-      });
+      addMessage({ id: crypto.randomUUID(), role: 'system', text: `❌ 启动失败: ${err}`, timestamp: Date.now() });
       setInClass(false);
     }
   };
 
   const handleEndClass = async () => {
-    const sysMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'system',
-      text: '正在结束课堂…',
-      timestamp: Date.now(),
-    };
-    addMessage(sysMsg);
+    addMessage({ id: crypto.randomUUID(), role: 'system', text: '正在结束课堂…', timestamp: Date.now() });
     setRightPanel('chat');
 
     if (useMultiAgent) {
-      // Phase 3: Post-Lesson Agent updates files
-      addMessage({
-        id: crypto.randomUUID(),
-        role: 'system',
-        text: '📝 Post-Lesson Agent 正在更新文件…',
-        timestamp: Date.now(),
-      });
-      try {
-        await runPostLesson();
-      } catch (err) {
-        console.warn('Post-lesson phase failed:', err);
-      }
+      addMessage({ id: crypto.randomUUID(), role: 'system', text: '📝 Post-Lesson Agent 正在更新文件…', timestamp: Date.now() });
+      try { await runPostLesson(); } catch (err) { }
     } else {
-      // Legacy: tell AI to end class
-      try {
-        await aiSendMessage('今天到这里吧，下课。');
-      } catch (err) {
-        console.warn('End-of-class AI routine failed:', err);
-      }
+      try { await aiSendMessage('今天到这里吧，下课。'); } catch (err) { }
     }
 
-    // Clear saved session
-    try {
-      await clearSavedSession(getWorkspacePath());
-    } catch {}
+    try { await clearSavedSession(getWorkspacePath()); } catch { }
     useAppStore.getState().clearSession();
     setPrepComplete(false);
   };
@@ -226,170 +164,150 @@ export default function LessonPage() {
   const handleRetry = async () => {
     const lastUserMsg = messages.findLast((m) => m.role === 'user');
     if (lastUserMsg) {
-      if (useMultiAgent && prepComplete) {
-        await sendTeaching(lastUserMsg.text);
-      } else {
-        await aiSendMessage(lastUserMsg.text);
-      }
+      if (useMultiAgent && prepComplete) { await sendTeaching(lastUserMsg.text); }
+      else { await aiSendMessage(lastUserMsg.text); }
     } else {
       await handleStartClass();
     }
   };
 
   const handleSend = async (text: string) => {
-    const msg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      text,
-      timestamp: Date.now(),
-    };
+    const msg: ChatMessage = { id: crypto.randomUUID(), role: 'user', text, timestamp: Date.now() };
     addMessage(msg);
-
-    // Use multi-agent teaching if prep is complete, otherwise legacy
-    if (useMultiAgent && prepComplete) {
-      await sendTeaching(text);
-    } else {
-      await aiSendMessage(text);
-    }
+    if (useMultiAgent && prepComplete) { await sendTeaching(text); }
+    else { await aiSendMessage(text); }
   };
 
   return (
-    <div className="flex h-screen flex-col bg-white dark:bg-slate-900">
-      {/* Top bar */}
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 px-4 dark:border-slate-700">
+    <div className="flex h-screen flex-col bg-bg-light dark:bg-bg-dark font-sans text-text-main dark:text-text-main-dark selection:bg-primary/20">
+
+      {/* Top Header */}
+      <header className="flex h-16 shrink-0 items-center justify-between px-6 lg:px-8">
         <button
           onClick={() => navigate('/')}
-          className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          className="group flex items-center gap-2 text-sm font-medium text-text-sub transition-colors hover:text-text-main dark:text-text-placeholder dark:hover:text-text-main-dark"
         >
-          ← 返回
+          <svg className="h-4 w-4 transition-transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          返回
         </button>
-        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-          AP Physics C: E&M — 课堂
-        </span>
-        <div className="flex gap-2">
+
+        <div className="text-[14px] font-medium tracking-wide flex items-center gap-2">
+          <span className="text-text-main dark:text-text-main-dark">AP Physics C: E&M</span>
+          <span className="text-border-border-light/80 dark:text-border-dark">/</span>
+          <span className="text-text-sub dark:text-text-placeholder">课堂</span>
+        </div>
+
+        <div className="flex items-center gap-3">
           {isInClass && messages.length > 0 && (
             <button
               onClick={() => navigate('/notes')}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+              className="flex h-[32px] items-center justify-center rounded-btn border border-border-light bg-surface-light px-4 text-[13px] font-medium text-text-sub transition-all hover:border-primary hover:text-primary hover:shadow-sm dark:border-border-dark dark:bg-surface-dark dark:text-text-placeholder dark:hover:border-primary"
             >
               📝 笔记
             </button>
           )}
           {!isInClass ? (
-            <button
-              onClick={handleStartClass}
-              className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-            >
+            <button onClick={handleStartClass} className="h-[32px] rounded-btn bg-primary px-5 text-[13px] font-medium tracking-wide text-white transition-all hover:scale-105 hover:bg-[#BF6A4E] shadow-sm">
               开始上课
             </button>
           ) : (
-            <button
-              onClick={handleEndClass}
-              className="rounded-lg bg-red-500 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600"
-            >
+            <button onClick={handleEndClass} className="h-[32px] rounded-btn border border-danger/30 bg-danger/10 px-5 text-[13px] font-medium tracking-wide text-danger transition-all hover:bg-danger hover:text-white">
               下课
             </button>
           )}
         </div>
       </header>
 
-      {/* Three-column layout */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* Main Workspace Area (3 Columns inside a seamless container) */}
+      <div className="flex flex-1 overflow-hidden px-4 pb-4 lg:px-6 lg:pb-6 gap-4">
+
         {/* Left sidebar — chapter outline */}
-        <aside className="flex w-56 shrink-0 flex-col border-r border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-850">
+        <aside className="hidden md:flex w-64 shrink-0 flex-col overflow-y-auto rounded-[24px] bg-surface-light border border-border-light/60 shadow-sm dark:border-border-dark/60 dark:bg-surface-dark">
           <ChapterOutline isInClass={isInClass} />
         </aside>
 
-        {/* Center — chat */}
-        <main className="flex flex-1 flex-col">
-          <div className="flex-1 overflow-y-auto p-4">
-            {messages.length === 0 && !isInClass && (
-              <div className="flex h-full items-center justify-center">
-                <p className="text-slate-400 dark:text-slate-500">
-                  点击「开始上课」进入课堂
-                </p>
-              </div>
-            )}
-            {messages.map((msg) => (
-              <ChatMessageBubble key={msg.id} message={msg} />
-            ))}
-            {/* Retry button — shown when an error occurred */}
-            {isInClass && !isStreaming && hasError && (
-              <div className="my-3 flex justify-center">
-                <button
-                  onClick={handleRetry}
-                  className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-                >
-                  🔄 重试
-                </button>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
+        {/* Center — sophisticated chat container */}
+        <main className="flex flex-1 flex-col overflow-hidden rounded-[24px] bg-surface-light border border-border-light/60 shadow-card dark:border-border-dark/60 dark:bg-surface-dark">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-8">
+            <div className="mx-auto max-w-3xl h-full relative">
+              {messages.length === 0 && !isInClass && (
+                <div className="flex h-full items-center justify-center">
+                  <div className="text-center">
+                    <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-border-light/30 dark:bg-border-dark/30 text-3xl">📖</div>
+                    <h3 className="text-lg font-medium text-text-main dark:text-text-main-dark mb-2">等待上课</h3>
+                    <p className="text-sm text-text-placeholder tracking-wide">点击右上角「开始上课」进入课堂</p>
+                  </div>
+                </div>
+              )}
+              {messages.map((msg) => (
+                <ChatMessageBubble key={msg.id} message={msg} />
+              ))}
+
+              {isInClass && !isStreaming && hasError && (
+                <div className="my-8 flex justify-center">
+                  <button onClick={handleRetry} className="flex h-[38px] items-center gap-2 rounded-btn bg-primary px-6 text-sm font-medium text-white transition-all hover:scale-105 hover:bg-[#BF6A4E] shadow-sm">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    重试
+                  </button>
+                </div>
+              )}
+              <div ref={messagesEndRef} className="h-4" />
+            </div>
           </div>
+          {/* Floating Chat Input injected at bottom */}
           <ChatInput onSend={handleSend} disabled={!isInClass || isStreaming} />
         </main>
 
-        {/* Right panel — canvas or group chat */}
-        <aside className="flex w-80 shrink-0 flex-col border-l border-slate-200 dark:border-slate-700">
-          {/* Panel tabs */}
-          <div className="flex h-10 shrink-0 border-b border-slate-200 dark:border-slate-700">
-            <button
-              onClick={() => setRightPanel('canvas')}
-              className={`flex-1 text-xs font-medium ${
-                rightPanel === 'canvas'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              🎨 白板
-            </button>
-            <button
-              onClick={() => setRightPanel('chat')}
-              className={`flex-1 text-xs font-medium ${
-                rightPanel === 'chat'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              💬 群聊
-            </button>
-            <button
-              onClick={() => setRightPanel('log')}
-              className={`flex-1 text-xs font-medium ${
-                rightPanel === 'log'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              🔧 日志
-            </button>
+        {/* Right panel — Segmented Canvas/Log/Chat */}
+        <aside className="hidden lg:flex w-[340px] shrink-0 flex-col overflow-hidden rounded-[24px] bg-surface-light border border-border-light/60 shadow-sm dark:border-border-dark/60 dark:bg-surface-dark">
+
+          {/* Segmented Control Header */}
+          <div className="p-3 border-b border-border-light/60 dark:border-border-dark/60">
+            <div className="flex h-[40px] items-center rounded-btn bg-bg-light p-1 dark:bg-[#1E1D1A]">
+              {(['canvas', 'chat', 'log'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setRightPanel(tab)}
+                  className={`flex-1 h-full rounded-[6px] text-[13px] font-medium tracking-wide transition-all ${rightPanel === tab
+                      ? 'bg-surface-light text-primary shadow-sm dark:bg-surface-dark'
+                      : 'text-text-placeholder hover:text-text-main dark:hover:text-text-main-dark'
+                    }`}
+                >
+                  {tab === 'canvas' ? '🎨 白板' : tab === 'chat' ? '💬 群聊' : '🔧 日志'}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-3">
+
+          {/* Panel Content */}
+          <div className="flex-1 overflow-y-auto bg-surface-light dark:bg-surface-dark p-4">
             {rightPanel === 'canvas' ? (
               <CanvasPanel items={canvasItems} />
             ) : rightPanel === 'log' ? (
               <AgentLogPanel logs={agentLogs} />
             ) : (
               <div className="flex h-full flex-col">
-                <div className="flex-1 space-y-3 overflow-y-auto p-2">
+                <div className="flex-1 space-y-5 overflow-y-auto px-1 py-2">
                   {groupChatMessages.length === 0 ? (
-                    <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                      群聊消息将在此显示
+                    <div className="flex h-full flex-col items-center justify-center text-text-placeholder opacity-80">
+                      <div className="mb-3 text-3xl">💬</div>
+                      <p className="text-[13px] tracking-wide">群聊暂无新消息</p>
                     </div>
                   ) : (
                     groupChatMessages.map((msg, i) => {
                       const isStudent = msg.sender === '宇轩';
                       return (
                         <div key={i} className={`flex flex-col ${isStudent ? 'items-end' : 'items-start'}`}>
-                          <span className="mb-0.5 text-[10px] text-slate-400">
-                            {msg.sender} {msg.time || ''}
+                          <span className="mb-1.5 px-1 text-[11px] font-medium tracking-wide text-text-placeholder">
+                            {msg.sender} <span className="opacity-60 font-normal ml-1">{msg.time || ''}</span>
                           </span>
                           <div
-                            className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
-                              isStudent
-                                ? 'bg-green-500 text-white'
-                                : 'bg-white text-slate-700 shadow-sm dark:bg-slate-700 dark:text-slate-200'
-                            }`}
+                            className={`max-w-[85%] rounded-[16px] px-4 py-2.5 text-[14px] leading-relaxed shadow-sm ${isStudent
+                                ? 'bg-[#55B37D] text-white rounded-br-[4px]'
+                                : 'bg-[#F9F7F4] text-text-main rounded-bl-[4px] border border-border-light/50 dark:bg-[#2A2825] dark:text-text-main-dark dark:border-border-dark/50'
+                              }`}
                           >
                             {msg.text}
                           </div>
@@ -402,6 +320,7 @@ export default function LessonPage() {
             )}
           </div>
         </aside>
+
       </div>
     </div>
   );

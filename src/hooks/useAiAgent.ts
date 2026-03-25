@@ -128,7 +128,7 @@ export function useAiAgent() {
       const unlisten2 = await onCanvasEvent((event) => {
         const item: CanvasItem = {
           id: crypto.randomUUID(),
-          type: 'svg',
+          type: event.type || 'svg',
           content: event.content,
           title: event.title,
           timestamp: Date.now(),
@@ -306,8 +306,9 @@ export function useAiAgent() {
     }
   }, []);
 
-  /// Initialize practice session: load practice prompt and set up backend
-  const initPractice = useCallback(async (workspacePath: string) => {
+  /// Initialize practice session: load practice prompt and set up backend.
+  /// If customPrompt is provided, use it directly instead of loading from workspace config files.
+  const initPractice = useCallback(async (workspacePath: string, customPrompt?: string) => {
     const settings = useAppStore.getState().settings;
     await startAiSession({
       workspacePath,
@@ -316,16 +317,20 @@ export function useAiAgent() {
       model: settings.aiModel ?? undefined,
     });
 
-    // Load practice-specific prompt from workspace config files
-    try {
-      const core = await readFile(workspacePath, 'teacher/config/system_core.md');
-      const narrative = await readFile(workspacePath, 'teacher/config/system_narrative.md');
-      const practicePrompt = `${core}\n\n${narrative}`;
-      await setPracticePrompt(practicePrompt);
-    } catch {
-      // Fall back — config files may not exist. The Rust backend has a
-      // comprehensive built-in practice prompt that will be prepended.
-      await setPracticePrompt('');
+    if (customPrompt !== undefined) {
+      await setPracticePrompt(customPrompt);
+    } else {
+      // Load practice-specific prompt from workspace config files
+      try {
+        const core = await readFile(workspacePath, 'teacher/config/system_core.md');
+        const narrative = await readFile(workspacePath, 'teacher/config/system_narrative.md');
+        const practicePrompt = `${core}\n\n${narrative}`;
+        await setPracticePrompt(practicePrompt);
+      } catch {
+        // Fall back — config files may not exist. The Rust backend has a
+        // comprehensive built-in practice prompt that will be prepended.
+        await setPracticePrompt('');
+      }
     }
   }, []);
 

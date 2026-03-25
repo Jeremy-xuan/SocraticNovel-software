@@ -57,15 +57,15 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-white dark:bg-slate-900">
-      <header className="flex h-12 shrink-0 items-center border-b border-slate-200 px-4 dark:border-slate-700">
+    <div className="flex h-screen flex-col bg-surface-light dark:bg-bg-dark">
+      <header className="flex h-12 shrink-0 items-center border-b border-border-light px-4 dark:border-border-dark">
         <button
           onClick={() => navigate('/')}
-          className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400"
+          className="text-aux text-text-sub hover:text-text-main dark:text-text-placeholder"
         >
           ← 返回
         </button>
-        <span className="ml-4 text-sm font-medium text-slate-700 dark:text-slate-200">
+        <span className="ml-4 text-aux font-medium text-text-main dark:text-text-main-dark">
           设置
         </span>
       </header>
@@ -73,10 +73,10 @@ export default function SettingsPage() {
       <div className="mx-auto w-full max-w-lg flex-1 overflow-y-auto p-8">
         {/* AI Provider */}
         <section className="mb-8">
-          <h2 className="mb-2 text-lg font-semibold text-slate-800 dark:text-slate-100">
+          <h2 className="mb-2 text-subtitle font-medium text-text-main dark:text-text-main-dark">
             默认 AI 提供商
           </h2>
-          <p className="mb-4 text-xs text-slate-400">
+          <p className="mb-4 text-tag tracking-[0.04em] text-text-placeholder">
             上课时将使用选中的提供商。请确保该提供商已配置 API Key。
           </p>
           <div className="grid grid-cols-2 gap-3">
@@ -84,11 +84,10 @@ export default function SettingsPage() {
               <button
                 key={provider}
                 onClick={() => updateSettings({ aiProvider: provider, aiModel: null })}
-                className={`rounded-lg border p-3 text-left text-sm transition-colors ${
-                  settings.aiProvider === provider
+                className={`rounded-btn border p-3 text-left text-aux transition-colors ${settings.aiProvider === provider
                     ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300'
-                }`}
+                    : 'border-border-light text-text-sub hover:bg-bg-light dark:border-border-dark dark:text-text-main-dark'
+                  }`}
               >
                 {provider === 'anthropic' && '🟣 Anthropic (Claude)'}
                 {provider === 'openai' && '🟢 OpenAI'}
@@ -101,10 +100,10 @@ export default function SettingsPage() {
 
         {/* Model */}
         <section className="mb-8">
-          <h2 className="mb-2 text-lg font-semibold text-slate-800 dark:text-slate-100">
+          <h2 className="mb-2 text-subtitle font-medium text-text-main dark:text-text-main-dark">
             模型
           </h2>
-          <p className="mb-3 text-xs text-slate-400">
+          <p className="mb-3 text-tag tracking-[0.04em] text-text-placeholder">
             留空则使用各提供商的默认推荐模型。
           </p>
           <div className="flex flex-col gap-2">
@@ -112,15 +111,14 @@ export default function SettingsPage() {
               <button
                 key={m.id}
                 onClick={() => updateSettings({ aiModel: m.default && settings.aiModel === null ? null : m.id })}
-                className={`flex items-center justify-between rounded-lg border px-4 py-2.5 text-left text-sm transition-colors ${
-                  (settings.aiModel === m.id) || (settings.aiModel === null && m.default)
+                className={`flex items-center justify-between rounded-btn border px-4 py-2.5 text-left text-aux transition-colors ${(settings.aiModel === m.id) || (settings.aiModel === null && m.default)
                     ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300'
-                }`}
+                    : 'border-border-light text-text-sub hover:bg-bg-light dark:border-border-dark dark:text-text-main-dark'
+                  }`}
               >
                 <span>{m.label}</span>
                 {m.default && (
-                  <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-400 dark:bg-slate-700 dark:text-slate-400">
+                  <span className="ml-2 rounded bg-bg-light px-1.5 py-0.5 text-tag tracking-[0.04em] text-text-placeholder dark:bg-slate-700 dark:text-text-placeholder">
                     默认
                   </span>
                 )}
@@ -131,11 +129,11 @@ export default function SettingsPage() {
 
         {/* API Key */}
         <section className="mb-8">
-          <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-slate-100">
+          <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
             API Key
           </h2>
           {keyExists && (
-            <p className="mb-3 text-sm text-green-600 dark:text-green-400">
+            <p className="mb-3 text-aux text-green-600 dark:text-green-400">
               ✓ 已保存 {settings.aiProvider} API Key（存储在 macOS Keychain 中）
             </p>
           )}
@@ -145,35 +143,34 @@ export default function SettingsPage() {
               value={apiKeyInput}
               onChange={(e) => setApiKeyInput(e.target.value)}
               placeholder={keyExists ? '输入新 Key 覆盖...' : `输入 ${settings.aiProvider} API Key...`}
-              className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              className="flex-1 rounded-btn border border-border-light bg-surface-light px-4 py-2 text-aux text-text-main placeholder-text-placeholder focus:bg-surface-light focus:border-blue-500 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-main-dark"
             />
             <button
               onClick={handleSaveKey}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-btn bg-primary px-4 py-2 text-aux font-medium text-white hover:bg-[#BF6A4E] h-[38px]"
             >
               {saved ? '✓ 已保存' : '保存'}
             </button>
           </div>
-          <p className="mt-2 text-xs text-slate-400">
+          <p className="mt-2 text-tag tracking-[0.04em] text-text-placeholder">
             密钥将安全存储在 macOS Keychain 中
           </p>
         </section>
 
         {/* Theme */}
         <section className="mb-8">
-          <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-slate-100">
-            主题
+          <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
+            主题配色
           </h2>
           <div className="flex gap-3">
             {(['light', 'dark', 'system'] as const).map((theme) => (
               <button
                 key={theme}
                 onClick={() => updateSettings({ theme })}
-                className={`rounded-lg border px-4 py-2 text-sm transition-colors ${
-                  settings.theme === theme
+                className={`rounded-btn border px-4 py-2 text-aux transition-colors ${settings.theme === theme
                     ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300'
-                }`}
+                    : 'border-border-light text-text-sub hover:bg-bg-light dark:border-border-dark dark:text-text-main-dark'
+                  }`}
               >
                 {theme === 'light' && '☀️ 浅色'}
                 {theme === 'dark' && '🌙 深色'}
@@ -183,13 +180,37 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* Layout Theme */}
+        <section className="mb-8">
+          <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
+            首页布局风格
+          </h2>
+          <div className="flex gap-4">
+            {(['cards', 'input'] as const).map((layout) => (
+              <button
+                key={layout}
+                onClick={() => updateSettings({ homeLayout: layout })}
+                className={`flex-1 flex flex-col items-center justify-center rounded-btn border p-5 transition-all outline-none ${(settings.homeLayout || 'cards') === layout
+                    ? 'border-primary bg-primary/5 text-primary dark:bg-primary/10 shadow-sm ring-1 ring-primary/20'
+                    : 'border-border-light text-text-sub hover:bg-black/5 dark:border-border-dark dark:text-text-placeholder dark:hover:bg-white/5'
+                  }`}
+              >
+                <div className="font-medium text-[15px] mb-1.5">{layout === 'cards' ? '手绘卡片版' : '极简长条版'}</div>
+                <div className="text-[12px] opacity-70 tracking-wide">
+                  {layout === 'cards' ? '插画风格与古典衬线排版' : 'Claude 纯净原生交互范式'}
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+
         {/* Workspace */}
         <section>
-          <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-slate-100">
+          <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
             Workspace
           </h2>
-          <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+          <div className="rounded-btn border border-border-light p-4 dark:border-border-dark">
+            <p className="text-aux text-text-sub dark:text-text-placeholder">
               当前: {settings.currentWorkspacePath ?? '加载中...'}
             </p>
           </div>

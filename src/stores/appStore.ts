@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ChatMessage, CanvasItem, SessionType, AppSettings, GroupChatMessage, AgentLogEntry, ReviewCard, ReviewStats } from '../types';
+import type { ChatMessage, CanvasItem, SessionType, AppSettings, GroupChatMessage, AgentLogEntry, ReviewCard, ReviewStats, Annotation } from '../types';
 
 interface AppState {
   // Session
@@ -14,6 +14,9 @@ interface AppState {
 
   // Canvas
   canvasItems: CanvasItem[];
+
+  // Canvas annotations
+  annotations: Record<string, Annotation[]>;
 
   // Group chat
   groupChatMessages: GroupChatMessage[];
@@ -45,6 +48,13 @@ interface AppState {
   addCanvasItem: (item: CanvasItem) => void;
   clearCanvas: () => void;
 
+  // Actions — Annotations
+  addAnnotation: (itemId: string, annotation: Annotation) => void;
+  removeAnnotation: (itemId: string, annotationId: string) => void;
+  undoAnnotation: (itemId: string) => void;
+  clearAnnotations: (itemId: string) => void;
+  loadAnnotationsFromStorage: () => void;
+
   // Actions — Group Chat
   addGroupChatMessages: (msgs: GroupChatMessage[]) => void;
   clearGroupChat: () => void;
@@ -69,12 +79,17 @@ interface AppState {
 
 // Load persisted settings from localStorage
 function loadPersistedSettings(): Partial<AppSettings> {
-  try {
-    const saved = localStorage.getItem('socratic-novel-settings');
-    return saved ? JSON.parse(saved) : {};
-  } catch {
-    return {};
+  const saved = localStorage.getItem('socratic-settings');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (!parsed.homeLayout) parsed.homeLayout = 'cards';
+      return parsed;
+    } catch {
+      return {};
+    }
   }
+  return {};
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -86,12 +101,14 @@ export const useAppStore = create<AppState>((set) => ({
   thinkingStatus: '',
   hasError: false,
   canvasItems: [],
+  annotations: {},
   groupChatMessages: [],
   agentLogs: [],
   reviewCards: [],
   reviewStats: { totalCards: 0, dueToday: 0, mastered: 0, reviewedToday: 0 },
   settings: {
-    theme: 'light',
+    theme: 'system',
+    homeLayout: 'cards',
     currentWorkspaceId: null,
     currentWorkspacePath: null,
     aiProvider: 'anthropic',
@@ -124,6 +141,51 @@ export const useAppStore = create<AppState>((set) => ({
   // Canvas
   addCanvasItem: (item) => set((state) => ({ canvasItems: [...state.canvasItems, item] })),
   clearCanvas: () => set({ canvasItems: [] }),
+
+  // Annotations
+  addAnnotation: (itemId, annotation) =>
+    set((state) => {
+      const current = state.annotations[itemId] || [];
+      const updated = { ...state.annotations, [itemId]: [...current, annotation] };
+      try { localStorage.setItem(`canvas-annotations-${itemId}`, JSON.stringify(updated[itemId])); } catch { /* ignore */ }
+      return { annotations: updated };
+    }),
+  removeAnnotation: (itemId, annotationId) =>
+    set((state) => {
+      const current = state.annotations[itemId] || [];
+      const filtered = current.filter((a) => a.id !== annotationId);
+      const updated = { ...state.annotations, [itemId]: filtered };
+      try { localStorage.setItem(`canvas-annotations-${itemId}`, JSON.stringify(filtered)); } catch { /* ignore */ }
+      return { annotations: updated };
+    }),
+  undoAnnotation: (itemId) =>
+    set((state) => {
+      const current = state.annotations[itemId] || [];
+      if (current.length === 0) return state;
+      const undone = current.slice(0, -1);
+      const updated = { ...state.annotations, [itemId]: undone };
+      try { localStorage.setItem(`canvas-annotations-${itemId}`, JSON.stringify(undone)); } catch { /* ignore */ }
+      return { annotations: updated };
+    }),
+  clearAnnotations: (itemId) =>
+    set((state) => {
+      const updated = { ...state.annotations, [itemId]: [] };
+      try { localStorage.removeItem(`canvas-annotations-${itemId}`); } catch { /* ignore */ }
+      return { annotations: updated };
+    }),
+  loadAnnotationsFromStorage: () => {
+    const allAnnotations: Record<string, Annotation[]> = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('canvas-annotations-')) {
+        const itemId = key.replace('canvas-annotations-', '');
+        try {
+          allAnnotations[itemId] = JSON.parse(localStorage.getItem(key) || '[]');
+        } catch { /* ignore */ }
+      }
+    }
+    set({ annotations: allAnnotations });
+  },
 
   // Group Chat
   addGroupChatMessages: (msgs) =>

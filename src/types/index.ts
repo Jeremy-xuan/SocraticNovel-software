@@ -74,6 +74,22 @@ export interface CanvasItem {
   timestamp: number;
 }
 
+// Canvas annotations
+export type AnnotationType = 'pen' | 'text' | 'arrow' | 'highlight';
+
+export interface Annotation {
+  id: string;
+  type: AnnotationType;
+  color: string;
+  points?: { x: number; y: number }[];
+  startPoint?: { x: number; y: number };
+  endPoint?: { x: number; y: number };
+  text?: string;
+  position?: { x: number; y: number };
+  fontSize?: number;
+  strokeWidth?: number;
+}
+
 // Group chat message (WeChat-style)
 export interface GroupChatMessage {
   sender: string;
@@ -95,6 +111,7 @@ export interface AgentLogEntry {
 // Settings
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
+  homeLayout?: 'input' | 'cards';
   currentWorkspaceId: string | null;
   currentWorkspacePath: string | null;
   aiProvider: 'anthropic' | 'openai' | 'google' | 'deepseek' | 'custom';
@@ -186,11 +203,11 @@ export type TeachingStyle =
   | 'companion';        // 陪伴鼓励型
 
 export const TEACHING_STYLE_LABELS: Record<TeachingStyle, { label: string; desc: string; icon: string }> = {
-  'theory-precise':    { label: '理论精确型', desc: '追问到底，不接受模糊答案', icon: '🔬' },
+  'theory-precise': { label: '理论精确型', desc: '追问到底，不接受模糊答案', icon: '🔬' },
   'intuition-analogy': { label: '直觉类比型', desc: '用比喻建立直觉，节奏温暖', icon: '💡' },
-  'engineering':       { label: '工程实战型', desc: '先给全局地图，像 debug 一样排查', icon: '🔧' },
-  'philosophy':        { label: '哲学引导型', desc: '从根本问题出发，连接更大世界观', icon: '🌌' },
-  'companion':         { label: '陪伴鼓励型', desc: '重视情绪，根据状态调整节奏', icon: '🤝' },
+  'engineering': { label: '工程实战型', desc: '先给全局地图，像 debug 一样排查', icon: '🔧' },
+  'philosophy': { label: '哲学引导型', desc: '从根本问题出发，连接更大世界观', icon: '🌌' },
+  'companion': { label: '陪伴鼓励型', desc: '重视情绪，根据状态调整节奏', icon: '🤝' },
 };
 
 export type CharacterSource = 'preset' | 'custom-name' | 'original';

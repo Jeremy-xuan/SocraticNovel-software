@@ -77,22 +77,22 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950">
+    <div className="flex h-screen bg-bg-light dark:bg-bg-dark">
       {/* Left sidebar — step indicator */}
-      <div className="flex w-56 flex-col border-r border-slate-200 bg-white/50 p-6 dark:border-slate-700 dark:bg-slate-800/50">
-        <h2 className="mb-6 text-lg font-bold text-slate-800 dark:text-slate-100">
+      <div className="flex w-56 flex-col border-r border-border-light bg-surface-light/50 p-6 dark:border-border-dark dark:bg-surface-dark/50">
+        <h2 className="mb-6 text-subtitle font-medium text-text-main dark:text-text-main-dark">
           🔨 创建教学系统
         </h2>
         <div className="space-y-2">
           {STEPS.map(s => (
             <div
               key={s.id}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+              className={`flex items-center gap-3 rounded-btn px-3 py-2 text-aux transition-colors ${
                 s.id === step
                   ? 'bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
                   : s.id < step
                     ? 'text-green-600 dark:text-green-400'
-                    : 'text-slate-400 dark:text-slate-500'
+                    : 'text-text-placeholder dark:text-text-sub'
               }`}
             >
               <span className="text-base">{s.id < step ? '✅' : s.icon}</span>
@@ -103,7 +103,7 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
         <div className="mt-auto">
           <button
             onClick={onBack}
-            className="text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            className="text-aux text-text-placeholder hover:text-text-sub dark:hover:text-text-main-dark"
           >
             ← 返回首页
           </button>
@@ -123,20 +123,20 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
         </div>
 
         {/* Bottom nav */}
-        <div className="flex items-center justify-between border-t border-slate-200 bg-white px-8 py-4 dark:border-slate-700 dark:bg-slate-800">
+        <div className="flex items-center justify-between border-t border-border-light bg-surface-light px-8 py-4 dark:border-border-dark dark:bg-surface-dark">
           <button
             onClick={handlePrev}
-            className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+            className="rounded-btn border border-border-light px-5 py-2.5 text-aux font-medium text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-main-dark dark:hover:bg-slate-700"
           >
             ← {step === 1 ? '返回' : '上一步'}
           </button>
-          <span className="text-sm text-slate-400">
+          <span className="text-aux text-text-placeholder">
             {step} / {STEPS.length}
           </span>
           <button
             onClick={handleNext}
             disabled={!canNext()}
-            className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40"
+            className="rounded-btn bg-primary px-6 py-2.5 text-aux font-medium text-white hover:bg-[#BF6A4E] disabled:opacity-40 h-[38px]"
           >
             {step === 5 ? '🚀 开始生成' : '下一步 →'}
           </button>

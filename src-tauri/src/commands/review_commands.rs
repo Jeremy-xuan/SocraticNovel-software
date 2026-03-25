@@ -43,13 +43,13 @@ pub struct AddCardsPayload {
     pub cards: Vec<NewCard>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct NewCard {
-    #[serde(rename = "knowledgePoint")]
+    #[serde(rename = "knowledgePoint", alias = "knowledge_point")]
     pub knowledge_point: String,
-    #[serde(rename = "sourceChapter")]
+    #[serde(rename = "sourceChapter", alias = "source_chapter")]
     pub source_chapter: String,
-    #[serde(rename = "cardType")]
+    #[serde(rename = "cardType", alias = "card_type")]
     pub card_type: String,
     pub front: String,
     pub back: String,
@@ -207,13 +207,13 @@ pub fn update_review_card(payload: UpdateCardPayload) -> Result<ReviewCard, Stri
     Ok(updated)
 }
 
-#[tauri::command]
-pub fn add_review_cards(payload: AddCardsPayload) -> Result<usize, String> {
-    let mut cards = load_cards(&payload.workspace_path);
+/// Core logic for adding review cards (used by both Tauri command and internal callers)
+pub fn add_review_cards_internal(workspace_path: &str, new_cards: Vec<NewCard>) -> Result<usize, String> {
+    let mut cards = load_cards(workspace_path);
     let today = today();
-    let count = payload.cards.len();
+    let count = new_cards.len();
 
-    for new_card in payload.cards {
+    for new_card in new_cards {
         let id = format!("rc-{}", uuid::Uuid::new_v4());
         cards.push(ReviewCard {
             id,
@@ -230,6 +230,11 @@ pub fn add_review_cards(payload: AddCardsPayload) -> Result<usize, String> {
         });
     }
 
-    save_cards(&payload.workspace_path, &cards)?;
+    save_cards(workspace_path, &cards)?;
     Ok(count)
+}
+
+#[tauri::command]
+pub fn add_review_cards(payload: AddCardsPayload) -> Result<usize, String> {
+    add_review_cards_internal(&payload.workspace_path, payload.cards)
 }

@@ -35,26 +35,36 @@ export default function ChatInput({ onSend, disabled }: Props) {
   };
 
   return (
-    <div className="shrink-0 border-t border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
-      <div className="flex items-end gap-2">
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onInput={handleInput}
-          disabled={disabled}
-          placeholder={disabled ? '等待 AI 回复...' : '输入消息...（Enter 发送，Shift+Enter 换行）'}
-          rows={1}
-          className="flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:border-blue-400 focus:bg-white focus:outline-none disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:bg-slate-800"
-        />
-        <button
-          onClick={handleSubmit}
-          disabled={disabled || !text.trim()}
-          className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-40"
-        >
-          发送
-        </button>
+    <div className="shrink-0 w-full px-4 sm:px-8 pb-8 pt-2 bg-gradient-to-t from-surface-light via-surface-light to-transparent dark:from-surface-dark dark:via-surface-dark">
+      <div className="mx-auto w-full max-w-3xl">
+        <div className="relative flex items-end rounded-[24px] bg-surface-light shadow-float border border-border-light dark:border-border-dark dark:bg-[#1E1D1A] transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary">
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onInput={handleInput}
+            disabled={disabled}
+            placeholder={disabled ? '等待 AI 回复...' : '输入消息...（Enter 发送，Shift+Enter 换行）'}
+            rows={1}
+            className="flex-1 max-h-[150px] resize-none bg-transparent px-6 py-4 text-[15px] leading-relaxed text-text-main placeholder-text-placeholder focus:outline-none disabled:opacity-50 dark:text-text-main-dark"
+          />
+          <div className="shrink-0 p-2 flex items-center justify-center">
+            <button
+              onClick={handleSubmit}
+              disabled={disabled || !text.trim()}
+              className="flex h-[36px] w-[36px] items-center justify-center rounded-full bg-primary text-white transition-all duration-200 hover:scale-105 hover:bg-[#BF6A4E] disabled:opacity-30 disabled:hover:scale-100 disabled:hover:bg-primary shadow-sm"
+              aria-label="Send message"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div className="mt-3 text-center text-[11px] tracking-wide text-text-placeholder">
+          AI 可能会犯错。核实重要信息。
+        </div>
       </div>
     </div>
   );

@@ -35,6 +35,14 @@ export async function initBuiltinWorkspace(): Promise<Workspace> {
   return invoke('init_builtin_workspace');
 }
 
+export async function deleteWorkspace(workspaceId: string): Promise<void> {
+  return invoke('delete_workspace', { workspaceId });
+}
+
+export async function updateWorkspaceMeta(workspaceId: string): Promise<void> {
+  return invoke('update_workspace_meta', { workspaceId });
+}
+
 // Settings
 export async function getApiKey(provider: string): Promise<string | null> {
   return invoke('get_api_key', { provider });

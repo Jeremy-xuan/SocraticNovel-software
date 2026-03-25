@@ -22,7 +22,12 @@ use std::io::{self, Write};
 
 const MAX_LOOPS: usize = 10;
 const GRACE_AFTER_RESPOND: usize = 1;
-const WORKSPACE: &str = "/Users/wujunjie/socratic-novel-软件开发/workspaces/ap-physics-em";
+fn default_workspace() -> String {
+    dirs::home_dir()
+        .map(|h| h.join("socratic-novel-软件开发").join("workspaces").join("ap-physics-em"))
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|| "./workspaces/ap-physics-em".to_string())
+}
 
 #[tokio::main]
 async fn main() {
@@ -177,7 +182,8 @@ async fn run_practice_loop(
                     is_error: None,
                 });
             } else {
-                let (result, is_error) = tools::execute_tool(WORKSPACE, tool_name, input);
+                let workspace = default_workspace();
+                let (result, is_error) = tools::execute_tool(&workspace, tool_name, input);
                 println!("    → {}", truncate(&result, 100));
                 tool_results.push(ContentBlock::ToolResult {
                     tool_use_id: tool_id.clone(),

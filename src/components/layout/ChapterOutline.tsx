@@ -92,17 +92,17 @@ export default function ChapterOutline({ isInClass }: Props) {
   if (!outline || outline.units.length === 0) {
     return (
       <div className="p-4">
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <h3 className="mb-2 text-tag tracking-[0.04em] font-medium uppercase tracking-wider text-text-placeholder">
           课堂信息
         </h3>
-        <div className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-          <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-800">
+        <div className="space-y-2 text-aux text-text-sub dark:text-text-main-dark">
+          <div className="rounded-btn bg-surface-light p-3 shadow-card dark:bg-surface-dark">
             <p className="font-medium">状态</p>
-            <p className={isInClass ? 'text-green-500' : 'text-slate-400'}>
+            <p className={isInClass ? 'text-green-500' : 'text-text-placeholder'}>
               {isInClass ? '🟢 上课中' : '⚪ 未开始'}
             </p>
           </div>
-          <p className="text-xs text-slate-400">暂无课程大纲</p>
+          <p className="text-tag tracking-[0.04em] text-text-placeholder">暂无课程大纲</p>
         </div>
       </div>
     );
@@ -117,16 +117,16 @@ export default function ChapterOutline({ isInClass }: Props) {
   return (
     <div className="flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="shrink-0 border-b border-slate-200 p-3 dark:border-slate-700">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <div className="shrink-0 border-b border-border-light p-3 dark:border-border-dark">
+        <h3 className="text-tag tracking-[0.04em] font-medium uppercase tracking-wider text-text-placeholder">
           章节大纲
         </h3>
         <div className="mt-1 flex items-center gap-2">
           <span className={`inline-block h-2 w-2 rounded-full ${isInClass ? 'bg-green-400' : 'bg-slate-300'}`} />
-          <span className="text-xs text-slate-500 dark:text-slate-400">
+          <span className="text-tag tracking-[0.04em] text-text-sub dark:text-text-placeholder">
             {isInClass ? '上课中' : '未开始'}
           </span>
-          <span className="ml-auto text-xs text-slate-400">
+          <span className="ml-auto text-tag tracking-[0.04em] text-text-placeholder">
             {completedChapters}/{totalChapters}
           </span>
         </div>
@@ -175,20 +175,20 @@ function UnitSection({
     <div className="mb-1">
       <button
         onClick={onToggle}
-        className="flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-xs font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+        className="flex w-full items-center gap-1.5 rounded-btn px-2 py-1.5 text-left text-tag tracking-[0.04em] font-medium text-text-sub hover:bg-bg-light dark:text-text-main-dark dark:hover:bg-slate-800"
       >
         <span className={`transition-transform ${expanded ? 'rotate-90' : ''}`}>▸</span>
         <span className={allDone ? 'text-green-500' : ''}>
           U{unit.unitNumber}
         </span>
         <span className="truncate flex-1">{unit.title}</span>
-        <span className="shrink-0 text-[10px] text-slate-400">
+        <span className="shrink-0 text-[10px] text-text-placeholder">
           {completedCount}/{unit.chapters.length}
         </span>
       </button>
 
       {expanded && (
-        <div className="ml-2 border-l border-slate-200 pl-2 dark:border-slate-700">
+        <div className="ml-2 border-l border-border-light pl-2 dark:border-border-dark">
           {unit.chapters.map((ch, idx) => (
             <ChapterItem
               key={`${unit.unitId}-${idx}`}
@@ -221,10 +221,10 @@ function ChapterItem({
 
   return (
     <div
-      className={`flex items-start gap-1.5 rounded-md px-2 py-1 text-xs ${
+      className={`flex items-start gap-1.5 rounded-btn px-2 py-1 text-tag tracking-[0.04em] ${
         isCurrent
           ? 'bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-          : 'text-slate-500 dark:text-slate-400'
+          : 'text-text-sub dark:text-text-placeholder'
       } ${chapter.status === 'completed' ? 'opacity-60' : ''}`}
     >
       <span className="mt-px shrink-0">{statusIcon}</span>

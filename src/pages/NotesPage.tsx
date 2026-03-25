@@ -155,16 +155,16 @@ export default function NotesPage() {
   });
 
   return (
-    <div className="flex h-screen flex-col bg-white dark:bg-slate-900">
+    <div className="flex h-screen flex-col bg-surface-light dark:bg-bg-dark">
       {/* Header — hidden when printing */}
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 px-4 dark:border-slate-700 print:hidden">
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-border-light px-4 dark:border-border-dark print:hidden">
         <button
           onClick={() => navigate(-1)}
-          className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          className="text-aux text-text-sub hover:text-text-main dark:text-text-placeholder dark:hover:text-text-main-dark"
         >
           ← 返回
         </button>
-        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+        <span className="text-aux font-medium text-text-main dark:text-text-main-dark">
           📝 学习笔记
         </span>
         <div className="flex gap-2">
@@ -172,13 +172,13 @@ export default function NotesPage() {
             <>
               <button
                 onClick={handleCopyMarkdown}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                className="rounded-btn border border-border-light px-3 py-1.5 text-tag tracking-[0.04em] text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-main-dark dark:hover:bg-slate-700"
               >
                 📋 复制 Markdown
               </button>
               <button
                 onClick={() => handleExportPdf()}
-                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                className="rounded-btn bg-primary px-3 py-1.5 text-tag tracking-[0.04em] font-medium text-white hover:bg-[#BF6A4E] h-[38px]"
                 title="使用当前风格导出 PDF"
               >
                 📄 导出 PDF
@@ -187,26 +187,26 @@ export default function NotesPage() {
               <div className="relative">
                 <button
                   onClick={() => setShowStylePicker(!showStylePicker)}
-                  className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-500 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-400"
+                  className="rounded-btn border border-border-light px-2 py-1.5 text-tag tracking-[0.04em] text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-placeholder"
                   title="选择 PDF 风格"
                 >
                   🎨
                 </button>
                 {showStylePicker && (
-                  <div className="absolute right-0 top-full mt-1 w-44 rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800 z-50">
+                  <div className="absolute right-0 top-full mt-1 w-44 rounded-btn border border-border-light bg-surface-light shadow-lg dark:border-slate-600 dark:bg-surface-dark z-50">
                     <button
                       onClick={() => { setPdfStyle('journal'); setShowStylePicker(false); handleExportPdf('journal'); }}
-                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-slate-50 dark:hover:bg-slate-700 ${pdfStyle === 'journal' ? 'text-blue-600 font-medium' : 'text-slate-600 dark:text-slate-300'}`}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-tag tracking-[0.04em] hover:bg-bg-light dark:hover:bg-slate-700 ${pdfStyle === 'journal' ? 'text-primary font-medium' : 'text-text-sub dark:text-text-main-dark'}`}
                     >
                       ✒️ 手记风
-                      <span className="ml-auto text-[10px] text-slate-400">手写字体 · 笔记本纸</span>
+                      <span className="ml-auto text-[10px] text-text-placeholder">手写字体 · 笔记本纸</span>
                     </button>
                     <button
                       onClick={() => { setPdfStyle('minimal'); setShowStylePicker(false); handleExportPdf('minimal'); }}
-                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-slate-50 dark:hover:bg-slate-700 border-t border-slate-100 dark:border-slate-700 ${pdfStyle === 'minimal' ? 'text-blue-600 font-medium' : 'text-slate-600 dark:text-slate-300'}`}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-tag tracking-[0.04em] hover:bg-bg-light dark:hover:bg-slate-700 border-t border-slate-100 dark:border-border-dark ${pdfStyle === 'minimal' ? 'text-primary font-medium' : 'text-text-sub dark:text-text-main-dark'}`}
                     >
                       📐 极简风
-                      <span className="ml-auto text-[10px] text-slate-400">衬线标题 · 大留白</span>
+                      <span className="ml-auto text-[10px] text-text-placeholder">衬线标题 · 大留白</span>
                     </button>
                   </div>
                 )}
@@ -221,16 +221,16 @@ export default function NotesPage() {
         {!notes && !loading && !error && (
           <div className="flex h-full flex-col items-center justify-center gap-4">
             <div className="text-center">
-              <p className="mb-2 text-lg font-medium text-slate-700 dark:text-slate-200">
+              <p className="mb-2 text-subtitle font-medium text-text-main dark:text-text-main-dark">
                 生成本次课堂的复习笔记
               </p>
-              <p className="mb-6 text-sm text-slate-400">
+              <p className="mb-6 text-aux text-text-placeholder">
                 AI 将分析对话内容，提取核心概念、公式、解题方法和易错点
               </p>
             </div>
             <button
               onClick={handleGenerate}
-              className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-medium text-white shadow-md hover:bg-blue-700 transition-colors"
+              className="rounded-btn bg-primary px-6 py-3 text-aux font-medium text-white shadow-card hover:bg-[#BF6A4E] transition-colors h-[38px]"
             >
               📝 生成笔记
             </button>
@@ -240,7 +240,7 @@ export default function NotesPage() {
         {loading && (
           <div className="flex h-full flex-col items-center justify-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-            <p className="text-sm text-slate-500 animate-pulse">
+            <p className="text-aux text-text-sub animate-pulse">
               正在分析对话并生成笔记…（约 15-30 秒）
             </p>
           </div>
@@ -248,10 +248,10 @@ export default function NotesPage() {
 
         {error && (
           <div className="flex h-full flex-col items-center justify-center gap-4">
-            <p className="text-sm text-red-500">❌ {error}</p>
+            <p className="text-aux text-danger">❌ {error}</p>
             <button
               onClick={handleGenerate}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+              className="rounded-btn bg-primary px-4 py-2 text-aux text-white hover:bg-[#BF6A4E] h-[38px]"
             >
               🔄 重试
             </button>
@@ -261,15 +261,15 @@ export default function NotesPage() {
         {notes && (
           <div ref={notesRef} className="mx-auto max-w-3xl px-8 py-8 print:max-w-none print:px-12 print:py-0">
             {/* Title — visible in both screen and print */}
-            <div className="mb-8 border-b border-slate-200 pb-6 dark:border-slate-700 print:border-black">
-              <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 print:text-black">
+            <div className="mb-8 border-b border-border-light pb-6 dark:border-border-dark print:border-black">
+              <h1 className="text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark print:text-black">
                 AP Physics C: E&M — 学习笔记
               </h1>
-              <p className="mt-1 text-sm text-slate-400 print:text-gray-500">{today}</p>
+              <p className="mt-1 text-aux text-text-placeholder print:text-text-sub">{today}</p>
             </div>
 
             {/* Rendered Markdown */}
-            <article className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-semibold prose-h2:mt-8 prose-h2:border-b prose-h2:border-slate-200 prose-h2:pb-2 prose-h3:mt-6 prose-code:before:content-none prose-code:after:content-none print:prose-print">
+            <article className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-medium prose-h2:mt-8 prose-h2:border-b prose-h2:border-border-light prose-h2:pb-2 prose-h3:mt-6 prose-code:before:content-none prose-code:after:content-none print:prose-print">
               <ReactMarkdown
                 remarkPlugins={[remarkMath, remarkGfm]}
                 rehypePlugins={[rehypeKatex]}
@@ -280,18 +280,18 @@ export default function NotesPage() {
 
             {/* Canvas diagrams if any */}
             {canvasItems.length > 0 && (
-              <div className="mt-10 border-t border-slate-200 pt-6 dark:border-slate-700">
-                <h2 className="mb-4 text-lg font-semibold text-slate-700 dark:text-slate-200">
+              <div className="mt-10 border-t border-border-light pt-6 dark:border-border-dark">
+                <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
                   📐 白板图示
                 </h2>
                 <div className="grid gap-4">
                   {canvasItems.map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800"
+                      className="rounded-btn border border-border-light bg-surface-light p-4 dark:border-border-dark dark:bg-surface-dark"
                     >
                       {item.title && (
-                        <p className="mb-2 text-sm font-medium text-slate-600 dark:text-slate-300">
+                        <p className="mb-2 text-aux font-medium text-text-sub dark:text-text-main-dark">
                           {item.title}
                         </p>
                       )}
@@ -306,9 +306,9 @@ export default function NotesPage() {
             )}
 
             {/* Anki Cards Section */}
-            <div className="mt-10 border-t border-slate-200 pt-6 dark:border-slate-700 print:hidden">
+            <div className="mt-10 border-t border-border-light pt-6 dark:border-border-dark print:hidden">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200">
+                <h2 className="text-subtitle font-medium text-text-main dark:text-text-main-dark">
                   🃏 Anki 闪卡
                 </h2>
                 <div className="flex gap-2">
@@ -316,13 +316,13 @@ export default function NotesPage() {
                     <>
                       <button
                         onClick={handleDownloadTsv}
-                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300"
+                        className="rounded-btn border border-border-light px-3 py-1.5 text-tag tracking-[0.04em] text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-main-dark"
                       >
                         📥 下载 TSV
                       </button>
                       <button
                         onClick={handlePushAnkiConnect}
-                        className="rounded-lg border border-emerald-200 px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-50 dark:border-emerald-600 dark:text-emerald-400"
+                        className="rounded-btn border border-emerald-200 px-3 py-1.5 text-tag tracking-[0.04em] text-success hover:bg-emerald-50 dark:border-emerald-600 dark:text-emerald-400"
                       >
                         🔗 推送到 Anki
                       </button>
@@ -331,7 +331,7 @@ export default function NotesPage() {
                   <button
                     onClick={handleGenerateAnki}
                     disabled={ankiLoading}
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                    className="rounded-btn bg-emerald-600 px-3 py-1.5 text-tag tracking-[0.04em] font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
                   >
                     {ankiLoading ? '⏳ 生成中…' : '🃏 生成 Anki 卡片'}
                   </button>
@@ -339,7 +339,7 @@ export default function NotesPage() {
               </div>
 
               {ankiStatus && (
-                <p className="mb-3 text-xs text-slate-500">{ankiStatus}</p>
+                <p className="mb-3 text-tag tracking-[0.04em] text-text-sub">{ankiStatus}</p>
               )}
 
               {ankiCards.length > 0 && (
@@ -347,26 +347,26 @@ export default function NotesPage() {
                   {ankiCards.map((card, i) => (
                     <div
                       key={i}
-                      className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800"
+                      className="rounded-btn border border-border-light bg-surface-light p-4 dark:border-border-dark dark:bg-surface-dark"
                     >
                       <div className="flex items-start gap-3">
-                        <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
+                        <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-tag tracking-[0.04em] font-medium text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
                           Q
                         </span>
-                        <p className="text-sm text-slate-700 dark:text-slate-200">{card.front}</p>
+                        <p className="text-aux text-text-main dark:text-text-main-dark">{card.front}</p>
                       </div>
                       <div className="mt-2 flex items-start gap-3">
-                        <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                        <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-tag tracking-[0.04em] font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300">
                           A
                         </span>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">{card.back}</p>
+                        <p className="text-aux text-text-sub dark:text-text-placeholder">{card.back}</p>
                       </div>
                       {card.tags && (
                         <div className="mt-2 ml-7">
                           {card.tags.split(/\s+/).filter(Boolean).map((tag, j) => (
                             <span
                               key={j}
-                              className="mr-1 inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500 dark:bg-slate-700 dark:text-slate-400"
+                              className="mr-1 inline-block rounded bg-bg-light px-1.5 py-0.5 text-[10px] text-text-sub dark:bg-slate-700 dark:text-text-placeholder"
                             >
                               {tag}
                             </span>
@@ -379,7 +379,7 @@ export default function NotesPage() {
               )}
 
               {ankiCards.length === 0 && !ankiLoading && (
-                <p className="text-sm text-slate-400">
+                <p className="text-aux text-text-placeholder">
                   点击「生成 Anki 卡片」从本次课堂内容创建闪卡
                 </p>
               )}

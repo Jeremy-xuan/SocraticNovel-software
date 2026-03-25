@@ -1,88 +1,49 @@
-use std::process::Command;
+use keyring::Entry;
 
 const SERVICE_NAME: &str = "SocraticNovel";
 
-/// Store an API key in macOS Keychain using the `security` CLI.
+/// Store an API key in the system credential store (cross-platform).
 #[tauri::command]
 pub fn set_api_key(provider: &str, key: &str) -> Result<(), String> {
-    // Delete existing entry first (ignore errors if it doesn't exist)
-    let _ = Command::new("security")
-        .args(["delete-generic-password", "-s", SERVICE_NAME, "-a", provider])
-        .output();
-
-    let output = Command::new("security")
-        .args([
-            "add-generic-password",
-            "-s",
-            SERVICE_NAME,
-            "-a",
-            provider,
-            "-w",
-            key,
-            "-U", // Update if exists
-        ])
-        .output()
-        .map_err(|e| format!("Failed to execute security command: {}", e))?;
-
-    if output.status.success() {
-        Ok(())
-    } else {
-        Err(format!(
-            "Failed to store API key: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ))
-    }
+    let entry = Entry::new(SERVICE_NAME, provider)
+        .map_err(|e| format!("Keyring error: {}", e))?;
+    entry.set_password(key)
+        .map_err(|e| format!("Failed to store key: {}", e))?;
+    Ok(())
 }
 
-/// Retrieve an API key from macOS Keychain.
+/// Retrieve an API key from the system credential store.
 #[tauri::command]
 pub fn get_api_key(provider: &str) -> Result<Option<String>, String> {
-    let output = Command::new("security")
-        .args([
-            "find-generic-password",
-            "-s",
-            SERVICE_NAME,
-            "-a",
-            provider,
-            "-w", // Output just the password
-        ])
-        .output()
-        .map_err(|e| format!("Failed to execute security command: {}", e))?;
-
-    if output.status.success() {
-        let key = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        if key.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(key))
-        }
-    } else {
-        // Not found is not an error
-        Ok(None)
+    let entry = Entry::new(SERVICE_NAME, provider)
+        .map_err(|e| format!("Keyring error: {}", e))?;
+    match entry.get_password() {
+        Ok(key) => Ok(Some(key)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(e) => Err(format!("Failed to retrieve key: {}", e)),
     }
 }
 
-/// Check if an API key exists in Keychain for the given provider.
+/// Check if an API key exists for the given provider.
 #[tauri::command]
 pub fn has_api_key(provider: &str) -> Result<bool, String> {
-    match get_api_key(provider)? {
-        Some(_) => Ok(true),
-        None => Ok(false),
+    let entry = Entry::new(SERVICE_NAME, provider)
+        .map_err(|e| format!("Keyring error: {}", e))?;
+    match entry.get_password() {
+        Ok(_) => Ok(true),
+        Err(keyring::Error::NoEntry) => Ok(false),
+        Err(e) => Err(format!("Failed to check key: {}", e)),
     }
 }
 
-/// Delete an API key from Keychain.
+/// Delete an API key from the system credential store.
 #[tauri::command]
 pub fn delete_api_key(provider: &str) -> Result<(), String> {
-    let output = Command::new("security")
-        .args(["delete-generic-password", "-s", SERVICE_NAME, "-a", provider])
-        .output()
-        .map_err(|e| format!("Failed to execute security command: {}", e))?;
-
-    if output.status.success() {
-        Ok(())
-    } else {
-        // Not found is not an error
-        Ok(())
+    let entry = Entry::new(SERVICE_NAME, provider)
+        .map_err(|e| format!("Keyring error: {}", e))?;
+    match entry.delete_credential() {
+        Ok(()) => Ok(()),
+        Err(keyring::Error::NoEntry) => Ok(()),
+        Err(e) => Err(format!("Failed to delete key: {}", e)),
     }
 }

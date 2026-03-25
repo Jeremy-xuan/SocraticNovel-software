@@ -1,6 +1,65 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+@theme {
+  --color-bg-light: #FAF8F5;
+  --color-surface-light: #FFFFFF;
+  --color-primary: #CC785C;
+  --color-border-light: #EDE9E3;
+  --color-border-hover: #D6D1CA;
+
+  --color-text-main: #1A1917;
+  --color-text-sub: #6B6863;
+  --color-text-placeholder: #9B8A7A;
+
+  --color-success: #1D9E75;
+  --color-warning: #BA7517;
+  --color-danger: #E24B4A;
+  --color-info: #378ADD;
+
+  --color-bg-dark: #1A1917;
+  --color-surface-dark: #252320;
+  --color-text-main-dark: #FAF8F5;
+  --color-text-sub-dark: #D6D1CA;
+  --color-border-dark: #3A3836;
+
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+
+  --text-title: 24px;
+  --text-subtitle: 18px;
+  --text-body: 15px;
+  --text-aux: 13px;
+  --text-tag: 11px;
+
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.10);
+  --shadow-float: 0 4px 16px rgba(0, 0, 0, 0.08);
+
+  --radius-btn: 8px;
+  --radius-card: 12px;
+  --radius-block: 16px;
+  --radius-badge: 99px;
+
+  --default-transition-timing-function: ease;
+  --default-transition-duration: 150ms;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg-light);
+    color: var(--color-text-main);
+    font-family: var(--font-sans);
+    line-height: 1.65;
+  }
+
+  /* Reset some default inputs/buttons focus */
+  :focus-visible {
+    outline: none;
+  }
+}
+
+/* Print styles for PDF export */
+
 /* Print styles for PDF export */
 @media print {
   body {

@@ -27,14 +27,14 @@ export default function StepWorld({ data, onChange }: Props) {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="mb-1 text-2xl font-bold text-slate-800 dark:text-slate-100">🌍 世界观构建</h2>
-        <p className="text-sm text-slate-500">设计故事发生的空间和关系</p>
+        <h2 className="mb-1 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">🌍 世界观构建</h2>
+        <p className="text-aux text-text-sub">设计故事发生的空间和关系</p>
       </div>
 
       {/* Location style */}
       <section className="space-y-4">
-        <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">故事发生在哪里？</h3>
-        <p className="text-xs text-slate-500">
+        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">故事发生在哪里？</h3>
+        <p className="text-tag tracking-[0.04em] text-text-sub">
           不是"线上教室"——是一个你能闻到气味、听到声音的地方
         </p>
         <div className="grid grid-cols-2 gap-3">
@@ -42,22 +42,22 @@ export default function StepWorld({ data, onChange }: Props) {
             <button
               key={ls.value}
               onClick={() => setWorld({ locationStyle: ls.value })}
-              className={`rounded-xl border p-4 text-left transition-colors ${
+              className={`rounded-card border p-4 text-left transition-colors ${
                 world.locationStyle === ls.value
                   ? 'border-blue-300 bg-blue-50 dark:border-blue-600 dark:bg-blue-900/20'
-                  : 'border-slate-200 hover:border-slate-300 dark:border-slate-600'
+                  : 'border-border-light hover:border-border-light dark:border-slate-600'
               }`}
             >
               <div className="mb-1 flex items-center gap-2">
-                <span className="text-lg">{ls.icon}</span>
-                <span className="font-medium text-slate-700 dark:text-slate-200">{ls.label}</span>
+                <span className="text-subtitle">{ls.icon}</span>
+                <span className="font-medium text-text-main dark:text-text-main-dark">{ls.label}</span>
               </div>
-              <div className="text-xs text-slate-500">{ls.examples}</div>
+              <div className="text-tag tracking-[0.04em] text-text-sub">{ls.examples}</div>
             </button>
           ))}
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">
+          <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">
             地点描述 <span className="text-red-400">*</span>
           </label>
           <textarea
@@ -65,39 +65,39 @@ export default function StepWorld({ data, onChange }: Props) {
             onChange={e => setWorld({ location: e.target.value })}
             placeholder="描述具体的地点：有什么子空间？气候如何？光线条件？&#10;好的地点至少有 3 个子空间（教学区、生活区、私人区域）+ 一个共用空间"
             rows={4}
-            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+            className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
         </div>
       </section>
 
       {/* Arrival reason */}
       <section className="space-y-4">
-        <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">学习者为什么来到这里？</h3>
+        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">学习者为什么来到这里？</h3>
         <div className="grid grid-cols-3 gap-3">
           {ARRIVAL_TYPES.map(at => (
             <button
               key={at.value}
               onClick={() => setWorld({ arrivalType: at.value })}
-              className={`rounded-xl border p-4 text-left transition-colors ${
+              className={`rounded-card border p-4 text-left transition-colors ${
                 world.arrivalType === at.value
                   ? 'border-blue-300 bg-blue-50 dark:border-blue-600 dark:bg-blue-900/20'
-                  : 'border-slate-200 hover:border-slate-300 dark:border-slate-600'
+                  : 'border-border-light hover:border-border-light dark:border-slate-600'
               }`}
             >
-              <div className="mb-1 text-lg">{at.icon}</div>
-              <div className="text-sm font-medium text-slate-700 dark:text-slate-200">{at.label}</div>
-              <div className="text-xs text-slate-500">{at.desc}</div>
+              <div className="mb-1 text-subtitle">{at.icon}</div>
+              <div className="text-aux font-medium text-text-main dark:text-text-main-dark">{at.label}</div>
+              <div className="text-tag tracking-[0.04em] text-text-sub">{at.desc}</div>
             </button>
           ))}
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">到来原因详情</label>
+          <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">到来原因详情</label>
           <input
             type="text"
             value={world.arrivalReason}
             onChange={e => setWorld({ arrivalReason: e.target.value })}
             placeholder="简要描述学习者来到这个地方的具体原因"
-            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+            className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
         </div>
       </section>
@@ -105,8 +105,8 @@ export default function StepWorld({ data, onChange }: Props) {
       {/* Character relations */}
       {data.characterCount > 1 && (
         <section className="space-y-4">
-          <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">角色之间的关系</h3>
-          <p className="text-xs text-slate-500">
+          <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">角色之间的关系</h3>
+          <p className="text-tag tracking-[0.04em] text-text-sub">
             他们不只是"同事"——他们有前史。谁先来的？有没有紧张关系或默契？
           </p>
           <textarea
@@ -114,7 +114,7 @@ export default function StepWorld({ data, onChange }: Props) {
             onChange={e => setWorld({ characterRelations: e.target.value })}
             placeholder="描述角色之间的关系和前史...&#10;不需要完整故事——几句关键信息就够"
             rows={3}
-            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+            className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
         </section>
       )}
@@ -122,8 +122,8 @@ export default function StepWorld({ data, onChange }: Props) {
       {/* Supernatural element */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">特殊设定（可选）</h3>
-          <label className="flex items-center gap-2 text-sm text-slate-500">
+          <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">特殊设定（可选）</h3>
+          <label className="flex items-center gap-2 text-aux text-text-sub">
             <input
               type="checkbox"
               checked={world.hasSupernatural}
@@ -135,7 +135,7 @@ export default function StepWorld({ data, onChange }: Props) {
         </div>
         {world.hasSupernatural && (
           <>
-            <p className="text-xs text-slate-500">
+            <p className="text-tag tracking-[0.04em] text-text-sub">
               最多只属于一个角色。稀缺性创造重量。超自然元素应该让角色更脆弱，而不是更强大
             </p>
             <textarea
@@ -143,7 +143,7 @@ export default function StepWorld({ data, onChange }: Props) {
               onChange={e => setWorld({ supernaturalElement: e.target.value })}
               placeholder="描述超自然设定...&#10;参考类型：感知型（能看见某种东西）/ 记忆型 / 空间型"
               rows={3}
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+              className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
             />
           </>
         )}

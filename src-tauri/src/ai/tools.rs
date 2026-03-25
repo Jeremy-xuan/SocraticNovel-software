@@ -99,12 +99,13 @@ fn tool_search_file() -> ToolDefinition {
 fn tool_render_canvas() -> ToolDefinition {
     ToolDefinition {
         name: "render_canvas".to_string(),
-        description: "Render a visual element (SVG diagram, chart) on the student's whiteboard/canvas panel.".to_string(),
+        description: "Render a visual element (SVG diagram, chart, or Mermaid diagram) on the student's whiteboard/canvas panel. Supports raw SVG markup or Mermaid diagram syntax.".to_string(),
         input_schema: json!({
             "type": "object",
             "properties": {
                 "title": { "type": "string", "description": "A short title for the canvas item" },
-                "content": { "type": "string", "description": "SVG markup string to render on the canvas" }
+                "content": { "type": "string", "description": "SVG markup string or Mermaid diagram syntax to render on the canvas" },
+                "type": { "type": "string", "enum": ["svg", "mermaid"], "description": "Content type: 'svg' for SVG markup, 'mermaid' for Mermaid diagram syntax", "default": "svg" }
             },
             "required": ["content"]
         }),
@@ -302,10 +303,11 @@ pub fn execute_tool(
             // render_canvas is handled on the frontend side — we just acknowledge it
             let title = input["title"].as_str().unwrap_or("Canvas");
             let content = input["content"].as_str().unwrap_or("");
+            let canvas_type = input["type"].as_str().unwrap_or("svg");
             if content.is_empty() {
                 ("Error: content is required for render_canvas".to_string(), true)
             } else {
-                (format!("[Canvas rendered: {}]", title), false)
+                (format!("[Canvas rendered ({}): {}]", canvas_type, title), false)
             }
         }
         "show_group_chat" => {

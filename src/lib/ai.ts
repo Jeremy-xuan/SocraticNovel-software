@@ -25,6 +25,7 @@ export type AgentEvent =
 export interface CanvasEvent {
   title: string;
   content: string;
+  type?: 'svg' | 'mermaid';
 }
 
 export interface GroupChatMessage {

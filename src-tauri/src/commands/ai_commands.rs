@@ -1,5 +1,6 @@
 use crate::ai::runtime;
 use crate::ai::types::*;
+use crate::commands::review_commands::{NewCard, add_review_cards_internal};
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use std::sync::Mutex;
@@ -439,7 +440,81 @@ pub async fn run_post_lesson(
         &summary,
     ).await?;
 
+    // After run_post_lesson completes, auto-generate review cards
+    let card_count = auto_generate_review_cards(
+        &payload.api_key, &provider, &model, &workspace_path, &summary
+    ).await.unwrap_or(0);
+
+    // Emit event to frontend
+    {
+        use tauri::Emitter;
+        let _ = app.emit("review-cards-generated", serde_json::json!({ "count": card_count }));
+    }
+
     Ok(())
+}
+
+/// Auto-generate review cards from the conversation summary using AI.
+async fn auto_generate_review_cards(
+    api_key: &str,
+    provider: &str,
+    model: &str,
+    workspace_path: &str,
+    conversation_summary: &str,
+) -> Result<usize, String> {
+    let system_prompt = "你是一个教学助手。根据以下课堂对话记录，生成 3-5 张间隔复习卡片。\n\n\
+        要求：\n\
+        1. 提取本课的核心知识点\n\
+        2. 每张卡片的正面是一个具体的问题，背面是简明扼要的答案\n\
+        3. card_type: \"concept\" 用于概念理解题，\"compute\" 用于计算/推导题\n\
+        4. 输出严格 JSON 格式，不要额外文字\n\n\
+        输出格式：\n\
+        [\n  {\n    \"knowledge_point\": \"知识点名称\",\n    \"source_chapter\": \"章节\",\n    \
+        \"card_type\": \"concept\",\n    \"front\": \"问题...\",\n    \"back\": \"答案...\"\n  }\n]";
+
+    let user_message = format!("课堂对话记录：\n{}", conversation_summary);
+    let messages = vec![Message {
+        role: "user".to_string(),
+        content: vec![ContentBlock::Text { text: user_message }],
+    }];
+
+    let response = runtime::call_ai_simple(api_key, provider, model, system_prompt, messages).await?;
+
+    // Extract JSON array from response (handle possible markdown code fences)
+    let json_str = extract_json_array(&response).ok_or("AI 返回格式不是有效的 JSON 数组")?;
+
+    let cards: Vec<NewCard> = serde_json::from_str(&json_str)
+        .map_err(|e| format!("解析复习卡片 JSON 失败: {}", e))?;
+
+    if cards.is_empty() {
+        return Ok(0);
+    }
+
+    add_review_cards_internal(workspace_path, cards)
+}
+
+/// Extract a JSON array from text that may contain markdown code fences.
+fn extract_json_array(text: &str) -> Option<String> {
+    let trimmed = text.trim();
+
+    // Try direct parse first
+    if trimmed.starts_with('[') {
+        if let Ok(_) = serde_json::from_str::<Vec<serde_json::Value>>(trimmed) {
+            return Some(trimmed.to_string());
+        }
+    }
+
+    // Try extracting from markdown code fences
+    if let Some(start) = trimmed.find('[') {
+        if let Some(end) = trimmed.rfind(']') {
+            let candidate = &trimmed[start..=end];
+            if serde_json::from_str::<Vec<serde_json::Value>>(candidate).is_ok() {
+                return Some(candidate.to_string());
+            }
+        }
+    }
+
+    None
 }
 
 /// Set the teaching-specific system prompt (loaded from split config files)

@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -150,12 +150,39 @@ pub fn search_file(workspace_path: &str, file_path: &str, query: &str) -> Result
     }
 }
 
+#[derive(Serialize, Deserialize, Default)]
+struct WorkspaceMeta {
+    #[serde(default)]
+    last_opened: Option<String>,
+}
+
+fn read_workspace_meta(ws_path: &Path) -> WorkspaceMeta {
+    let meta_path = ws_path.join(".workspace_meta.json");
+    if meta_path.exists() {
+        fs::read_to_string(&meta_path)
+            .ok()
+            .and_then(|s| serde_json::from_str(&s).ok())
+            .unwrap_or_default()
+    } else {
+        WorkspaceMeta::default()
+    }
+}
+
+fn write_workspace_meta(ws_path: &Path, meta: &WorkspaceMeta) -> Result<(), String> {
+    let meta_path = ws_path.join(".workspace_meta.json");
+    let json = serde_json::to_string_pretty(meta)
+        .map_err(|e| format!("Failed to serialize meta: {}", e))?;
+    fs::write(&meta_path, json).map_err(|e| format!("Failed to write meta: {}", e))
+}
+
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WorkspaceInfo {
     id: String,
     name: String,
     path: String,
     has_claude_md: bool,
+    last_opened: Option<String>,
 }
 
 #[tauri::command]
@@ -174,11 +201,13 @@ pub fn list_workspaces() -> Result<Vec<WorkspaceInfo>, String> {
             let name = entry.file_name().to_string_lossy().to_string();
             let path = entry.path().to_string_lossy().to_string();
             let has_claude_md = entry.path().join("CLAUDE.md").exists();
+            let meta = read_workspace_meta(&entry.path());
             workspaces.push(WorkspaceInfo {
                 id: name.clone(),
                 name,
                 path,
                 has_claude_md,
+                last_opened: meta.last_opened,
             });
         }
     }
@@ -205,6 +234,7 @@ pub fn create_workspace(name: &str) -> Result<WorkspaceInfo, String> {
         name: name.to_string(),
         path: ws_path.to_string_lossy().to_string(),
         has_claude_md: false,
+        last_opened: None,
     })
 }
 
@@ -214,11 +244,13 @@ pub fn init_builtin_workspace() -> Result<WorkspaceInfo, String> {
     let target = base.join("ap-physics-em");
 
     if target.exists() {
+        let meta = read_workspace_meta(&target);
         return Ok(WorkspaceInfo {
             id: "ap-physics-em".to_string(),
             name: "ap-physics-em".to_string(),
             path: target.to_string_lossy().to_string(),
             has_claude_md: target.join("CLAUDE.md").exists(),
+            last_opened: meta.last_opened,
         });
     }
 
@@ -252,7 +284,37 @@ pub fn init_builtin_workspace() -> Result<WorkspaceInfo, String> {
         name: "ap-physics-em".to_string(),
         path: target.to_string_lossy().to_string(),
         has_claude_md: target.join("CLAUDE.md").exists(),
+        last_opened: None,
     })
+}
+
+#[tauri::command]
+pub fn delete_workspace(workspace_id: &str) -> Result<(), String> {
+    if workspace_id == "ap-physics-em" {
+        return Err("内置工作区不可删除".to_string());
+    }
+
+    let ws_path = workspaces_dir().join(workspace_id);
+    if !ws_path.exists() {
+        return Err(format!("工作区 '{}' 不存在", workspace_id));
+    }
+
+    fs::remove_dir_all(&ws_path)
+        .map_err(|e| format!("删除工作区失败: {}", e))
+}
+
+#[tauri::command]
+pub fn update_workspace_meta(workspace_id: &str) -> Result<(), String> {
+    let ws_path = workspaces_dir().join(workspace_id);
+    if !ws_path.exists() {
+        return Err(format!("工作区 '{}' 不存在", workspace_id));
+    }
+
+    let now = chrono::Local::now().to_rfc3339();
+    let meta = WorkspaceMeta {
+        last_opened: Some(now),
+    };
+    write_workspace_meta(&ws_path, &meta)
 }
 
 fn copy_dir_recursive(

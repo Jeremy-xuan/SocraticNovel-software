@@ -166,16 +166,16 @@ export default function PdfImportPage() {
   const enhancedContent = enhancedPages.get(previewPage);
 
   return (
-    <div className="flex h-screen flex-col bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950">
+    <div className="flex h-screen flex-col bg-bg-light dark:bg-bg-dark">
       {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-slate-200 px-6 py-3 dark:border-slate-700">
+      <div className="flex items-center justify-between border-b border-border-light px-6 py-3 dark:border-border-dark">
         <button
           onClick={() => navigate('/')}
-          className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          className="text-aux text-text-sub hover:text-text-main dark:text-text-placeholder dark:hover:text-text-main-dark"
         >
           ← 返回主页
         </button>
-        <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+        <h1 className="text-subtitle font-medium text-text-main dark:text-text-main-dark">
           📄 PDF 教材导入
         </h1>
         <div className="w-16" />
@@ -183,7 +183,7 @@ export default function PdfImportPage() {
 
       {/* Error */}
       {error && (
-        <div className="mx-6 mt-3 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-300">
+        <div className="mx-6 mt-3 rounded-btn bg-red-50 px-4 py-2 text-aux text-danger dark:bg-red-900/30 dark:text-red-300">
           {error}
           <button onClick={() => setError(null)} className="ml-2 underline">
             关闭
@@ -197,15 +197,15 @@ export default function PdfImportPage() {
         {phase === 'select' && (
           <div className="text-center">
             <div className="mb-6 text-6xl">📄</div>
-            <h2 className="mb-2 text-2xl font-bold text-slate-800 dark:text-slate-100">
+            <h2 className="mb-2 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">
               导入 PDF 教材
             </h2>
-            <p className="mb-8 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mb-8 text-aux text-text-sub dark:text-text-placeholder">
               选择 PDF 文件，自动提取文本并转换为 Markdown 存入 workspace
             </p>
             <button
               onClick={handleSelectFile}
-              className="rounded-2xl bg-blue-500 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:bg-blue-600 hover:shadow-xl"
+              className="rounded-full bg-primary px-8 py-3.5 text-[16px] font-medium tracking-wide text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:opacity-90"
             >
               选择 PDF 文件
             </button>
@@ -215,9 +215,9 @@ export default function PdfImportPage() {
         {/* Extracting */}
         {phase === 'extracting' && (
           <div className="text-center">
-            <div className="mb-4 text-4xl animate-pulse">⏳</div>
-            <p className="text-lg text-slate-600 dark:text-slate-300">正在提取 PDF 文本...</p>
-            <p className="mt-1 text-sm text-slate-400">{pdfPath}</p>
+            <div className="mb-4 text-title leading-tight tracking-[0.04em] animate-pulse">⏳</div>
+            <p className="text-subtitle text-text-sub dark:text-text-main-dark">正在提取 PDF 文本...</p>
+            <p className="mt-1 text-aux text-text-placeholder">{pdfPath}</p>
           </div>
         )}
 
@@ -225,12 +225,12 @@ export default function PdfImportPage() {
         {phase === 'preview' && result && (
           <div className="flex w-full max-w-5xl flex-1 flex-col overflow-hidden px-6 pb-6">
             {/* Info bar */}
-            <div className="mb-4 flex items-center justify-between rounded-xl bg-white p-4 shadow-sm dark:bg-slate-800">
+            <div className="mb-4 flex items-center justify-between rounded-card bg-surface-light p-4 shadow-card dark:bg-surface-dark">
               <div>
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                <p className="text-aux font-medium text-text-main dark:text-text-main-dark">
                   {result.filename}
                 </p>
-                <p className="text-xs text-slate-400">
+                <p className="text-tag tracking-[0.04em] text-text-placeholder">
                   {result.total_pages} 页 · {(result.fullText.length / 1000).toFixed(1)}K 字符
                   {enhancedPages.size > 0 && (
                     <span className="ml-2 text-green-500">✨ AI 已增强</span>
@@ -238,36 +238,36 @@ export default function PdfImportPage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <label className="text-xs text-slate-500">保存为：</label>
+                <label className="text-tag tracking-[0.04em] text-text-sub">保存为：</label>
                 <input
                   type="text"
                   value={targetName}
                   onChange={(e) => setTargetName(e.target.value)}
-                  className="w-48 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+                  className="w-48 rounded-btn border border-border-light bg-bg-light px-3 py-1.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
                 />
-                <span className="text-xs text-slate-400">.md</span>
+                <span className="text-tag tracking-[0.04em] text-text-placeholder">.md</span>
               </div>
             </div>
 
             {/* AI Enhancement controls */}
-            <div className="mb-3 flex items-center gap-2 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-800">
-              <span className="text-xs font-medium text-slate-500">AI 增强：</span>
+            <div className="mb-3 flex items-center gap-2 rounded-card bg-surface-light p-3 shadow-card dark:bg-surface-dark">
+              <span className="text-tag tracking-[0.04em] font-medium text-text-sub">AI 增强：</span>
               <button
                 onClick={() => setEnhanceMode('none')}
-                className={`rounded-lg px-3 py-1 text-xs ${enhanceMode === 'none' ? 'bg-slate-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}
+                className={`rounded-btn px-3 py-1 text-tag tracking-[0.04em] ${enhanceMode === 'none' ? 'bg-slate-600 text-white' : 'bg-bg-light text-text-sub dark:bg-slate-700 dark:text-text-main-dark'}`}
               >
                 不使用
               </button>
               <button
                 onClick={() => setEnhanceMode('text')}
-                className={`rounded-lg px-3 py-1 text-xs ${enhanceMode === 'text' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}
+                className={`rounded-btn px-3 py-1 text-tag tracking-[0.04em] ${enhanceMode === 'text' ? 'bg-primary text-white' : 'bg-bg-light text-text-sub dark:bg-slate-700 dark:text-text-main-dark'}`}
               >
                 📝 文本优化
               </button>
               <button
                 onClick={() => setEnhanceMode('vision')}
                 disabled={!rendererAvailable}
-                className={`rounded-lg px-3 py-1 text-xs ${enhanceMode === 'vision' ? 'bg-purple-500 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'} disabled:opacity-40`}
+                className={`rounded-btn px-3 py-1 text-tag tracking-[0.04em] ${enhanceMode === 'vision' ? 'bg-purple-500 text-white' : 'bg-bg-light text-text-sub dark:bg-slate-700 dark:text-text-main-dark'} disabled:opacity-40`}
                 title={rendererAvailable ? `Vision API 逐页识别 (${rendererName})` : '需要安装 PDFium 或 poppler'}
               >
                 👁️ Vision OCR
@@ -275,15 +275,15 @@ export default function PdfImportPage() {
               {enhanceMode !== 'none' && (
                 <button
                   onClick={handleAiEnhance}
-                  className="ml-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 px-4 py-1 text-xs font-medium text-white hover:from-blue-600 hover:to-purple-600"
+                  className="ml-3 flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-[13px] font-medium tracking-wide text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:opacity-90"
                 >
-                  ✨ 开始 AI 增强 ({result.total_pages} 页)
+                  <span className="text-[14px]">✨</span> 操作所有 {result.total_pages} 页
                 </button>
               )}
               {rendererAvailable && (
                 <button
                   onClick={handlePreviewPageImage}
-                  className="ml-auto rounded-lg border border-slate-200 px-3 py-1 text-xs text-slate-500 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-400"
+                  className="ml-auto rounded-btn border border-border-light px-3 py-1 text-tag tracking-[0.04em] text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-placeholder"
                 >
                   🖼️ 预览页面图片
                 </button>
@@ -296,17 +296,17 @@ export default function PdfImportPage() {
                 <button
                   onClick={() => { setPreviewPage(Math.max(0, previewPage - 1)); setPagePreviewImage(null); }}
                   disabled={previewPage === 0}
-                  className="rounded-lg border border-slate-200 px-3 py-1 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-600 dark:text-slate-300"
+                  className="rounded-btn border border-border-light px-3 py-1 text-aux text-text-sub hover:bg-bg-light disabled:opacity-40 dark:border-slate-600 dark:text-text-main-dark"
                 >
                   ← 上一页
                 </button>
-                <span className="flex items-center text-sm text-slate-500">
+                <span className="flex items-center text-aux text-text-sub">
                   第 {previewPage + 1} / {result.total_pages} 页
                 </span>
                 <button
                   onClick={() => { setPreviewPage(Math.min(result.total_pages - 1, previewPage + 1)); setPagePreviewImage(null); }}
                   disabled={previewPage >= result.total_pages - 1}
-                  className="rounded-lg border border-slate-200 px-3 py-1 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-600 dark:text-slate-300"
+                  className="rounded-btn border border-border-light px-3 py-1 text-aux text-text-sub hover:bg-bg-light disabled:opacity-40 dark:border-slate-600 dark:text-text-main-dark"
                 >
                   下一页 →
                 </button>
@@ -314,7 +314,7 @@ export default function PdfImportPage() {
               <button
                 onClick={handleImport}
                 disabled={!targetName.trim()}
-                className="rounded-xl bg-green-500 px-6 py-2 text-sm font-semibold text-white shadow transition-all hover:bg-green-600 disabled:opacity-50"
+                className="rounded-card bg-green-500 px-6 py-2 text-aux font-medium text-white shadow transition-all hover:bg-green-600 disabled:opacity-50"
               >
                 ✅ 导入到 Workspace
               </button>
@@ -323,29 +323,29 @@ export default function PdfImportPage() {
             {/* Content area */}
             <div className="flex flex-1 gap-4 overflow-hidden">
               {/* Text preview */}
-              <div className={`flex-1 overflow-auto rounded-xl border border-slate-200 bg-white p-6 font-mono text-sm leading-relaxed text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 ${enhancedContent ? 'w-1/2' : ''}`}>
-                <div className="mb-2 text-xs font-medium text-slate-400">
+              <div className={`flex-1 overflow-auto rounded-card border border-border-light bg-surface-light p-6 font-mono text-aux leading-relaxed text-text-main dark:border-border-dark dark:bg-surface-dark dark:text-text-main-dark ${enhancedContent ? 'w-1/2' : ''}`}>
+                <div className="mb-2 text-tag tracking-[0.04em] font-medium text-text-placeholder">
                   {enhancedContent ? '原始提取' : '提取文本'}
                 </div>
                 {currentPage ? (
                   <pre className="whitespace-pre-wrap">{currentPage.text}</pre>
                 ) : (
-                  <p className="text-slate-400">该页无文本内容</p>
+                  <p className="text-text-placeholder">该页无文本内容</p>
                 )}
               </div>
 
               {/* Enhanced content (side by side) */}
               {enhancedContent && (
-                <div className="flex-1 overflow-auto rounded-xl border border-green-200 bg-white p-6 text-sm leading-relaxed text-slate-700 dark:border-green-800 dark:bg-slate-800 dark:text-slate-300">
-                  <div className="mb-2 text-xs font-medium text-green-500">✨ AI 增强</div>
+                <div className="flex-1 overflow-auto rounded-card border border-green-200 bg-surface-light p-6 text-aux leading-relaxed text-text-main dark:border-green-800 dark:bg-surface-dark dark:text-text-main-dark">
+                  <div className="mb-2 text-tag tracking-[0.04em] font-medium text-green-500">✨ AI 增强</div>
                   <pre className="whitespace-pre-wrap font-sans">{enhancedContent}</pre>
                 </div>
               )}
 
               {/* Page image preview */}
               {pagePreviewImage && (
-                <div className="w-80 overflow-auto rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-800">
-                  <div className="mb-1 text-xs font-medium text-slate-400">🖼️ 页面渲染</div>
+                <div className="w-80 overflow-auto rounded-card border border-border-light bg-surface-light p-2 dark:border-border-dark dark:bg-surface-dark">
+                  <div className="mb-1 text-tag tracking-[0.04em] font-medium text-text-placeholder">🖼️ 页面渲染</div>
                   <img
                     src={`data:image/jpeg;base64,${pagePreviewImage}`}
                     alt={`Page ${previewPage + 1}`}
@@ -360,16 +360,16 @@ export default function PdfImportPage() {
         {/* Enhancing */}
         {phase === 'enhancing' && (
           <div className="text-center">
-            <div className="mb-4 text-4xl animate-pulse">✨</div>
-            <p className="text-lg text-slate-600 dark:text-slate-300">
+            <div className="mb-4 text-title leading-tight tracking-[0.04em] animate-pulse">✨</div>
+            <p className="text-subtitle text-text-sub dark:text-text-main-dark">
               AI {enhanceMode === 'vision' ? 'Vision' : '文本'} 增强中...
             </p>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-aux text-text-sub">
               第 {enhanceProgress.current} / {enhanceProgress.total} 页
             </p>
             <div className="mx-auto mt-3 h-2 w-64 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all"
+                className="h-full rounded-full bg-bg-light dark:bg-bg-dark"
                 style={{ width: `${enhanceProgress.total > 0 ? (enhanceProgress.current / enhanceProgress.total) * 100 : 0}%` }}
               />
             </div>
@@ -379,24 +379,24 @@ export default function PdfImportPage() {
         {/* Saving */}
         {phase === 'saving' && (
           <div className="text-center">
-            <div className="mb-4 text-4xl animate-pulse">💾</div>
-            <p className="text-lg text-slate-600 dark:text-slate-300">正在保存到 workspace...</p>
+            <div className="mb-4 text-title leading-tight tracking-[0.04em] animate-pulse">💾</div>
+            <p className="text-subtitle text-text-sub dark:text-text-main-dark">正在保存到 workspace...</p>
           </div>
         )}
 
         {/* Done */}
         {phase === 'done' && (
           <div className="text-center">
-            <div className="mb-4 text-4xl">✅</div>
-            <h2 className="mb-2 text-2xl font-bold text-slate-800 dark:text-slate-100">
+            <div className="mb-4 text-title leading-tight tracking-[0.04em]">✅</div>
+            <h2 className="mb-2 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">
               导入成功！
             </h2>
-            <p className="mb-1 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mb-1 text-aux text-text-sub dark:text-text-placeholder">
               已保存为 Markdown 文件
               {enhancedPages.size > 0 && ' (AI 增强版)'}
             </p>
             {savedPath && (
-              <p className="mb-6 max-w-md break-all text-xs text-slate-400">{savedPath}</p>
+              <p className="mb-6 max-w-md break-all text-tag tracking-[0.04em] text-text-placeholder">{savedPath}</p>
             )}
             <div className="flex justify-center gap-3">
               <button
@@ -409,13 +409,13 @@ export default function PdfImportPage() {
                   setEnhancedPages(new Map());
                   setPagePreviewImage(null);
                 }}
-                className="rounded-xl bg-blue-500 px-6 py-3 text-sm font-medium text-white hover:bg-blue-600"
+                className="rounded-full bg-primary px-6 py-2.5 text-[14px] font-medium tracking-wide text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:opacity-90"
               >
                 继续导入
               </button>
               <button
                 onClick={() => navigate('/')}
-                className="rounded-xl border border-slate-200 px-6 py-3 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300"
+                className="rounded-card border border-border-light px-6 py-3 text-aux text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-main-dark"
               >
                 返回主页
               </button>

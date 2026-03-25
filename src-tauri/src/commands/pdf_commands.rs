@@ -295,7 +295,15 @@ fn render_page_with_pdftoppm(pdf_path: &str, page_number: usize, dpi: u32) -> Re
 }
 
 fn find_pdftoppm() -> Option<String> {
-    let candidates = ["pdftoppm", "/opt/homebrew/bin/pdftoppm", "/usr/local/bin/pdftoppm"];
+    #[cfg(target_os = "macos")]
+    let candidates = vec!["pdftoppm", "/opt/homebrew/bin/pdftoppm", "/usr/local/bin/pdftoppm"];
+
+    #[cfg(target_os = "linux")]
+    let candidates = vec!["pdftoppm", "/usr/bin/pdftoppm", "/usr/local/bin/pdftoppm"];
+
+    #[cfg(target_os = "windows")]
+    let candidates = vec!["pdftoppm.exe", "pdftoppm"];
+
     for cmd in candidates {
         if std::process::Command::new(cmd)
             .arg("-v")

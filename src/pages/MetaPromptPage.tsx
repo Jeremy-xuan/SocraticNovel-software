@@ -172,19 +172,19 @@ export default function MetaPromptPage() {
   // ─── Phase 1: Name input ──────────────────────────────────
   if (pagePhase === 'name') {
     return (
-      <div className="flex h-screen items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950">
-        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+      <div className="flex h-screen items-center justify-center bg-bg-light dark:bg-bg-dark">
+        <div className="w-full max-w-md rounded-block border border-border-light bg-surface-light p-8 shadow-lg dark:border-border-dark dark:bg-surface-dark">
           <div className="mb-6 text-center">
-            <span className="mb-3 block text-4xl">🔨</span>
-            <h1 className="mb-2 text-2xl font-bold text-slate-800 dark:text-slate-100">
+            <span className="mb-3 block text-title leading-tight tracking-[0.04em]">🔨</span>
+            <h1 className="mb-2 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">
               创建教学系统
             </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-aux text-text-sub dark:text-text-placeholder">
               填写问卷设计你的沉浸式教学系统，AI 自动生成所有文件
             </p>
           </div>
           <div className="mb-6">
-            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            <label className="mb-2 block text-aux font-medium text-text-main dark:text-text-main-dark">
               项目名称
             </label>
             <input
@@ -193,15 +193,15 @@ export default function MetaPromptPage() {
               onChange={(e) => { setWorkspaceName(e.target.value); setNameError(''); }}
               onKeyDown={(e) => e.key === 'Enter' && handleNameSubmit()}
               placeholder="例如: AP-Chemistry, 高中数学, ..."
-              className={`w-full rounded-lg border bg-white px-4 py-3 text-sm text-slate-700 placeholder-slate-400 focus:outline-none dark:bg-slate-700 dark:text-slate-200 ${
+              className={`w-full rounded-btn border bg-surface-light px-4 py-3 text-aux text-text-main placeholder-text-placeholder focus:bg-surface-light focus:outline-none dark:bg-slate-700 dark:text-text-main-dark ${
                 nameError
                   ? 'border-amber-400 focus:border-amber-500 dark:border-amber-500'
-                  : 'border-slate-200 focus:border-blue-500 dark:border-slate-600'
+                  : 'border-border-light focus:border-blue-500 dark:border-slate-600'
               }`}
               autoFocus
             />
             {nameError && (
-              <p className="mt-2 flex items-center gap-1.5 text-sm text-amber-600 dark:text-amber-400">
+              <p className="mt-2 flex items-center gap-1.5 text-aux text-warning dark:text-amber-400">
                 <span>⚠️</span> {nameError}
               </p>
             )}
@@ -209,14 +209,14 @@ export default function MetaPromptPage() {
           <div className="flex items-center justify-between">
             <button
               onClick={() => navigate(-1)}
-              className="text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              className="text-aux text-text-placeholder hover:text-text-sub dark:hover:text-text-main-dark"
             >
               ← 返回
             </button>
             <button
               onClick={handleNameSubmit}
               disabled={!workspaceName.trim()}
-              className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-btn bg-primary px-6 py-2.5 font-medium text-white hover:bg-[#BF6A4E] disabled:opacity-50 h-[38px]"
             >
               下一步 →
             </button>
@@ -238,28 +238,28 @@ export default function MetaPromptPage() {
 
   // ─── Phase 3: AI generation chat (Phase 5/6) ─────────────
   return (
-    <div className="flex h-screen flex-col bg-white dark:bg-slate-900">
+    <div className="flex h-screen flex-col bg-surface-light dark:bg-bg-dark">
       {/* Top bar */}
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 px-4 dark:border-slate-700">
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-border-light px-4 dark:border-border-dark">
         <button
           onClick={() => navigate('/')}
-          className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          className="text-aux text-text-sub hover:text-text-main dark:text-text-placeholder dark:hover:text-text-main-dark"
         >
           ← 返回
         </button>
-        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+        <span className="text-aux font-medium text-text-main dark:text-text-main-dark">
           ⚙️ 生成中 — {workspaceName}
         </span>
         <div className="flex gap-2">
           <button
             onClick={() => setShowLog(!showLog)}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+            className="rounded-btn border border-border-light px-3 py-1.5 text-tag tracking-[0.04em] text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-main-dark dark:hover:bg-slate-700"
           >
             {showLog ? '隐藏日志' : '🔧 日志'}
           </button>
           <button
             onClick={handleFinish}
-            className="rounded-lg bg-green-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-green-700"
+            className="rounded-btn bg-green-600 px-4 py-1.5 text-aux font-medium text-white hover:bg-green-700"
           >
             ✅ 完成创建
           </button>
@@ -268,14 +268,14 @@ export default function MetaPromptPage() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left sidebar — generation phase */}
-        <aside className="flex w-56 shrink-0 flex-col border-r border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-850">
-          <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <aside className="flex w-56 shrink-0 flex-col border-r border-border-light bg-bg-light p-4 dark:border-border-dark dark:bg-slate-850">
+          <h3 className="mb-4 text-tag tracking-[0.04em] font-medium uppercase tracking-wider text-text-placeholder">
             生成进度
           </h3>
           {/* Completed phases */}
           <div className="mb-3 space-y-1">
             {['📋 基础信息', '🎭 角色创建', '🌍 世界观', '📖 故事设计'].map((label, i) => (
-              <div key={i} className="flex items-center gap-2 px-3 py-1.5 text-xs text-green-600 dark:text-green-400">
+              <div key={i} className="flex items-center gap-2 px-3 py-1.5 text-tag tracking-[0.04em] text-green-600 dark:text-green-400">
                 <span>✅</span> <span>{label}</span>
               </div>
             ))}
@@ -288,12 +288,12 @@ export default function MetaPromptPage() {
               return (
                 <div
                   key={phase.id}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                  className={`flex items-center gap-3 rounded-btn px-3 py-2.5 text-aux transition-colors ${
                     isActive
                       ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
                       : isDone
                         ? 'text-green-600 dark:text-green-400'
-                        : 'text-slate-400 dark:text-slate-500'
+                        : 'text-text-placeholder dark:text-text-sub'
                   }`}
                 >
                   <span className="text-base">
@@ -301,7 +301,7 @@ export default function MetaPromptPage() {
                   </span>
                   <div>
                     <span className="font-medium">Phase {phase.id}</span>
-                    <p className="text-xs opacity-75">{phase.label}</p>
+                    <p className="text-tag tracking-[0.04em] opacity-75">{phase.label}</p>
                   </div>
                 </div>
               );
@@ -309,9 +309,9 @@ export default function MetaPromptPage() {
           </div>
 
           <div className="mt-auto">
-            <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-800">
-              <p className="text-xs font-medium text-slate-600 dark:text-slate-300">工作区</p>
-              <p className="truncate text-xs text-slate-400">{workspaceName}</p>
+            <div className="rounded-btn bg-surface-light p-3 shadow-card dark:bg-surface-dark">
+              <p className="text-tag tracking-[0.04em] font-medium text-text-sub dark:text-text-main-dark">工作区</p>
+              <p className="truncate text-tag tracking-[0.04em] text-text-placeholder">{workspaceName}</p>
             </div>
           </div>
         </aside>
@@ -321,7 +321,7 @@ export default function MetaPromptPage() {
           <div className="flex-1 overflow-y-auto p-4">
             {messages.length === 0 && (
               <div className="flex h-full items-center justify-center">
-                <p className="text-slate-400 dark:text-slate-500">
+                <p className="text-text-placeholder dark:text-text-sub">
                   正在初始化…
                 </p>
               </div>
@@ -333,7 +333,7 @@ export default function MetaPromptPage() {
               <div className="my-3 flex justify-center">
                 <button
                   onClick={handleRetry}
-                  className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                  className="rounded-btn bg-primary px-4 py-1.5 text-aux font-medium text-white hover:bg-[#BF6A4E] h-[38px]"
                 >
                   🔄 重试
                 </button>
@@ -346,9 +346,9 @@ export default function MetaPromptPage() {
 
         {/* Right panel — log */}
         {showLog && (
-          <aside className="flex w-80 shrink-0 flex-col border-l border-slate-200 dark:border-slate-700">
-            <div className="flex h-10 shrink-0 items-center border-b border-slate-200 px-3 dark:border-slate-700">
-              <span className="text-xs font-medium text-slate-500">🔧 Agent 日志</span>
+          <aside className="flex w-80 shrink-0 flex-col border-l border-border-light dark:border-border-dark">
+            <div className="flex h-10 shrink-0 items-center border-b border-border-light px-3 dark:border-border-dark">
+              <span className="text-tag tracking-[0.04em] font-medium text-text-sub">🔧 Agent 日志</span>
             </div>
             <div className="flex-1 overflow-y-auto p-3">
               <AgentLogPanel logs={agentLogs} />

@@ -277,10 +277,12 @@ async fn process_claude_streaming(
 
                         if current_tool_name == "render_canvas" {
                             let title = input["title"].as_str().unwrap_or("Canvas").to_string();
-                            let svg = input["content"].as_str().unwrap_or("").to_string();
+                            let content = input["content"].as_str().unwrap_or("").to_string();
+                            let canvas_type = input["type"].as_str().unwrap_or("svg").to_string();
                             let _ = app.emit("canvas-event", serde_json::json!({
                                 "title": title,
-                                "content": svg,
+                                "content": content,
+                                "type": canvas_type,
                             }));
                         }
 
@@ -347,10 +349,12 @@ fn emit_non_streaming_events(
                 }
                 if name == "render_canvas" {
                     let title = input["title"].as_str().unwrap_or("Canvas").to_string();
-                    let svg = input["content"].as_str().unwrap_or("").to_string();
+                    let content = input["content"].as_str().unwrap_or("").to_string();
+                    let canvas_type = input["type"].as_str().unwrap_or("svg").to_string();
                     let _ = app.emit("canvas-event", serde_json::json!({
                         "title": title,
-                        "content": svg,
+                        "content": content,
+                        "type": canvas_type,
                     }));
                 }
                 if name == "show_group_chat" {
@@ -508,9 +512,10 @@ async fn process_openai_streaming(
 
         if name == "render_canvas" {
             let title = input["title"].as_str().unwrap_or("Canvas").to_string();
-            let svg = input["content"].as_str().unwrap_or("").to_string();
+            let content = input["content"].as_str().unwrap_or("").to_string();
+            let canvas_type = input["type"].as_str().unwrap_or("svg").to_string();
             let _ = app.emit("canvas-event", serde_json::json!({
-                "title": title, "content": svg,
+                "title": title, "content": content, "type": canvas_type,
             }));
         }
 
@@ -943,12 +948,24 @@ fn build_post_prompt(base: &str) -> String {
 }
 
 pub fn build_practice_prompt(base: &str) -> String {
-    format!(
-        r#"[Desktop App Instructions]
-You MUST use the `respond_to_student` tool to send ALL visible content to the student.
-Direct text output is treated as silent internal thinking and will NOT be shown.
+    let respond_instruction = "[Desktop App Instructions]\n\
+You MUST use the `respond_to_student` tool to send ALL visible content to the student.\n\
+Direct text output is treated as silent internal thinking and will NOT be shown.\n\n\
+# Tool Usage\n\
+- Use `read_file` to look up reference materials (textbook, formulas, exercises) when you need context\n\
+- Use `search_file` to find specific content across workspace files\n\
+- Use `render_canvas` for diagrams — electric field lines, circuits, charge distributions\n\
+- Use `think` for complex problem analysis before responding\n\n";
 
-[Mode: Practice / 刷题]
+    // Full protocol mode: the base prompt is a complete tutoring protocol (e.g. 幽鬼α).
+    // Only prepend the minimal respond_to_student instructions without the default practice scene.
+    if base.len() > 10000 {
+        return format!("{}{}", respond_instruction, base);
+    }
+
+    // Default practice mode: add the full wrapper with Socratic method + scene instructions.
+    format!(
+        r#"{}[Mode: Practice / 刷题]
 You are in PRACTICE MODE. The student sends problems. You guide. That's all.
 
 # Core Mechanism
@@ -1006,12 +1023,6 @@ NEVER do these:
 - ❌ Listing steps outside the scene context
 - ❌ Dramatic revelations or big emotional speeches
 
-# Tool Usage
-- Use `read_file` to look up reference materials (textbook, formulas, exercises) when you need context
-- Use `search_file` to find specific content across workspace files
-- Use `render_canvas` for diagrams — electric field lines, circuits, charge distributions
-- Use `think` for complex problem analysis before responding
-
 # Response Format
 Keep it tight:
 1. Brief scene beat (1-2 sentences of corridor imagery)
@@ -1020,7 +1031,7 @@ Keep it tight:
 
 Exception: when the student completes a problem correctly, give a brief scene closure + acknowledge their understanding (still in-scene, never "Good job!").
 
-{}"#, base
+{}"#, respond_instruction, base
     )
 }
 

@@ -38,4 +38,5 @@ tauri-plugin-dialog = "2"
 base64 = "0.22"
 pdfium-render = "0.8"
 image = "0.25"
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 

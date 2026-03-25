@@ -14,8 +14,8 @@ export default function ChatMessageBubble({ message }: Props) {
 
   if (message.role === 'system') {
     return (
-      <div className="my-3 flex justify-center">
-        <span className="rounded-full bg-slate-100 px-4 py-1.5 text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+      <div className="my-6 flex justify-center">
+        <span className="rounded-full bg-border-light/30 px-5 py-2 text-[13px] font-medium tracking-wide text-text-sub dark:bg-surface-dark dark:text-text-placeholder">
           {message.text}
         </span>
       </div>
@@ -26,46 +26,60 @@ export default function ChatMessageBubble({ message }: Props) {
   const showThinking = message.isStreaming && !message.text && thinkingStatus;
 
   return (
-    <div className={`my-3 flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div
-        className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-          isUser
-            ? 'bg-blue-600 text-white'
-            : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
-        }`}
-      >
-        {/* Thinking status — shown while AI is working but no text yet */}
-        {showThinking && (
-          <div className="flex flex-col gap-1">
-            <span className="animate-pulse">{thinkingStatus}</span>
-          </div>
-        )}
+    <div className={`my-8 flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <div className={`w-full max-w-3xl ${isUser ? 'ml-auto max-w-[70%]' : ''}`}>
 
         {isUser ? (
-          <p className="whitespace-pre-wrap">{message.text}</p>
-        ) : message.text ? (
-          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-pre:my-2 prose-blockquote:my-2">
-            <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-              {message.text}
-            </ReactMarkdown>
+          /* User Message: Soft warm gray bubble, right aligned */
+          <div className="float-right rounded-[20px] rounded-br-[4px] bg-[#F5F2EC] px-6 py-4 text-text-main shadow-sm dark:bg-[#2A2825] dark:text-text-main-dark">
+            <p className="whitespace-pre-wrap leading-relaxed text-[15px]">{message.text}</p>
           </div>
-        ) : null}
+        ) : (
+          /* AI Message: Flush left, completely borderless, sophisticated spacing */
+          <div className="flex gap-5">
+            {/* AI Avatar */}
+            <div className="shrink-0 mt-1 h-8 w-8 rounded-full bg-[#E5E0D8] dark:bg-[#33302C] flex items-center justify-center text-primary text-xs font-semibold tracking-wider">
+              AI
+            </div>
 
-        {/* Tool calls indicator */}
-        {message.toolCalls && message.toolCalls.length > 0 && (
-          <div className="mt-2 border-t border-slate-200/20 pt-2">
-            {message.toolCalls.map((tc) => (
-              <div key={tc.id} className="text-xs opacity-70">
-                🔧 {tc.name}({Object.keys(tc.input).join(', ')})
-                {tc.isError && ' ❌'}
-              </div>
-            ))}
+            {/* Text Content */}
+            <div className="flex-1 min-w-0">
+              {showThinking && (
+                <div className="mb-2 flex items-center gap-2 text-text-placeholder text-[14px]">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></span>
+                  <span className="animate-pulse">{thinkingStatus}</span>
+                </div>
+              )}
+
+              {message.text ? (
+                <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none prose-p:leading-[1.7] prose-p:my-4 prose-headings:font-medium prose-headings:tracking-tight prose-headings:mt-8 prose-headings:mb-4 prose-ul:my-4 prose-ol:my-4 prose-li:my-1 prose-pre:my-6 prose-pre:rounded-[12px] prose-pre:bg-[#1E1E1E] prose-blockquote:my-6 prose-blockquote:border-l-primary prose-blockquote:text-text-sub">
+                  <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                    {message.text}
+                  </ReactMarkdown>
+                </div>
+              ) : null}
+
+              {/* Tool calls indicator */}
+              {message.toolCalls && message.toolCalls.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2 pt-2">
+                  {message.toolCalls.map((tc) => (
+                    <div key={tc.id} className="inline-flex items-center rounded-full bg-border-light/40 px-3 py-1 text-[12px] tracking-wide text-text-sub dark:bg-border-dark/40">
+                      <span className="mr-1.5 opacity-70">🔧</span>
+                      {tc.name}
+                      {tc.isError && <span className="ml-1 text-danger">❌</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Streaming cursor */}
+              {message.isStreaming && message.text && (
+                <span className="ml-1 inline-block h-4 w-2 bg-primary animate-pulse align-middle opacity-70"></span>
+              )}
+            </div>
+
+            <div className="clear-both"></div>
           </div>
-        )}
-
-        {/* Streaming cursor */}
-        {message.isStreaming && message.text && (
-          <span className="ml-1 inline-block animate-pulse">▊</span>
         )}
       </div>
     </div>

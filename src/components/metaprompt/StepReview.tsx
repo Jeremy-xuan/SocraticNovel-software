@@ -11,8 +11,8 @@ export default function StepReview({ data }: Props) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="mb-1 text-2xl font-bold text-slate-800 dark:text-slate-100">✅ 确认总览</h2>
-        <p className="text-sm text-slate-500">请检查以下设计，确认无误后点击"开始生成"</p>
+        <h2 className="mb-1 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">✅ 确认总览</h2>
+        <p className="text-aux text-text-sub">请检查以下设计，确认无误后点击"开始生成"</p>
       </div>
 
       {/* Subject & Course */}
@@ -30,24 +30,24 @@ export default function StepReview({ data }: Props) {
       {/* Characters */}
       <Section title="🎭 角色设计">
         {characters.map((char, i) => (
-          <div key={i} className="mb-4 rounded-lg border border-slate-100 bg-slate-50 p-4 last:mb-0 dark:border-slate-600 dark:bg-slate-700/50">
+          <div key={i} className="mb-4 rounded-btn border border-slate-100 bg-bg-light p-4 last:mb-0 dark:border-slate-600 dark:bg-slate-700/50">
             <div className="mb-2 flex items-center gap-2">
-              <span className="text-lg font-bold text-slate-700 dark:text-slate-200">{char.name}</span>
-              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+              <span className="text-subtitle font-medium text-text-main dark:text-text-main-dark">{char.name}</span>
+              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-tag tracking-[0.04em] text-primary dark:bg-blue-900/30 dark:text-blue-300">
                 {TEACHING_STYLE_LABELS[char.teachingStyle].icon} {TEACHING_STYLE_LABELS[char.teachingStyle].label}
               </span>
               {char.source === 'preset' && (
-                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-600 dark:bg-green-900/30 dark:text-green-300">
+                <span className="rounded-full bg-green-100 px-2 py-0.5 text-tag tracking-[0.04em] text-green-600 dark:bg-green-900/30 dark:text-green-300">
                   预设
                 </span>
               )}
             </div>
-            <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
-              <div><span className="text-slate-400">性别/年龄：</span>{char.gender} / {char.age}</div>
-              <div><span className="text-slate-400">外貌：</span>{char.appearanceKeywords}</div>
-              <div><span className="text-slate-400">性格：</span>{char.personalityCore.slice(0, 80)}{char.personalityCore.length > 80 ? '...' : ''}</div>
-              <div><span className="text-slate-400">暗线：</span>{char.backstoryAutoGenerate ? '🤖 AI 自动设计' : (char.backstoryHints || '（未填写）')}</div>
-              <div><span className="text-slate-400">关系温度：</span>{'❄️'.repeat(Math.max(0, 5 - Math.round(char.initialWarmth / 2)))}{'🔥'.repeat(Math.round(char.initialWarmth / 2))}</div>
+            <div className="space-y-1 text-aux text-text-sub dark:text-text-main-dark">
+              <div><span className="text-text-placeholder">性别/年龄：</span>{char.gender} / {char.age}</div>
+              <div><span className="text-text-placeholder">外貌：</span>{char.appearanceKeywords}</div>
+              <div><span className="text-text-placeholder">性格：</span>{char.personalityCore.slice(0, 80)}{char.personalityCore.length > 80 ? '...' : ''}</div>
+              <div><span className="text-text-placeholder">暗线：</span>{char.backstoryAutoGenerate ? '🤖 AI 自动设计' : (char.backstoryHints || '（未填写）')}</div>
+              <div><span className="text-text-placeholder">关系温度：</span>{'❄️'.repeat(Math.max(0, 5 - Math.round(char.initialWarmth / 2)))}{'🔥'.repeat(Math.round(char.initialWarmth / 2))}</div>
             </div>
           </div>
         ))}
@@ -71,13 +71,13 @@ export default function StepReview({ data }: Props) {
       {/* Story */}
       <Section title="📖 故事设计">
         <div className="mb-3">
-          <span className="text-xs font-medium text-slate-500">情感阶段</span>
+          <span className="text-tag tracking-[0.04em] font-medium text-text-sub">情感阶段</span>
           <div className="mt-1 space-y-1">
             {story.emotionalPhases.map((phase, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-xs dark:bg-slate-600">{i + 1}</span>
+              <div key={i} className="flex items-center gap-2 text-aux text-text-sub dark:text-text-main-dark">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-tag tracking-[0.04em] dark:bg-slate-600">{i + 1}</span>
                 <span className="font-medium">{phase.name}</span>
-                <span className="text-slate-400">({phase.coveragePercent})</span>
+                <span className="text-text-placeholder">({phase.coveragePercent})</span>
               </div>
             ))}
           </div>
@@ -94,8 +94,8 @@ export default function StepReview({ data }: Props) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
-      <h3 className="mb-3 text-base font-semibold text-slate-700 dark:text-slate-200">{title}</h3>
+    <div className="rounded-card border border-border-light bg-surface-light p-5 dark:border-border-dark dark:bg-surface-dark">
+      <h3 className="mb-3 text-base font-medium text-text-main dark:text-text-main-dark">{title}</h3>
       <div className="space-y-2">{children}</div>
     </div>
   );
@@ -103,9 +103,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex gap-2 text-sm">
-      <span className="min-w-[5rem] shrink-0 text-slate-400">{label}</span>
-      <span className="text-slate-700 dark:text-slate-200">{value}</span>
+    <div className="flex gap-2 text-aux">
+      <span className="min-w-[5rem] shrink-0 text-text-placeholder">{label}</span>
+      <span className="text-text-main dark:text-text-main-dark">{value}</span>
     </div>
   );
 }
