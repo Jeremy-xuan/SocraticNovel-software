@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
 import { useAiAgent } from '../hooks/useAiAgent';
-import { createWorkspace } from '../lib/tauri';
+import { createWorkspace, listWorkspaces } from '../lib/tauri';
 import ChatMessageBubble from '../components/chat/ChatMessageBubble';
 import ChatInput from '../components/chat/ChatInput';
 import AgentLogPanel from '../components/debug/AgentLogPanel';
@@ -29,6 +29,7 @@ export default function MetaPromptPage() {
   const [workspaceName, setWorkspaceName] = useState('');
   const [workspacePath, setWorkspacePath] = useState('');
   const [askingName, setAskingName] = useState(true);
+  const [nameError, setNameError] = useState('');
 
   // Auto-scroll
   useEffect(() => {
@@ -106,18 +107,36 @@ export default function MetaPromptPage() {
       addMessage(initialMsg);
       await sendMetaPrompt(initialMsg.text);
     } catch (err) {
+      const errStr = String(err);
+      const friendly = errStr.includes('already exists')
+        ? `工作区名称冲突，请返回修改名称后重试`
+        : `初始化失败: ${errStr}`;
       addMessage({
         id: crypto.randomUUID(),
         role: 'system',
-        text: `❌ 初始化失败: ${err}`,
+        text: `❌ ${friendly}`,
         timestamp: Date.now(),
       });
+      if (errStr.includes('already exists')) {
+        setAskingName(true);
+        setNameError(`工作区「${workspaceName.trim()}」已存在，请换一个名称`);
+      }
     }
   }, [clearMessages, addMessage, initMetaPrompt, sendMetaPrompt]);
 
-  const handleNameSubmit = () => {
+  const handleNameSubmit = async () => {
     const name = workspaceName.trim();
     if (!name) return;
+    setNameError('');
+    try {
+      const existing = await listWorkspaces();
+      if (existing.some((ws) => ws.name === name || ws.id === name)) {
+        setNameError(`工作区「${name}」已存在，请换一个名称`);
+        return;
+      }
+    } catch {
+      // listWorkspaces failed — proceed anyway, createWorkspace will catch real errors
+    }
     setAskingName(false);
     handleStartSession(name);
   };
@@ -169,12 +188,21 @@ export default function MetaPromptPage() {
             <input
               type="text"
               value={workspaceName}
-              onChange={(e) => setWorkspaceName(e.target.value)}
+              onChange={(e) => { setWorkspaceName(e.target.value); setNameError(''); }}
               onKeyDown={(e) => e.key === 'Enter' && handleNameSubmit()}
               placeholder="例如: AP-Chemistry, 高中数学, ..."
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+              className={`w-full rounded-lg border bg-white px-4 py-3 text-sm text-slate-700 placeholder-slate-400 focus:outline-none dark:bg-slate-700 dark:text-slate-200 ${
+                nameError
+                  ? 'border-amber-400 focus:border-amber-500 dark:border-amber-500'
+                  : 'border-slate-200 focus:border-blue-500 dark:border-slate-600'
+              }`}
               autoFocus
             />
+            {nameError && (
+              <p className="mt-2 flex items-center gap-1.5 text-sm text-amber-600 dark:text-amber-400">
+                <span>⚠️</span> {nameError}
+              </p>
+            )}
           </div>
           <div className="flex items-center justify-between">
             <button
