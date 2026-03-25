@@ -5,6 +5,7 @@ export interface StartSessionParams {
   workspacePath: string;
   systemPrompt: string;
   provider: string;
+  model?: string;
 }
 
 export interface SendMessageParams {
@@ -98,6 +99,28 @@ export async function sendPracticeMessage(params: PracticeParams): Promise<void>
 /// Set practice-specific system prompt
 export async function setPracticePrompt(prompt: string): Promise<void> {
   return invoke('set_practice_prompt', { prompt });
+}
+
+// ─── Meta Prompt Commands ────────────────────────────────────────
+
+export interface MetaPromptParams {
+  text: string;
+  apiKey: string;
+}
+
+/// Send a message during Meta Prompt workspace generation flow
+export async function sendMetaPromptMessage(params: MetaPromptParams): Promise<void> {
+  return invoke('send_meta_prompt_message', { payload: params });
+}
+
+/// Set meta prompt system prompt
+export async function setMetaPromptPrompt(prompt: string): Promise<void> {
+  return invoke('set_meta_prompt_prompt', { prompt });
+}
+
+/// Get the embedded META_PROMPT.md content
+export async function getMetaPromptContent(): Promise<string> {
+  return invoke('get_meta_prompt_content');
 }
 
 // ─── Note Generation Commands ────────────────────────────────────

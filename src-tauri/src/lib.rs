@@ -36,6 +36,10 @@ pub fn run() {
             // AI: Practice mode
             ai_commands::send_practice_message,
             ai_commands::set_practice_prompt,
+            // AI: Meta Prompt (workspace generation)
+            ai_commands::send_meta_prompt_message,
+            ai_commands::set_meta_prompt_prompt,
+            ai_commands::get_meta_prompt_content,
             // AI: Note generation
             ai_commands::generate_lesson_notes,
             ai_commands::generate_anki_cards,

@@ -22,7 +22,7 @@ use std::io::{self, Write};
 
 const MAX_LOOPS: usize = 10;
 const GRACE_AFTER_RESPOND: usize = 1;
-const WORKSPACE: &str = "/Users/wujunjie/SocraticNovel/workspaces/ap-physics-em";
+const WORKSPACE: &str = "/Users/wujunjie/socratic-novel-软件开发/workspaces/ap-physics-em";
 
 #[tokio::main]
 async fn main() {
@@ -31,6 +31,7 @@ async fn main() {
         std::process::exit(1);
     });
     let provider = std::env::var("PROVIDER").unwrap_or("deepseek".into());
+    let model = std::env::var("MODEL").unwrap_or_default();
 
     println!("╔═══════════════════════════════════════════════════╗");
     println!("║   SocraticNovel CLI Practice Mode                 ║");
@@ -66,11 +67,11 @@ async fn main() {
                 break;
             }
             "/notes" => {
-                print_notes(&api_key, &provider, &messages).await;
+                print_notes(&api_key, &provider, &model, &messages).await;
                 continue;
             }
             "/anki" => {
-                print_anki(&api_key, &provider, &messages).await;
+                print_anki(&api_key, &provider, &model, &messages).await;
                 continue;
             }
             "/debug" => {
@@ -240,13 +241,13 @@ async fn call_ai(
 }
 
 /// Generate and print notes.
-async fn print_notes(api_key: &str, provider: &str, messages: &[Message]) {
+async fn print_notes(api_key: &str, provider: &str, model: &str, messages: &[Message]) {
     if messages.is_empty() {
         println!("⚠ 还没有对话记录，先发送一些题目吧。");
         return;
     }
     println!("\n📓 生成笔记中...");
-    match runtime::generate_notes(api_key, provider, messages).await {
+    match runtime::generate_notes(api_key, provider, model, messages).await {
         Ok(notes) => {
             println!("═══════════════ 笔记 ═══════════════");
             println!("{}", notes);
@@ -257,13 +258,13 @@ async fn print_notes(api_key: &str, provider: &str, messages: &[Message]) {
 }
 
 /// Generate and print Anki cards.
-async fn print_anki(api_key: &str, provider: &str, messages: &[Message]) {
+async fn print_anki(api_key: &str, provider: &str, model: &str, messages: &[Message]) {
     if messages.is_empty() {
         println!("⚠ 还没有对话记录，先发送一些题目吧。");
         return;
     }
     println!("\n🃏 生成 Anki 卡片中...");
-    match runtime::generate_anki_cards(api_key, provider, messages).await {
+    match runtime::generate_anki_cards(api_key, provider, model, messages).await {
         Ok(tsv) => {
             let count = tsv.lines().filter(|l| l.contains('\t')).count();
             println!("═══════════ Anki Cards ({}) ═══════════", count);

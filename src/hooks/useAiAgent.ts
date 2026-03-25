@@ -1,12 +1,14 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '../stores/appStore';
-import { startAiSession, sendChatMessage, sendTeachingMessage, sendPracticeMessage, setPracticePrompt, runPrepPhase, runPostLesson, setTeachingPrompt, onAgentEvent, onCanvasEvent, onGroupChatEvent } from '../lib/ai';
+import { startAiSession, sendChatMessage, sendTeachingMessage, sendPracticeMessage, sendMetaPromptMessage, setPracticePrompt, setMetaPromptPrompt, runPrepPhase, runPostLesson, setTeachingPrompt, onAgentEvent, onCanvasEvent, onGroupChatEvent, getMetaPromptContent } from '../lib/ai';
 import { getApiKey, readFile } from '../lib/tauri';
 import type { ChatMessage, CanvasItem } from '../types';
 
-// Shared workspace path — matches LessonPage.tsx
+// Shared workspace path — read from store (set by LandingPage via initBuiltinWorkspace)
 function getWorkspacePath(): string {
-  return '/Users/wujunjie/SocraticNovel/workspaces/ap-physics-em';
+  const path = useAppStore.getState().settings.currentWorkspacePath;
+  if (!path) throw new Error('Workspace path not initialized');
+  return path;
 }
 
 export function useAiAgent() {
@@ -150,7 +152,12 @@ export function useAiAgent() {
 
   const initSession = useCallback(async (workspacePath: string, systemPrompt: string) => {
     const settings = useAppStore.getState().settings;
-    await startAiSession({ workspacePath, systemPrompt, provider: settings.aiProvider });
+    await startAiSession({
+      workspacePath,
+      systemPrompt,
+      provider: settings.aiProvider,
+      model: settings.aiModel ?? undefined,
+    });
   }, []);
 
   /// Run prep phase: reads workspace files and generates a lesson brief
@@ -302,7 +309,12 @@ export function useAiAgent() {
   /// Initialize practice session: load practice prompt and set up backend
   const initPractice = useCallback(async (workspacePath: string) => {
     const settings = useAppStore.getState().settings;
-    await startAiSession({ workspacePath, systemPrompt: '', provider: settings.aiProvider });
+    await startAiSession({
+      workspacePath,
+      systemPrompt: '',
+      provider: settings.aiProvider,
+      model: settings.aiModel ?? undefined,
+    });
 
     // Load practice-specific prompt from workspace config files
     try {
@@ -359,5 +371,62 @@ export function useAiAgent() {
     }
   }, []);
 
-  return { initSession, sendMessage, sendTeaching, sendPractice, initPractice, runPrep, runPostLesson: runPostLesson_ };
+  /// Initialize meta prompt session: load META_PROMPT.md content and set up backend
+  const initMetaPrompt = useCallback(async (workspacePath: string) => {
+    const settings = useAppStore.getState().settings;
+    await startAiSession({
+      workspacePath,
+      systemPrompt: '',
+      provider: settings.aiProvider,
+      model: settings.aiModel ?? undefined,
+    });
+
+    // Load embedded META_PROMPT.md content from backend
+    const metaPromptContent = await getMetaPromptContent();
+    await setMetaPromptPrompt(metaPromptContent);
+  }, []);
+
+  /// Send a message during Meta Prompt guided workspace creation
+  const sendMetaPrompt = useCallback(async (text: string) => {
+    const settings = useAppStore.getState().settings;
+    const apiKey = await getApiKey(settings.aiProvider);
+    if (!apiKey) {
+      addMessage({
+        id: crypto.randomUUID(),
+        role: 'system',
+        text: '⚠️ 请先在设置中配置 API Key',
+        timestamp: Date.now(),
+      });
+      return;
+    }
+
+    const assistantMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      text: '',
+      timestamp: Date.now(),
+      isStreaming: true,
+    };
+    addMessage(assistantMsg);
+    setStreaming(true);
+    setHasError(false);
+
+    try {
+      await sendMetaPromptMessage({ text, apiKey });
+    } catch (err) {
+      const errMsg = String(err);
+      if (!errMsg.includes('HTTP request failed') && !errMsg.includes('API error')) {
+        addMessage({
+          id: crypto.randomUUID(),
+          role: 'system',
+          text: `❌ 发送失败: ${err}`,
+          timestamp: Date.now(),
+        });
+      }
+      setStreaming(false);
+      setHasError(true);
+    }
+  }, []);
+
+  return { initSession, sendMessage, sendTeaching, sendPractice, initPractice, sendMetaPrompt, initMetaPrompt, runPrep, runPostLesson: runPostLesson_ };
 }

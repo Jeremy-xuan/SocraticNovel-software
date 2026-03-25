@@ -229,6 +229,18 @@ pub fn get_practice_tools() -> Vec<ToolDefinition> {
     ]
 }
 
+/// Meta Prompt Phase tools: respond + file I/O + think (for workspace generation)
+pub fn get_meta_prompt_tools() -> Vec<ToolDefinition> {
+    vec![
+        tool_respond_to_student(),
+        tool_write_file(),
+        tool_read_file(),
+        tool_list_files(),
+        tool_append_file(),
+        tool_think(),
+    ]
+}
+
 /// Execute a tool call and return the result string.
 pub fn execute_tool(
     workspace_path: &str,

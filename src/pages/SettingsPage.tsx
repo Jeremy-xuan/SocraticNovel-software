@@ -3,6 +3,30 @@ import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
 import { setApiKey, hasApiKey } from '../lib/tauri';
 
+const PROVIDER_MODELS: Record<string, Array<{ id: string; label: string; default?: boolean }>> = {
+  anthropic: [
+    { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4 (2025-05-14)', default: true },
+    { id: 'claude-opus-4-5', label: 'Claude Opus 4.5' },
+    { id: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5' },
+    { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5（快速/省钱）' },
+  ],
+  openai: [
+    { id: 'gpt-4o', label: 'GPT-4o', default: true },
+    { id: 'gpt-4o-mini', label: 'GPT-4o mini（快速/省钱）' },
+    { id: 'o3-mini', label: 'o3-mini（推理）' },
+    { id: 'o1', label: 'o1（推理，慢）' },
+  ],
+  deepseek: [
+    { id: 'deepseek-reasoner', label: 'DeepSeek-R1（推理）', default: true },
+    { id: 'deepseek-chat', label: 'DeepSeek-V3（对话）' },
+  ],
+  google: [
+    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', default: true },
+    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash（快速）' },
+    { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
+  ],
+};
+
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { settings, updateSettings } = useAppStore();
@@ -59,7 +83,7 @@ export default function SettingsPage() {
             {(['anthropic', 'openai', 'google', 'deepseek'] as const).map((provider) => (
               <button
                 key={provider}
-                onClick={() => updateSettings({ aiProvider: provider })}
+                onClick={() => updateSettings({ aiProvider: provider, aiModel: null })}
                 className={`rounded-lg border p-3 text-left text-sm transition-colors ${
                   settings.aiProvider === provider
                     ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
@@ -70,6 +94,36 @@ export default function SettingsPage() {
                 {provider === 'openai' && '🟢 OpenAI'}
                 {provider === 'google' && '🔵 Google (Gemini)'}
                 {provider === 'deepseek' && '🔷 DeepSeek'}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Model */}
+        <section className="mb-8">
+          <h2 className="mb-2 text-lg font-semibold text-slate-800 dark:text-slate-100">
+            模型
+          </h2>
+          <p className="mb-3 text-xs text-slate-400">
+            留空则使用各提供商的默认推荐模型。
+          </p>
+          <div className="flex flex-col gap-2">
+            {(PROVIDER_MODELS[settings.aiProvider] ?? []).map((m) => (
+              <button
+                key={m.id}
+                onClick={() => updateSettings({ aiModel: m.default && settings.aiModel === null ? null : m.id })}
+                className={`flex items-center justify-between rounded-lg border px-4 py-2.5 text-left text-sm transition-colors ${
+                  (settings.aiModel === m.id) || (settings.aiModel === null && m.default)
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300'
+                }`}
+              >
+                <span>{m.label}</span>
+                {m.default && (
+                  <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-400 dark:bg-slate-700 dark:text-slate-400">
+                    默认
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -136,7 +190,7 @@ export default function SettingsPage() {
           </h2>
           <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              当前: ~/SocraticNovel/workspaces/ap-physics-em/
+              当前: {settings.currentWorkspacePath ?? '加载中...'}
             </p>
           </div>
         </section>

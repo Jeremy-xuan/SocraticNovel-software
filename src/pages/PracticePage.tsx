@@ -9,7 +9,9 @@ import AgentLogPanel from '../components/debug/AgentLogPanel';
 import type { ChatMessage } from '../types';
 
 function getWorkspacePath(): string {
-  return '/Users/wujunjie/SocraticNovel/workspaces/ap-physics-em';
+  const path = useAppStore.getState().settings.currentWorkspacePath;
+  if (!path) throw new Error('Workspace path not initialized');
+  return path;
 }
 
 export default function PracticePage() {

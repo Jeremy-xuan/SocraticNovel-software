@@ -31,6 +31,12 @@ export default function SetupWizardPage() {
 
   const handleSelectWorkspace = async (choice: 'builtin' | 'create' | 'import') => {
     setError(null);
+    if (choice === 'create') {
+      // Mark setup complete first, then navigate to meta prompt page
+      localStorage.setItem('socratic-novel-setup-done', 'true');
+      navigate('/meta-prompt');
+      return;
+    }
     if (choice === 'builtin') {
       try {
         const ws = await initBuiltinWorkspace();
@@ -198,8 +204,8 @@ export default function SetupWizardPage() {
                 </div>
               </button>
               <button
-                disabled
-                className="w-full cursor-not-allowed rounded-lg border border-slate-200 p-4 text-left opacity-50 dark:border-slate-600"
+                onClick={() => handleSelectWorkspace('create')}
+                className="w-full rounded-lg border border-slate-200 p-4 text-left transition-all hover:border-purple-300 hover:shadow-sm dark:border-slate-600 dark:hover:border-purple-600"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">🔨</span>
@@ -208,7 +214,7 @@ export default function SetupWizardPage() {
                       从零创建教学系统
                     </div>
                     <div className="text-xs text-slate-400">
-                      使用 Meta Prompt 创建自定义教学系统（即将推出）
+                      使用 Meta Prompt AI 引导创建自定义教学系统
                     </div>
                   </div>
                 </div>

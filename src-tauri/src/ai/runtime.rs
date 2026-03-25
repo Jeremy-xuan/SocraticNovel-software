@@ -13,6 +13,7 @@ const MAX_PREP_LOOPS: usize = 25;
 const MAX_TEACHING_LOOPS: usize = 10;
 const MAX_POST_LOOPS: usize = 20;
 const MAX_PRACTICE_LOOPS: usize = 10;
+const MAX_META_PROMPT_LOOPS: usize = 30;
 // After respond_to_student, allow 1 more iteration for follow-up tools (group_chat, canvas)
 // but respond_to_student itself is removed from available tools to prevent repeat calls
 const GRACE_AFTER_RESPOND: usize = 1;
@@ -24,6 +25,7 @@ pub enum AgentPhase {
     Teaching,    // Interactive teaching — respond_to_student only
     PostLesson,  // Post-lesson — updates runtime files
     Practice,    // Practice/drill — student sends problems, AI guides with file access
+    MetaPrompt,  // Meta Prompt — AI guides user through creating a new teaching system
 }
 
 /// Result from a phase loop execution
@@ -539,6 +541,7 @@ pub async fn run_agent_turn(
     app: &AppHandle,
     api_key: &str,
     provider: &str,
+    model: &str,
     workspace_path: &str,
     system_prompt: &str,
     mut messages: Vec<Message>,
@@ -577,16 +580,14 @@ pub async fn run_agent_turn(
         // Step 1: Get response from AI provider
         let (content_blocks, stop_reason) = match provider {
             "anthropic" => {
-                // Claude: streaming with incremental respond_to_student output
-                let client = ClaudeClient::new(api_key.to_string());
+                let client = ClaudeClient::with_model(api_key.to_string(), model);
                 process_claude_streaming(
                     app, &client, &system_prompt, messages.clone(), &tool_defs,
                     &mut student_text, &mut all_raw_text,
                 ).await?
             }
             "openai" | "deepseek" | "google" => {
-                // OpenAI-compatible: streaming with incremental respond_to_student
-                let client = OpenAiClient::new(api_key.to_string(), provider);
+                let client = OpenAiClient::with_model(api_key.to_string(), provider, model);
                 process_openai_streaming(
                     app, &client, &system_prompt, messages.clone(), &tool_defs,
                     &mut student_text, &mut all_raw_text,
@@ -694,6 +695,7 @@ async fn run_phase_loop(
     app: &AppHandle,
     api_key: &str,
     provider: &str,
+    model: &str,
     workspace_path: &str,
     system_prompt: &str,
     mut messages: Vec<Message>,
@@ -715,20 +717,21 @@ async fn run_phase_loop(
             AgentPhase::Teaching => "Teaching",
             AgentPhase::PostLesson => "PostLesson",
             AgentPhase::Practice => "Practice",
+            AgentPhase::MetaPrompt => "MetaPrompt",
         };
         println!("[{}] Iteration {}/{}", phase_label, iteration + 1, max_loops);
 
         // Step 1: Get response from AI provider (streaming)
         let (content_blocks, stop_reason) = match provider {
             "anthropic" => {
-                let client = ClaudeClient::new(api_key.to_string());
+                let client = ClaudeClient::with_model(api_key.to_string(), model);
                 process_claude_streaming(
                     app, &client, system_prompt, messages.clone(), &active_tools,
                     &mut student_text, &mut all_raw_text,
                 ).await?
             }
             "openai" | "deepseek" | "google" => {
-                let client = OpenAiClient::new(api_key.to_string(), provider);
+                let client = OpenAiClient::with_model(api_key.to_string(), provider, model);
                 process_openai_streaming(
                     app, &client, system_prompt, messages.clone(), &active_tools,
                     &mut student_text, &mut all_raw_text,
@@ -819,7 +822,7 @@ async fn run_phase_loop(
         // Safety limit
         if iteration == max_loops - 1 {
             match phase {
-                AgentPhase::Teaching | AgentPhase::Legacy | AgentPhase::Practice => {
+                AgentPhase::Teaching | AgentPhase::Legacy | AgentPhase::Practice | AgentPhase::MetaPrompt => {
                     let _ = app.emit("agent-event", AgentEvent::Error {
                         message: format!("[{}] Maximum iterations reached ({})", phase_label, max_loops),
                     });
@@ -832,9 +835,9 @@ async fn run_phase_loop(
         }
     }
 
-    // Fallback: show raw text if respond_to_student wasn't used (Teaching/Legacy/Practice)
+    // Fallback: show raw text if respond_to_student wasn't used (Teaching/Legacy/Practice/MetaPrompt)
     match phase {
-        AgentPhase::Teaching | AgentPhase::Legacy | AgentPhase::Practice => {
+        AgentPhase::Teaching | AgentPhase::Legacy | AgentPhase::Practice | AgentPhase::MetaPrompt => {
             if student_text.is_empty() && !all_raw_text.is_empty() {
                 println!("[Warning] AI did not use respond_to_student — showing raw text");
                 let _ = app.emit("agent-event", AgentEvent::TextDelta {
@@ -848,7 +851,7 @@ async fn run_phase_loop(
 
     // Final events
     match phase {
-        AgentPhase::Teaching | AgentPhase::Legacy | AgentPhase::Practice => {
+        AgentPhase::Teaching | AgentPhase::Legacy | AgentPhase::Practice | AgentPhase::MetaPrompt => {
             if !student_text.is_empty() {
                 let _ = app.emit("agent-event", AgentEvent::MessageDone {
                     full_text: student_text.clone(),
@@ -1016,13 +1019,38 @@ Exception: when the student completes a problem correctly, give a brief scene cl
     )
 }
 
-// ─── Public Multi-Agent API ───────────────────────────────────────
+fn build_meta_prompt_prompt(base: &str) -> String {
+    format!(
+        "[Desktop App Instructions]\n\
+        You MUST use the `respond_to_student` tool to send ALL visible content to the user. \
+        Direct text output is treated as silent internal thinking and will NOT be shown.\n\n\
+        [Mode: Meta Prompt — Teaching System Generator]\n\
+        You are a SocraticNovel system generator running inside a desktop app.\n\
+        Follow the META_PROMPT instructions below to guide the user through creating a complete teaching system.\n\n\
+        [Tool Usage]\n\
+        - Use `respond_to_student` for ALL messages visible to the user (questions, confirmations, progress updates).\n\
+        - Use `write_file` to generate workspace files (the workspace directory is already created).\n\
+        - Use `read_file` to review generated files if needed.\n\
+        - Use `list_files` to check directory structure.\n\
+        - Use `think` for internal reasoning.\n\n\
+        [Important Adaptations for Desktop App]\n\
+        - The workspace path is pre-configured. Write files relative to the workspace root.\n\
+        - File paths: use forward slashes (e.g., teacher/config/system_core.md).\n\
+        - The entry file should be named `CLAUDE.md` (not copilot-instructions.md) — the app reads this file on startup.\n\
+        - After generating each major file, tell the user what you created and ask for confirmation before proceeding.\n\
+        - Keep respond_to_student messages concise but informative.\n\n\
+        [META_PROMPT Content]\n\
+        {}\n\n\
+        {}", META_PROMPT_CONTENT, base
+    )
+}
 
 /// Phase 1: Prep Agent — reads files and generates a lesson brief
 pub async fn run_prep_phase(
     app: &AppHandle,
     api_key: &str,
     provider: &str,
+    model: &str,
     workspace_path: &str,
     system_prompt: &str,
     initial_message: &str,
@@ -1036,7 +1064,7 @@ pub async fn run_prep_phase(
         }],
     }];
     let result = run_phase_loop(
-        app, api_key, provider, workspace_path, &augmented_prompt,
+        app, api_key, provider, model, workspace_path, &augmented_prompt,
         messages, &tool_defs, MAX_PREP_LOOPS, &AgentPhase::Prep,
     ).await?;
     Ok((result.lesson_brief.unwrap_or_default(), result.messages))
@@ -1047,6 +1075,7 @@ pub async fn run_teaching_turn(
     app: &AppHandle,
     api_key: &str,
     provider: &str,
+    model: &str,
     workspace_path: &str,
     system_prompt: &str,
     lesson_brief: &str,
@@ -1055,7 +1084,7 @@ pub async fn run_teaching_turn(
     let tool_defs = tools::get_teaching_tools();
     let augmented_prompt = build_teaching_prompt(system_prompt, lesson_brief);
     let result = run_phase_loop(
-        app, api_key, provider, workspace_path, &augmented_prompt,
+        app, api_key, provider, model, workspace_path, &augmented_prompt,
         messages, &tool_defs, MAX_TEACHING_LOOPS, &AgentPhase::Teaching,
     ).await?;
     Ok(result.messages)
@@ -1066,6 +1095,7 @@ pub async fn run_post_lesson(
     app: &AppHandle,
     api_key: &str,
     provider: &str,
+    model: &str,
     workspace_path: &str,
     system_prompt: &str,
     conversation_summary: &str,
@@ -1079,7 +1109,7 @@ pub async fn run_post_lesson(
         }],
     }];
     let result = run_phase_loop(
-        app, api_key, provider, workspace_path, &augmented_prompt,
+        app, api_key, provider, model, workspace_path, &augmented_prompt,
         messages, &tool_defs, MAX_POST_LOOPS, &AgentPhase::PostLesson,
     ).await?;
     Ok(result.messages)
@@ -1090,6 +1120,7 @@ pub async fn run_practice_turn(
     app: &AppHandle,
     api_key: &str,
     provider: &str,
+    model: &str,
     workspace_path: &str,
     system_prompt: &str,
     messages: Vec<Message>,
@@ -1097,13 +1128,40 @@ pub async fn run_practice_turn(
     let tool_defs = tools::get_practice_tools();
     let augmented_prompt = build_practice_prompt(system_prompt);
     let result = run_phase_loop(
-        app, api_key, provider, workspace_path, &augmented_prompt,
+        app, api_key, provider, model, workspace_path, &augmented_prompt,
         messages, &tool_defs, MAX_PRACTICE_LOOPS, &AgentPhase::Practice,
     ).await?;
     Ok(result.messages)
 }
 
-// ─── Note Generation (non-streaming, single call) ─────────────────
+// ─── Meta Prompt: workspace generation via conversational AI ──────
+
+/// Embedded META_PROMPT.md content (compiled in at build time)
+const META_PROMPT_CONTENT: &str = include_str!("meta_prompt.md");
+
+/// Meta Prompt Mode: AI guides user through creating a new teaching system
+pub async fn run_meta_prompt_turn(
+    app: &AppHandle,
+    api_key: &str,
+    provider: &str,
+    model: &str,
+    workspace_path: &str,
+    system_prompt: &str,
+    messages: Vec<Message>,
+) -> Result<Vec<Message>, String> {
+    let tool_defs = tools::get_meta_prompt_tools();
+    let augmented_prompt = build_meta_prompt_prompt(system_prompt);
+    let result = run_phase_loop(
+        app, api_key, provider, model, workspace_path, &augmented_prompt,
+        messages, &tool_defs, MAX_META_PROMPT_LOOPS, &AgentPhase::MetaPrompt,
+    ).await?;
+    Ok(result.messages)
+}
+
+/// Get the embedded META_PROMPT.md content
+pub fn get_meta_prompt_content() -> &'static str {
+    META_PROMPT_CONTENT
+}
 
 const NOTES_PROMPT: &str = r#"You are a personalized study notes generator. Analyze the tutoring conversation below — pay special attention to where the student struggled, answered incorrectly, or needed hints.
 
@@ -1156,6 +1214,7 @@ Based on the problems discussed AND the student's weaknesses, generate 2-3 pract
 pub async fn generate_notes(
     api_key: &str,
     provider: &str,
+    model: &str,
     messages: &[Message],
 ) -> Result<String, String> {
     // Build a condensed conversation summary for the AI
@@ -1168,7 +1227,7 @@ pub async fn generate_notes(
         }],
     }];
 
-    call_ai_simple(api_key, provider, NOTES_PROMPT, user_message).await
+    call_ai_simple(api_key, provider, model, NOTES_PROMPT, user_message).await
 }
 
 const ANKI_PROMPT: &str = r#"You are an Anki flashcard generator. Analyze the conversation below and produce flashcards for spaced repetition review.
@@ -1201,6 +1260,7 @@ FRONT<TAB>BACK<TAB>TAGS
 pub async fn generate_anki_cards(
     api_key: &str,
     provider: &str,
+    model: &str,
     messages: &[Message],
 ) -> Result<String, String> {
     let conversation_text = extract_conversation_text(messages);
@@ -1212,7 +1272,7 @@ pub async fn generate_anki_cards(
         }],
     }];
 
-    call_ai_simple(api_key, provider, ANKI_PROMPT, user_message).await
+    call_ai_simple(api_key, provider, model, ANKI_PROMPT, user_message).await
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────
@@ -1245,12 +1305,13 @@ pub fn extract_conversation_text(messages: &[Message]) -> String {
 pub async fn call_ai_simple(
     api_key: &str,
     provider: &str,
+    model: &str,
     system_prompt: &str,
     messages: Vec<Message>,
 ) -> Result<String, String> {
     match provider {
         "anthropic" => {
-            let client = ClaudeClient::new(api_key.to_string());
+            let client = ClaudeClient::with_model(api_key.to_string(), model);
             let (content_blocks, _) = client
                 .send_message(system_prompt, messages, None)
                 .await?;
@@ -1260,7 +1321,7 @@ pub async fn call_ai_simple(
                 .join("\n"))
         }
         _ => {
-            let client = OpenAiClient::new(api_key.to_string(), provider);
+            let client = OpenAiClient::with_model(api_key.to_string(), provider, model);
             let (content_blocks, _) = client
                 .send_message(system_prompt, messages, None)
                 .await?;

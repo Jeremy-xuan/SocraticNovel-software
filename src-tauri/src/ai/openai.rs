@@ -11,7 +11,11 @@ pub struct OpenAiClient {
 
 impl OpenAiClient {
     pub fn new(api_key: String, provider: &str) -> Self {
-        let (base_url, model) = match provider {
+        Self::with_model(api_key, provider, "")
+    }
+
+    pub fn with_model(api_key: String, provider: &str, model_override: &str) -> Self {
+        let (base_url, default_model) = match provider {
             "openai" => (
                 "https://api.openai.com/v1/chat/completions".to_string(),
                 "gpt-4o".to_string(),
@@ -30,6 +34,8 @@ impl OpenAiClient {
                 "gpt-4o".to_string(),
             ),
         };
+
+        let model = if model_override.is_empty() { default_model } else { model_override.to_string() };
 
         Self {
             client: Client::new(),

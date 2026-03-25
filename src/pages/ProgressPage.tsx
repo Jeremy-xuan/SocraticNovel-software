@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { readFile } from '../lib/tauri';
-
-const WORKSPACE = '/Users/wujunjie/SocraticNovel/workspaces/ap-physics-em';
+import { useAppStore } from '../stores/appStore';
 
 // ─── Types ──────────────────────────────────────────────────
 interface LessonRecord {
@@ -108,6 +107,7 @@ function parseDiary(md: string): DiaryEntry[] {
 // ─── Component ──────────────────────────────────────────────
 export default function ProgressPage() {
   const navigate = useNavigate();
+  const workspacePath = useAppStore((s) => s.settings.currentWorkspacePath);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -118,14 +118,15 @@ export default function ProgressPage() {
   const [tab, setTab] = useState<'overview' | 'knowledge' | 'log'>('overview');
 
   const loadData = useCallback(async () => {
+    if (!workspacePath) { setError('Workspace not initialized'); setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
       const [progressMd, kpMd, sessionMd, diaryMd] = await Promise.all([
-        readFile(WORKSPACE, 'teacher/runtime/progress.md').catch(() => ''),
-        readFile(WORKSPACE, 'teacher/config/knowledge_points.md').catch(() => ''),
-        readFile(WORKSPACE, 'teacher/runtime/session_log.md').catch(() => ''),
-        readFile(WORKSPACE, 'teacher/runtime/diary.md').catch(() => ''),
+        readFile(workspacePath, 'teacher/runtime/progress.md').catch(() => ''),
+        readFile(workspacePath, 'teacher/config/knowledge_points.md').catch(() => ''),
+        readFile(workspacePath, 'teacher/runtime/session_log.md').catch(() => ''),
+        readFile(workspacePath, 'teacher/runtime/diary.md').catch(() => ''),
       ]);
       setLessons(parseProgress(progressMd));
       setChapters(parseKnowledgePoints(kpMd));
@@ -136,7 +137,7 @@ export default function ProgressPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [workspacePath]);
 
   useEffect(() => { loadData(); }, [loadData]);
 

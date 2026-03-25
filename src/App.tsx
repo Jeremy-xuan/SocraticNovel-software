@@ -8,6 +8,31 @@ import NotesPage from './pages/NotesPage';
 import ProgressPage from './pages/ProgressPage';
 import SettingsPage from './pages/SettingsPage';
 import SetupWizardPage from './pages/SetupWizardPage';
+import MetaPromptPage from './pages/MetaPromptPage';
+import { useAppStore } from './stores/appStore';
+
+function ThemeProvider() {
+  const theme = useAppStore((s) => s.settings.theme);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else if (theme === 'light') {
+      root.classList.remove('dark');
+    } else {
+      // system: follow OS preference
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      root.classList.toggle('dark', prefersDark);
+      const mql = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = (e: MediaQueryListEvent) => root.classList.toggle('dark', e.matches);
+      mql.addEventListener('change', handler);
+      return () => mql.removeEventListener('change', handler);
+    }
+  }, [theme]);
+
+  return null;
+}
 
 function AppRoutes() {
   const location = useLocation();
@@ -29,6 +54,7 @@ function AppRoutes() {
       <Route path="/notes" element={<NotesPage />} />
       <Route path="/progress" element={<ProgressPage />} />
       <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/meta-prompt" element={<MetaPromptPage />} />
     </Routes>
   );
 }
@@ -36,6 +62,7 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
+      <ThemeProvider />
       <AppRoutes />
     </BrowserRouter>
   );

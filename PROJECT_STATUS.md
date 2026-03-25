@@ -1,7 +1,7 @@
 # SocraticNovel — 项目状态文档
 
-> 最后更新：2025-07-20
-> 当前版本：Phase 2（练习模式 + 笔记系统）
+> 最后更新：2026-03-24
+> 当前版本：Phase 2（练习模式 + 笔记系统 + 学习进度页）
 
 ## 项目概述
 
@@ -193,6 +193,12 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
     - `cli_practice.rs` 二进制：终端交互 + 非流式 API 调用
     - 支持 /notes, /anki, /debug, /quit 命令
     - 已通过端到端测试（3 轮高斯定律对话 + 笔记 + Anki 生成）
+36. **✅ 学习进度页（ProgressPage）** — 解析 workspace 运行时文件，可视化展示学习全貌
+    - 解析 progress.md → 课程记录表格（日期 / 章节 / 老师 / 掌握度）
+    - 解析 knowledge_points.md → 知识点覆盖状态（done / partial / todo），按章聚合
+    - 解析 session_log.md → 课堂摘要列表
+    - 解析 diary.md → 学习日记条目
+    - 路由：Landing Page → /progress → ProgressPage
 
 ### Bug 修复 — ✅ Phase 2 相关
 
@@ -213,10 +219,10 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 
 ### 优先级中
 
-1. **学习进度展示** — progress.md 解析 + 可视化
-2. **深色模式** — TW4 dark: 变体已准备，但未实现切换
-3. **Workspace 选择器** — 目前硬编码路径，需要 UI 选择
-4. **模型选择器** — 用户应能在设置中选择具体模型（不只是提供商）
+1. **✅ 学习进度展示** — ProgressPage.tsx 已实现：解析 progress.md / knowledge_points.md / session_log.md / diary.md，可视化展示课程记录、知识点覆盖、日志、日记
+2. **✅ 深色模式** — `ThemeProvider` 组件（App.tsx）监听 store 中的 `theme` 设置，动态给 `document.documentElement` 加/移除 `dark` class；`system` 模式跟随 OS `prefers-color-scheme`，含 MediaQueryList 监听器
+3. **Workspace 选择器** — 路径现已从 Rust 动态返回（不再硬编码），但 UI 仍无法手动切换 workspace
+4. **✅ 模型选择器** — Settings 页面按提供商显示可选模型列表（Anthropic×4 / OpenAI×4 / DeepSeek×2 / Google×3）；切换提供商自动重置模型；`null` 表示使用 Rust 侧默认值；model 通过 `startAiSession` payload 传入后端
 5. **极简风笔记模板重新设计** — 当前极简风用户不太满意，需要重新设计
 
 ### 优先级低
@@ -230,9 +236,10 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 
 ### 应用代码
 ```
-~/socratic-novel/                    # 项目根目录
+~/socratic-novel-软件开发/                   # 项目根目录
 ├── src/                             # 前端 (React + TS)
 ├── src-tauri/src/                   # 后端 (Rust)
+├── workspaces/ap-physics-em/        # AI 读写的 workspace
 ├── package.json                     # 前端依赖
 ├── src-tauri/Cargo.toml             # 后端依赖
 └── PROJECT_STATUS.md                # 本文件
@@ -240,13 +247,13 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 
 ### 教学系统 Workspace
 ```
-~/SocraticNovel/workspaces/ap-physics-em/    # 运行时 workspace（AI 读写此目录）
-~/AP_Physics_EM/                             # 源模板（init_builtin_workspace 复制源）
+~/socratic-novel-软件开发/workspaces/ap-physics-em/    # 运行时 workspace（AI 读写此目录）
+~/AP_Physics_EM- 学习系统/                              # 源模板（init_builtin_workspace 复制源）
 ```
 
 ### 关键配置
 ```
-~/SocraticNovel/workspaces/ap-physics-em/
+~/socratic-novel-软件开发/workspaces/ap-physics-em/
 ├── CLAUDE.md                        # AI 启动入口（启动顺序 + 桌面环境说明）
 ├── teacher/config/system.md         # 系统总指令（~550 行，核心 prompt）
 ├── teacher/config/curriculum.md     # 课程大纲
@@ -262,7 +269,7 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 ```bash
 # 启动开发服务器
 export PATH="$HOME/.cargo/bin:$PATH"
-cd ~/socratic-novel
+cd ~/socratic-novel-软件开发
 npm run tauri dev
 
 # 仅前端

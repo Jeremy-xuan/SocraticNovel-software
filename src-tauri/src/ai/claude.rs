@@ -20,6 +20,14 @@ impl ClaudeClient {
         }
     }
 
+    pub fn with_model(api_key: String, model: &str) -> Self {
+        Self {
+            client: Client::new(),
+            api_key,
+            model: if model.is_empty() { DEFAULT_MODEL.to_string() } else { model.to_string() },
+        }
+    }
+
     /// Send a non-streaming request to Claude Messages API (fallback).
     #[allow(dead_code)]
     pub async fn send_message(

@@ -2,11 +2,11 @@ use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// Get the base workspaces directory: ~/SocraticNovel/workspaces/
+/// Get the base workspaces directory: ~/socratic-novel-软件开发/workspaces/
 fn workspaces_dir() -> PathBuf {
     dirs::home_dir()
         .expect("Could not find home directory")
-        .join("SocraticNovel")
+        .join("socratic-novel-软件开发")
         .join("workspaces")
 }
 
@@ -222,13 +222,13 @@ pub fn init_builtin_workspace() -> Result<WorkspaceInfo, String> {
         });
     }
 
-    // Source: the AP_Physics_EM directory in user's home
+    // Source: the AP_Physics_EM- 学习系统 directory in user's home
     let home = dirs::home_dir().ok_or("Cannot find home directory")?;
-    let source = home.join("AP_Physics_EM");
+    let source = home.join("AP_Physics_EM- 学习系统");
 
     if !source.exists() {
         return Err(
-            "AP_Physics_EM source not found. Please ensure ~/AP_Physics_EM/ exists.".to_string(),
+            "AP_Physics_EM source not found. Please ensure ~/AP_Physics_EM- 学习系统/ exists.".to_string(),
         );
     }
 

@@ -11,7 +11,9 @@ import { readFile, hasSavedSession, restoreAiSession, clearSavedSession } from '
 
 function getWorkspacePath(): string {
   // TODO: resolve from settings/workspace selector
-  return '/Users/wujunjie/SocraticNovel/workspaces/ap-physics-em';
+  const path = useAppStore.getState().settings.currentWorkspacePath;
+  if (!path) throw new Error('Workspace path not initialized');
+  return path;
 }
 
 export default function LessonPage() {

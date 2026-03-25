@@ -96,7 +96,9 @@ export interface AgentLogEntry {
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   currentWorkspaceId: string | null;
+  currentWorkspacePath: string | null;
   aiProvider: 'anthropic' | 'openai' | 'google' | 'deepseek' | 'custom';
+  aiModel: string | null;
   apiKeyConfigured: boolean;
 }
 

@@ -82,7 +82,9 @@ export const useAppStore = create<AppState>((set) => ({
   settings: {
     theme: 'light',
     currentWorkspaceId: null,
+    currentWorkspacePath: null,
     aiProvider: 'anthropic',
+    aiModel: null,
     apiKeyConfigured: false,
     ...loadPersistedSettings(),
   },

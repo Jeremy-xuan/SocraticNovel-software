@@ -26,7 +26,7 @@ export default function LandingPage() {
     const init = async () => {
       try {
         const ws = await initBuiltinWorkspace();
-        updateSettings({ currentWorkspaceId: ws.id });
+        updateSettings({ currentWorkspaceId: ws.id, currentWorkspacePath: ws.path });
         setWorkspaceReady(true);
 
         const keyOk = await hasApiKey(settings.aiProvider);
@@ -129,6 +129,23 @@ export default function LandingPage() {
           </span>
           <span className="mt-auto text-sm font-medium text-emerald-600 group-hover:text-emerald-700 dark:text-emerald-400">
             ▶ 开始刷题
+          </span>
+        </button>
+
+        {/* Create new teaching system card */}
+        <button
+          onClick={() => navigate('/meta-prompt')}
+          className="group flex w-64 flex-col items-start rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:border-purple-600"
+        >
+          <span className="mb-3 text-3xl">🔨</span>
+          <span className="mb-1 text-lg font-semibold text-slate-800 dark:text-slate-100">
+            创建教学系统
+          </span>
+          <span className="mb-4 text-sm text-slate-500 dark:text-slate-400">
+            AI 引导创建自定义教学系统
+          </span>
+          <span className="mt-auto text-sm font-medium text-purple-600 group-hover:text-purple-700 dark:text-purple-400">
+            ▶ 开始创建
           </span>
         </button>
       </div>
