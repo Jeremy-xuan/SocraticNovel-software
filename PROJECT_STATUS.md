@@ -1,7 +1,7 @@
 # SocraticNovel — 项目状态文档
 
 > 最后更新：2026-07-22
-> 当前版本：Phase 2 ✅ 完成（练习模式 + 笔记系统 + 学习进度页 + Meta Prompt + 间隔复习 + PDF 导入 + 章节大纲）
+> 当前版本：Phase 2 ✅ 完成 + 问卷化改造（练习模式 + 笔记系统 + 学习进度页 + Meta Prompt 问卷 + 间隔复习 + PDF 导入 + 章节大纲）
 
 ## 项目概述
 
@@ -71,6 +71,9 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 | **Chapter Outline** | `components/layout/ChapterOutline.tsx` | LessonPage 左侧课程大纲树 |
 | **Curriculum Parser** | `lib/curriculumParser.ts` | 解析 curriculum.md / progress.md 为结构化数据 |
 | **Agent Log** | `components/debug/AgentLogPanel.tsx` | Agent 活动日志查看器 |
+| **Meta Prompt 问卷** | `components/metaprompt/` | 5 步问卷向导（基础→角色→世界观→故事→确认） |
+| **角色预设库** | `data/characterPresets.ts` | 20 个动漫角色预设（折木/五条/利威尔/杀老师等） |
+| **问卷序列化** | `lib/questionnaireSerializer.ts` | 问卷数据 → Markdown 格式给 AI |
 
 ### 可用工具（AI Agent）
 
@@ -257,6 +260,23 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
     - 无 curriculum.md 时显示简化状态信息（兼容自定义 workspace）
     - `curriculumParser.ts`：通用 Markdown 表格解析器
 
+### UX 改善 — ✅ 问卷化改造 + 冲突检测
+
+43. **✅ Meta Prompt 问卷化改造** — 长对话式引导改为前端 5 步问卷向导
+    - 旧流程：AI 逐一提问 Phase 1-4 → 用户逐个回答 → 耗时多轮
+    - 新流程：前端问卷收集全部信息 → 一次性提交 → AI 直接进入 Phase 5 生成
+    - **5 步向导**：基础信息 → 角色创建 → 世界观 → 故事设计 → 确认总览
+    - **3 种角色创建模式**：预设库选择 / 输入角色名（AI 补全）/ 原创角色
+    - **20 个动漫角色预设**：按教学风格分 5 类（理论精确/直觉类比/工程实战/哲学引导/陪伴鼓励）
+    - 预设角色：折木奉太郎、槙岛圣护、利威尔、白银御行、石神千空、五条悟、杀老师、�的杏寿郎、鲁路修、坂本、布尔玛、渚薰、本田透、西宫�的花、02、赫萝、薇尔莉特、旗木卡卡西、蕾姆
+    - 问卷序列化为 Markdown（`# 用户设计决策总览`），meta_prompt.md 识别并跳过提问直接生成
+    - meta_prompt.md 精简：1259→1042 行（删除 Phase 1-4 提问 + 平台选择 + 知识库适配）
+    - 组件：`QuestionnaireWizard` + `StepSubject/Characters/World/Story/Review`
+44. **✅ Workspace 名称冲突友好提示** — 创建 workspace 时重名不再报错
+    - 预提交检测：提交前调用 `listWorkspaces()` 检查重名
+    - 琥珀色 ⚠️ 内联警告（非弹窗）
+    - 后备 catch：捕获 "already exists" 错误，自动返回名称输入界面
+
 ## 未完成 / 需要改进
 
 ### 优先级高
@@ -365,3 +385,5 @@ API_KEY=<your-key> PROVIDER=deepseek cargo run --bin dev_test
 16. **PDF 导入分层架构** — 三层设计：(1) `pdf-extract` 文本提取作为基础层，(2) PDFium/pdftoppm 页面渲染作为可选增强，(3) AI Vision/文本优化作为最高层。每层独立可用，逐级增强。
 17. **PDFium 动态加载** — 使用 `pdfium-render` 的运行时动态绑定（dlopen），编译不需要 PDFium 库文件。运行时按优先级搜索：app bundle → 项目 libs/ → Homebrew → 系统路径。找不到时自动 fallback 到 pdftoppm。这比静态链接更灵活，避免编译复杂度。
 18. **ContentBlock::Image 多平台适配** — AI 图像内容块统一为 Claude 格式（ImageSource::Base64），OpenAI 客户端在 `build_request_body()` 中自动转换为 `image_url` data URI 格式。单纯文本消息保持 string 简单格式以兼容旧 API。
+19. **Meta Prompt 问卷化** — 将 AI 逐步提问（Phase 1-4）改为前端 5 步向导。用户填完问卷后，`serializeQuestionnaire()` 将数据序列化为结构化 Markdown（`# 用户设计决策总览`），作为 AI 的第一条 user message 发送。meta_prompt.md 中 Phase 1-4 被替换为"接收用户设计决策并直接进入 Phase 5"的指令。这将 10+ 轮对话压缩为 0 轮，同时保证 AI 获得的信息量不减。
+20. **角色预设库架构** — 20 个动漫角色按教学风格分 5 类（theory-precise / intuition-analogy / engineering / philosophy / companion），每个预设包含 name / gender / age / appearance / teachingStyle / personalityCore / backstoryHints / initialWarmth。三种创建模式（preset / custom-name / original）通过 `CharacterDesign.source` 字段区分。预设选中后所有字段可编辑微调，不锁死。
