@@ -6,6 +6,7 @@ import ChatMessageBubble from '../components/chat/ChatMessageBubble';
 import ChatInput from '../components/chat/ChatInput';
 import CanvasPanel from '../components/canvas/CanvasPanel';
 import AgentLogPanel from '../components/debug/AgentLogPanel';
+import ChapterOutline from '../components/layout/ChapterOutline';
 import type { ChatMessage } from '../types';
 import { readFile, hasSavedSession, restoreAiSession, clearSavedSession } from '../lib/tauri';
 
@@ -294,27 +295,9 @@ export default function LessonPage() {
 
       {/* Three-column layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left sidebar — lesson navigation */}
-        <aside className="flex w-56 shrink-0 flex-col border-r border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-850">
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            课堂信息
-          </h3>
-          <div className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-            <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-800">
-              <p className="font-medium">当前章节</p>
-              <p className="text-slate-400">Ch.23 — 电场</p>
-            </div>
-            <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-800">
-              <p className="font-medium">今日老师</p>
-              <p className="text-slate-400">朔</p>
-            </div>
-            <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-800">
-              <p className="font-medium">状态</p>
-              <p className={isInClass ? 'text-green-500' : 'text-slate-400'}>
-                {isInClass ? '🟢 上课中' : '⚪ 未开始'}
-              </p>
-            </div>
-          </div>
+        {/* Left sidebar — chapter outline */}
+        <aside className="flex w-56 shrink-0 flex-col border-r border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-850">
+          <ChapterOutline isInClass={isInClass} />
         </aside>
 
         {/* Center — chat */}

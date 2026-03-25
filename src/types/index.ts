@@ -151,3 +151,27 @@ export interface PdfExtractResult {
   pages: PdfPage[];
   fullText: string;
 }
+
+// ─── Curriculum Outline ──────────────────────────────────────────
+
+export type ChapterStatus = 'not_started' | 'in_progress' | 'completed';
+
+export interface CurriculumChapter {
+  lesson: string;       // e.g. "1", "U1综合"
+  chapter: string;      // e.g. "Ch.21", "—"
+  title: string;        // e.g. "库仑定律、电荷守恒"
+  materialFile: string; // e.g. "materials/textbook/21_Coulomb_s_Law.pdf"
+  status: ChapterStatus;
+}
+
+export interface CurriculumUnit {
+  unitId: string;       // e.g. "unit-1"
+  unitNumber: number;   // e.g. 1
+  title: string;        // e.g. "静电场（Electrostatics）"
+  chapters: CurriculumChapter[];
+}
+
+export interface CurriculumOutline {
+  units: CurriculumUnit[];
+  currentChapter: string | null; // e.g. "Ch.23"
+}
