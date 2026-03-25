@@ -1000,19 +1000,57 @@ CREATE TABLE canvas_items (
 | 深色模式 | UI 偏好 |
 | 左侧栏：章节大纲 + 进度 | 课程导航 |
 
-### Phase 3: 打磨与分发
+### Phase 3: 打磨与分发 ✅ (v0.3.1)
+
+| 任务 | 状态 | 说明 |
+|------|------|------|
+| 多 Workspace 管理 | ✅ | 创建/切换/删除 workspace，Landing Page 卡片/输入双模式 |
+| 课后自动复习卡片 | ✅ | Post Agent 完成后自动提取 3-5 张 SM-2 卡片 |
+| Mermaid 图表支持 | ✅ | render_canvas type=mermaid，前端 mermaid.js 渲染 |
+| 极简风笔记模板 | ✅ | Notion/Craft 风格重新设计 |
+| Workspace 导入/导出 | ✅ | .snworkspace zip 格式，支持名称冲突处理 |
+| 多语言 UI（中/英） | ✅ | react-i18next，609 翻译键，跟随系统语言 |
+| CI/CD + macOS DMG | ✅ | GitHub Actions 自动构建，Universal Binary (ARM64+Intel) |
+| Windows 支持 | ✅ | keyring 跨平台凭证存储，跨平台路径适配 |
+| 白板用户标注 | ✅ | 画笔/文字/箭头/高亮/橡皮擦，5 色选择 |
+| 练习模式增强 | ✅ | 幽鬼α + AnimaTutor v2.3 双协议选择 |
+| OAuth 登录 | ⏭️ 跳过 | Anthropic 无公开 OAuth，ROI 不足 |
+| 社区 Workspace 分享 | ⏭️ 延后 | 需要后端服务，架构变更大 |
+| DMG 签名公证 | ⏭️ 延后 | 需 Apple Developer $99/年 |
+
+### Phase 4: 深度优化与用户增长
+
+#### 4.1 — UX 深度优化
 
 | 任务 | 说明 |
 |------|------|
-| OAuth 登录（Claude / OpenAI / Google） | 降低认证门槛 |
-| DMG 签名公证 + 自动更新 | macOS 分发 |
-| Mermaid 图表支持 | 白板扩展 |
-| 多语言 UI（中/英） | 国际化 |
-| Workspace 导入/导出 | 便携性 |
-| 学习进度可视化面板 | 数据概览 |
-| Windows / Linux 支持 | 跨平台 |
-| 社区 workspace 分享 | 生态 |
-| 白板用户标注功能 | 互动增强 |
+| 全局键盘快捷键系统 | LessonPage 快捷键 + 全局 Cmd+,/Cmd+N + tooltip 提示 |
+| 白板增强（缩略图 + 全屏） | SVG 缩略图预览、全屏模式、缩放平移、Mermaid 导出 |
+| 对话体验优化 | 虚拟滚动、对话搜索、消息复制、长回复折叠 |
+| 课程会话历史 | 保存完整对话记录，按日期浏览，只读回顾 |
+
+#### 4.2 — 性能与稳定性
+
+| 任务 | 说明 |
+|------|------|
+| Review Queue SQLite 迁移 | SM-2 从 JSON → SQLite，支持 10K+ 卡片 |
+| 会话状态韧性 | 自动 checkpoint、意外退出恢复、AI 超时重试 |
+| Gemini Vision 适配 | PDF AI 增强支持 Gemini Vision inline_data 格式 |
+
+#### 4.3 — 内容生态
+
+| 任务 | 说明 |
+|------|------|
+| 教学协议市场 | 3-5 个预设协议 + 浏览界面 + 用户自定义保存 |
+| Workspace 模板库 | 预设学科模板（数学/化学/编程/语言） |
+| 学习数据分析仪表板 | 学习时间统计、知识点热力图、SM-2 趋势、连续打卡 |
+
+#### 4.4 — 安全与分发
+
+| 任务 | 说明 |
+|------|------|
+| Tauri 自动更新 | plugin-updater + GitHub Releases 更新源 |
+| 数据导出与备份 | 全量加密导出、定时自动备份 |
 
 ---
 

@@ -110,6 +110,30 @@ jobs:
       - name: Build Tauri universal app
         run: npm run tauri build -- --target universal-apple-darwin
 
+      - name: Ad-hoc code sign the app
+        run: |
+          APP_PATH="$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -name '*.app' -maxdepth 1 | head -1)"
+          if [ -n "$APP_PATH" ]; then
+            echo "🔏 Ad-hoc signing: $APP_PATH"
+            codesign --force --deep -s - "$APP_PATH"
+            codesign --verify "$APP_PATH" && echo "✅ Signature verified"
+          fi
+
+      - name: Re-create DMG with signed app
+        run: |
+          APP_PATH="$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -name '*.app' -maxdepth 1 | head -1)"
+          DMG_DIR="src-tauri/target/universal-apple-darwin/release/bundle/dmg"
+          OLD_DMG="$(find "$DMG_DIR" -name '*.dmg' | head -1)"
+          DMG_NAME="$(basename "$OLD_DMG")"
+
+          if [ -n "$APP_PATH" ] && [ -n "$OLD_DMG" ]; then
+            echo "📦 Re-creating DMG with signed app..."
+            rm -f "$OLD_DMG"
+            hdiutil create -volname "SocraticNovel" -srcfolder "$APP_PATH" \
+              -ov -format UDZO "$DMG_DIR/$DMG_NAME"
+            echo "✅ DMG created: $DMG_DIR/$DMG_NAME"
+          fi
+
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
