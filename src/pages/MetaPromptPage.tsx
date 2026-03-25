@@ -6,13 +6,13 @@ import { createWorkspace, listWorkspaces } from '../lib/tauri';
 import ChatMessageBubble from '../components/chat/ChatMessageBubble';
 import ChatInput from '../components/chat/ChatInput';
 import AgentLogPanel from '../components/debug/AgentLogPanel';
-import type { ChatMessage } from '../types';
+import QuestionnaireWizard from '../components/metaprompt/QuestionnaireWizard';
+import { serializeQuestionnaire } from '../lib/questionnaireSerializer';
+import type { ChatMessage, MetaPromptQuestionnaire } from '../types';
 
-const META_PHASES = [
-  { id: 1, label: '基础信息', icon: '📋' },
-  { id: 2, label: '角色创建', icon: '🎭' },
-  { id: 3, label: '世界观设定', icon: '🌍' },
-  { id: 4, label: '故事设计', icon: '📖' },
+type PagePhase = 'name' | 'questionnaire' | 'generating';
+
+const GEN_PHASES = [
   { id: 5, label: '文件生成', icon: '⚙️' },
   { id: 6, label: '验证测试', icon: '✅' },
 ];
@@ -23,12 +23,12 @@ export default function MetaPromptPage() {
   const { sendMetaPrompt, initMetaPrompt } = useAiAgent();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const [pagePhase, setPagePhase] = useState<PagePhase>('name');
   const [sessionReady, setSessionReady] = useState(false);
-  const [currentPhase, setCurrentPhase] = useState(1);
+  const [currentGenPhase, setCurrentGenPhase] = useState(5);
   const [showLog, setShowLog] = useState(false);
   const [workspaceName, setWorkspaceName] = useState('');
   const [workspacePath, setWorkspacePath] = useState('');
-  const [askingName, setAskingName] = useState(true);
   const [nameError, setNameError] = useState('');
 
   // Auto-scroll
@@ -36,19 +36,17 @@ export default function MetaPromptPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Detect current phase from AI messages
+  // Detect Phase 6 from AI messages
   useEffect(() => {
     const lastMsg = messages.findLast((m) => m.role === 'assistant');
     if (!lastMsg) return;
     const text = lastMsg.text.toLowerCase();
-    if (text.includes('phase 6') || text.includes('验证') || text.includes('冷启动测试')) setCurrentPhase(6);
-    else if (text.includes('phase 5') || text.includes('文件生成') || text.includes('开始生成')) setCurrentPhase(5);
-    else if (text.includes('phase 4') || text.includes('故事设计') || text.includes('情感阶段')) setCurrentPhase(4);
-    else if (text.includes('phase 3') || text.includes('世界观') || text.includes('物理空间')) setCurrentPhase(3);
-    else if (text.includes('phase 2') || text.includes('角色') || text.includes('教师')) setCurrentPhase(2);
+    if (text.includes('phase 6') || text.includes('验证') || text.includes('冷启动测试')) {
+      setCurrentGenPhase(6);
+    }
   }, [messages]);
 
-  // Streaming timeout safety net (10 min for meta prompt — file generation takes time)
+  // Streaming timeout safety net (10 min)
   useEffect(() => {
     if (!isStreaming) return;
     const timer = setTimeout(() => {
@@ -66,8 +64,28 @@ export default function MetaPromptPage() {
     return () => clearTimeout(timer);
   }, [isStreaming]);
 
-  // Initialize workspace and meta prompt session
-  const handleStartSession = useCallback(async (name: string) => {
+  // Handle name submit → enter questionnaire
+  const handleNameSubmit = async () => {
+    const name = workspaceName.trim();
+    if (!name) return;
+    setNameError('');
+    try {
+      const existing = await listWorkspaces();
+      if (existing.some((ws) => ws.name === name || ws.id === name)) {
+        setNameError(`工作区「${name}」已存在，请换一个名称`);
+        return;
+      }
+    } catch {
+      // proceed anyway
+    }
+    setPagePhase('questionnaire');
+  };
+
+  // Handle questionnaire complete → create workspace + send to AI
+  const handleQuestionnaireComplete = useCallback(async (questionnaire: MetaPromptQuestionnaire) => {
+    setPagePhase('generating');
+    const name = workspaceName.trim();
+
     try {
       clearMessages();
       addMessage({
@@ -83,7 +101,7 @@ export default function MetaPromptPage() {
       addMessage({
         id: crypto.randomUUID(),
         role: 'system',
-        text: `✅ 工作区已创建，正在初始化 AI 引导...`,
+        text: '✅ 工作区已创建，正在初始化 AI 生成引擎...',
         timestamp: Date.now(),
       });
 
@@ -93,15 +111,16 @@ export default function MetaPromptPage() {
       addMessage({
         id: crypto.randomUUID(),
         role: 'system',
-        text: '🤖 Meta Prompt 引导已就绪 — AI 将一步步引导你创建自定义教学系统。',
+        text: '🤖 AI 生成引擎已就绪 — 正在发送你的设计决策...',
         timestamp: Date.now(),
       });
 
-      // Auto-send initial message to trigger AI Phase 1
+      // Serialize questionnaire and send as the first user message
+      const designDoc = serializeQuestionnaire(questionnaire);
       const initialMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'user',
-        text: '你好！我想创建一个自定义的苏格拉底式教学系统。请开始引导我。',
+        text: designDoc,
         timestamp: Date.now(),
       };
       addMessage(initialMsg);
@@ -109,7 +128,7 @@ export default function MetaPromptPage() {
     } catch (err) {
       const errStr = String(err);
       const friendly = errStr.includes('already exists')
-        ? `工作区名称冲突，请返回修改名称后重试`
+        ? '工作区名称冲突，请返回修改名称后重试'
         : `初始化失败: ${errStr}`;
       addMessage({
         id: crypto.randomUUID(),
@@ -118,28 +137,11 @@ export default function MetaPromptPage() {
         timestamp: Date.now(),
       });
       if (errStr.includes('already exists')) {
-        setAskingName(true);
-        setNameError(`工作区「${workspaceName.trim()}」已存在，请换一个名称`);
-      }
-    }
-  }, [clearMessages, addMessage, initMetaPrompt, sendMetaPrompt]);
-
-  const handleNameSubmit = async () => {
-    const name = workspaceName.trim();
-    if (!name) return;
-    setNameError('');
-    try {
-      const existing = await listWorkspaces();
-      if (existing.some((ws) => ws.name === name || ws.id === name)) {
+        setPagePhase('name');
         setNameError(`工作区「${name}」已存在，请换一个名称`);
-        return;
       }
-    } catch {
-      // listWorkspaces failed — proceed anyway, createWorkspace will catch real errors
     }
-    setAskingName(false);
-    handleStartSession(name);
-  };
+  }, [workspaceName, clearMessages, addMessage, initMetaPrompt, sendMetaPrompt]);
 
   const handleSend = async (text: string) => {
     const msg: ChatMessage = {
@@ -167,8 +169,8 @@ export default function MetaPromptPage() {
     navigate('/');
   };
 
-  // Workspace name input screen
-  if (askingName) {
+  // ─── Phase 1: Name input ──────────────────────────────────
+  if (pagePhase === 'name') {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950">
         <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-lg dark:border-slate-700 dark:bg-slate-800">
@@ -178,7 +180,7 @@ export default function MetaPromptPage() {
               创建教学系统
             </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              AI 将引导你一步步完成自定义教学系统的创建
+              填写问卷设计你的沉浸式教学系统，AI 自动生成所有文件
             </p>
           </div>
           <div className="mb-6">
@@ -216,7 +218,7 @@ export default function MetaPromptPage() {
               disabled={!workspaceName.trim()}
               className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
-              开始创建 →
+              下一步 →
             </button>
           </div>
         </div>
@@ -224,6 +226,17 @@ export default function MetaPromptPage() {
     );
   }
 
+  // ─── Phase 2: Questionnaire wizard ────────────────────────
+  if (pagePhase === 'questionnaire') {
+    return (
+      <QuestionnaireWizard
+        onComplete={handleQuestionnaireComplete}
+        onBack={() => setPagePhase('name')}
+      />
+    );
+  }
+
+  // ─── Phase 3: AI generation chat (Phase 5/6) ─────────────
   return (
     <div className="flex h-screen flex-col bg-white dark:bg-slate-900">
       {/* Top bar */}
@@ -235,7 +248,7 @@ export default function MetaPromptPage() {
           ← 返回
         </button>
         <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-          🔨 创建教学系统 — {workspaceName}
+          ⚙️ 生成中 — {workspaceName}
         </span>
         <div className="flex gap-2">
           <button
@@ -244,27 +257,34 @@ export default function MetaPromptPage() {
           >
             {showLog ? '隐藏日志' : '🔧 日志'}
           </button>
-          {currentPhase >= 5 && (
-            <button
-              onClick={handleFinish}
-              className="rounded-lg bg-green-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-green-700"
-            >
-              ✅ 完成创建
-            </button>
-          )}
+          <button
+            onClick={handleFinish}
+            className="rounded-lg bg-green-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-green-700"
+          >
+            ✅ 完成创建
+          </button>
         </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left sidebar — phase progress */}
+        {/* Left sidebar — generation phase */}
         <aside className="flex w-56 shrink-0 flex-col border-r border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-850">
           <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            创建进度
+            生成进度
           </h3>
+          {/* Completed phases */}
+          <div className="mb-3 space-y-1">
+            {['📋 基础信息', '🎭 角色创建', '🌍 世界观', '📖 故事设计'].map((label, i) => (
+              <div key={i} className="flex items-center gap-2 px-3 py-1.5 text-xs text-green-600 dark:text-green-400">
+                <span>✅</span> <span>{label}</span>
+              </div>
+            ))}
+          </div>
+          {/* Active phases */}
           <div className="space-y-2">
-            {META_PHASES.map((phase) => {
-              const isActive = phase.id === currentPhase;
-              const isDone = phase.id < currentPhase;
+            {GEN_PHASES.map((phase) => {
+              const isActive = phase.id === currentGenPhase;
+              const isDone = phase.id < currentGenPhase;
               return (
                 <div
                   key={phase.id}
@@ -324,7 +344,7 @@ export default function MetaPromptPage() {
           <ChatInput onSend={handleSend} disabled={!sessionReady || isStreaming} />
         </main>
 
-        {/* Right panel — log (togglable) */}
+        {/* Right panel — log */}
         {showLog && (
           <aside className="flex w-80 shrink-0 flex-col border-l border-slate-200 dark:border-slate-700">
             <div className="flex h-10 shrink-0 items-center border-b border-slate-200 px-3 dark:border-slate-700">

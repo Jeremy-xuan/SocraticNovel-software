@@ -175,3 +175,105 @@ export interface CurriculumOutline {
   units: CurriculumUnit[];
   currentChapter: string | null; // e.g. "Ch.23"
 }
+
+// ─── Meta Prompt Questionnaire ───────────────────────────────────
+
+export type TeachingStyle =
+  | 'theory-precise'    // 理论精确型
+  | 'intuition-analogy' // 直觉类比型
+  | 'engineering'       // 工程实战型
+  | 'philosophy'        // 哲学引导型
+  | 'companion';        // 陪伴鼓励型
+
+export const TEACHING_STYLE_LABELS: Record<TeachingStyle, { label: string; desc: string; icon: string }> = {
+  'theory-precise':    { label: '理论精确型', desc: '追问到底，不接受模糊答案', icon: '🔬' },
+  'intuition-analogy': { label: '直觉类比型', desc: '用比喻建立直觉，节奏温暖', icon: '💡' },
+  'engineering':       { label: '工程实战型', desc: '先给全局地图，像 debug 一样排查', icon: '🔧' },
+  'philosophy':        { label: '哲学引导型', desc: '从根本问题出发，连接更大世界观', icon: '🌌' },
+  'companion':         { label: '陪伴鼓励型', desc: '重视情绪，根据状态调整节奏', icon: '🤝' },
+};
+
+export type CharacterSource = 'preset' | 'custom-name' | 'original';
+
+export interface CharacterDesign {
+  source: CharacterSource;
+  presetId?: string;             // 预设角色 ID（如 'oreki-hotaro'）
+  customSourceName?: string;     // 用户输入的角色名（如 '折木奉太郎'）
+  name: string;                  // 在系统中使用的名字（可改）
+  gender: string;
+  age: string;
+  appearanceKeywords: string;    // 外貌关键词
+  teachingStyle: TeachingStyle;
+  personalityCore: string;       // 性格核心
+  backstoryHints: string;        // 暗线碎片（可选 "让 AI 设计"）
+  backstoryAutoGenerate: boolean;
+  initialWarmth: number;         // 初始关系温度 1-10
+}
+
+export interface SubjectInfo {
+  subjectName: string;           // 学科名称
+  textbook: string;              // 教材名称 + 版本
+  textbookFormat: 'pdf' | 'paper' | 'ebook' | 'none';
+  hasWorkbook: boolean;          // 是否有练习册
+}
+
+export interface CourseStructure {
+  totalChapters: number;         // 总章节数
+  completedChapters: string;     // 已完成的章节（描述）
+  learningPeriod: string;        // 学习周期
+  topicOverview: string;         // 主题概览
+}
+
+export interface WorldSetting {
+  location: string;              // 地点描述
+  locationStyle: 'enclosed' | 'semi-open' | 'everyday' | 'custom';
+  arrivalReason: string;         // 学习者到来的原因
+  arrivalType: 'arranged' | 'self-sought' | 'accidental';
+  characterRelations: string;    // 角色之间的关系
+  supernaturalElement: string;   // 超自然设定（可选）
+  hasSupernatural: boolean;
+}
+
+export type EmotionalPhaseTemplate = 'four-stage' | 'custom';
+
+export interface EmotionalPhase {
+  name: string;                  // 阶段名
+  coveragePercent: string;       // 覆盖范围（如 "前25%"）
+  tone: string;                  // 基调
+}
+
+export interface StoryDesign {
+  emotionalTemplate: EmotionalPhaseTemplate;
+  emotionalPhases: EmotionalPhase[];
+  rotationStyle: 'round-robin' | 'thematic';
+  rotationNotes: string;         // 轮值备注
+  enableGroupChat: boolean;
+  groupChatName: string;
+  groupChatStyle: string;
+  keyEvents: string;             // 关键事件描述（自由文本）
+}
+
+export interface MetaPromptQuestionnaire {
+  subject: SubjectInfo;
+  course: CourseStructure;
+  characterCount: 1 | 2 | 3;
+  characters: CharacterDesign[];
+  world: WorldSetting;
+  story: StoryDesign;
+}
+
+// ─── Character Presets ───────────────────────────────────────────
+
+export interface CharacterPreset {
+  id: string;
+  name: string;
+  source: string;                // 出处（如 "冰菓"）
+  gender: string;
+  age: string;
+  appearanceKeywords: string;
+  teachingStyle: TeachingStyle;
+  personalityCore: string;
+  backstoryHints: string;
+  initialWarmth: number;
+  icon: string;                  // 展示用 emoji
+}
