@@ -4,7 +4,7 @@ import { useAppStore } from '../stores/appStore';
 import {
   extractPdfText,
   importPdfToWorkspace,
-  checkPdftoppm,
+  checkPdfRenderer,
   renderPdfPage,
   aiEnhanceText,
   aiVisionEnhancePage,
@@ -31,13 +31,20 @@ export default function PdfImportPage() {
 
   // AI enhancement
   const [enhanceMode, setEnhanceMode] = useState<EnhanceMode>('none');
-  const [hasPdftoppm, setHasPdftoppm] = useState(false);
+  const [rendererAvailable, setRendererAvailable] = useState(false);
+  const [rendererName, setRendererName] = useState('none');
   const [enhancedPages, setEnhancedPages] = useState<Map<number, string>>(new Map());
   const [enhanceProgress, setEnhanceProgress] = useState({ current: 0, total: 0 });
   const [pagePreviewImage, setPagePreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
-    checkPdftoppm().then(setHasPdftoppm).catch(() => setHasPdftoppm(false));
+    checkPdfRenderer().then((info) => {
+      setRendererAvailable(info.available);
+      setRendererName(info.renderer);
+    }).catch(() => {
+      setRendererAvailable(false);
+      setRendererName('none');
+    });
   }, []);
 
   const handleSelectFile = async () => {
@@ -66,7 +73,7 @@ export default function PdfImportPage() {
   };
 
   const handlePreviewPageImage = async () => {
-    if (!pdfPath || !hasPdftoppm) return;
+    if (!pdfPath || !rendererAvailable) return;
     try {
       const pageNum = (result?.pages[previewPage]?.page_number) ?? previewPage + 1;
       const b64 = await renderPdfPage(pdfPath, pageNum);
@@ -94,7 +101,7 @@ export default function PdfImportPage() {
       setEnhanceProgress({ current: i + 1, total: result.pages.length });
       try {
         let enhanced: string;
-        if (enhanceMode === 'vision' && hasPdftoppm) {
+        if (enhanceMode === 'vision' && rendererAvailable) {
           enhanced = await aiVisionEnhancePage(
             pdfPath,
             result.pages[i].page_number,
@@ -259,9 +266,9 @@ export default function PdfImportPage() {
               </button>
               <button
                 onClick={() => setEnhanceMode('vision')}
-                disabled={!hasPdftoppm}
+                disabled={!rendererAvailable}
                 className={`rounded-lg px-3 py-1 text-xs ${enhanceMode === 'vision' ? 'bg-purple-500 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'} disabled:opacity-40`}
-                title={hasPdftoppm ? 'Vision API 逐页识别' : '需要安装 poppler (brew install poppler)'}
+                title={rendererAvailable ? `Vision API 逐页识别 (${rendererName})` : '需要安装 PDFium 或 poppler'}
               >
                 👁️ Vision OCR
               </button>
@@ -273,7 +280,7 @@ export default function PdfImportPage() {
                   ✨ 开始 AI 增强 ({result.total_pages} 页)
                 </button>
               )}
-              {hasPdftoppm && (
+              {rendererAvailable && (
                 <button
                   onClick={handlePreviewPageImage}
                   className="ml-auto rounded-lg border border-slate-200 px-3 py-1 text-xs text-slate-500 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-400"

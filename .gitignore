@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 textbook/
 workspaces/
+
+# PDFium shared library (downloaded via scripts/download-pdfium.sh)
+src-tauri/libs/*.dylib
+src-tauri/libs/*.so
+src-tauri/libs/*.dll

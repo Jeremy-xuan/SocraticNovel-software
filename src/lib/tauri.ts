@@ -114,8 +114,8 @@ export async function importPdfToWorkspace(
   return invoke('import_pdf_to_workspace', { pdfPath, workspacePath, targetName });
 }
 
-export async function checkPdftoppm(): Promise<boolean> {
-  return invoke('check_pdftoppm');
+export async function checkPdfRenderer(): Promise<{ hasPdfium: boolean; hasPdftoppm: boolean; available: boolean; renderer: string }> {
+  return invoke('check_pdf_renderer');
 }
 
 export async function renderPdfPage(pdfPath: string, pageNumber: number): Promise<string> {

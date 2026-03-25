@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::OnceLock;
 use base64::Engine as _;
+use pdfium_render::prelude::*;
 use crate::ai::types::{Message, ContentBlock, ImageSource};
 
 // ─── Types ───────────────────────────────────────────────────────
@@ -142,35 +144,115 @@ pub fn import_pdf_to_workspace(
     Ok(target_path.to_string_lossy().to_string())
 }
 
-// ─── PDF Page Rendering (pdftoppm) ───────────────────────────────
+// ─── PDF Page Rendering (PDFium) ─────────────────────────────────
 
-/// Check if pdftoppm is available on the system
-fn find_pdftoppm() -> Option<String> {
-    let candidates = [
-        "pdftoppm",
-        "/opt/homebrew/bin/pdftoppm",
-        "/usr/local/bin/pdftoppm",
-        "/usr/bin/pdftoppm",
-    ];
-    for cmd in candidates {
-        if std::process::Command::new(cmd)
-            .arg("-v")
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status()
-            .is_ok()
-        {
-            return Some(cmd.to_string());
+/// Cached path to PDFium shared library
+static PDFIUM_PATH: OnceLock<Option<String>> = OnceLock::new();
+
+/// Find the PDFium shared library on the system
+fn find_pdfium_library() -> Option<String> {
+    // Platform-specific library name
+    #[cfg(target_os = "macos")]
+    let lib_names = ["libpdfium.dylib"];
+    #[cfg(target_os = "linux")]
+    let lib_names = ["libpdfium.so"];
+    #[cfg(target_os = "windows")]
+    let lib_names = ["pdfium.dll"];
+
+    // Search paths: bundled with app, then common locations
+    let mut search_dirs: Vec<PathBuf> = Vec::new();
+
+    // 1. Next to the executable (for bundled apps)
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            search_dirs.push(dir.to_path_buf());
+            // macOS .app bundle: Contents/MacOS/ → Contents/Frameworks/
+            if let Some(parent) = dir.parent() {
+                search_dirs.push(parent.join("Frameworks"));
+                search_dirs.push(parent.join("Resources"));
+            }
         }
     }
+
+    // 2. Project directory (for development)
+    search_dirs.push(PathBuf::from("libs"));
+    search_dirs.push(PathBuf::from("../libs"));
+
+    // 3. Common system paths
+    #[cfg(target_os = "macos")]
+    {
+        search_dirs.push(PathBuf::from("/opt/homebrew/lib"));
+        search_dirs.push(PathBuf::from("/usr/local/lib"));
+    }
+    #[cfg(target_os = "linux")]
+    {
+        search_dirs.push(PathBuf::from("/usr/lib"));
+        search_dirs.push(PathBuf::from("/usr/local/lib"));
+    }
+
+    for dir in &search_dirs {
+        for name in &lib_names {
+            let path = dir.join(name);
+            if path.exists() {
+                return Some(dir.to_string_lossy().to_string());
+            }
+        }
+    }
+
     None
 }
 
-/// Render a single PDF page to a JPEG image using pdftoppm.
-/// Returns base64-encoded JPEG data.
-fn render_page_to_base64(pdf_path: &str, page_number: usize, dpi: u32) -> Result<String, String> {
+/// Get the PDFium library path (cached)
+fn get_pdfium_path() -> Option<&'static String> {
+    PDFIUM_PATH.get_or_init(|| find_pdfium_library()).as_ref()
+}
+
+/// Render a single PDF page to JPEG using PDFium. Returns base64-encoded data.
+fn render_page_with_pdfium(pdf_path: &str, page_number: usize, dpi: u32) -> Result<String, String> {
+    let lib_dir = get_pdfium_path()
+        .ok_or("PDFium library not found. Run: scripts/download-pdfium.sh")?;
+
+    let pdfium = Pdfium::new(
+        Pdfium::bind_to_library(
+            Pdfium::pdfium_platform_library_name_at_path(lib_dir)
+        ).map_err(|e| format!("Failed to load PDFium: {}", e))?
+    );
+
+    let document = pdfium
+        .load_pdf_from_file(pdf_path, None)
+        .map_err(|e| format!("Failed to open PDF: {}", e))?;
+
+    let page_index = page_number.checked_sub(1).unwrap_or(0);
+    let page = document
+        .pages()
+        .get(page_index as u16)
+        .map_err(|e| format!("Failed to get page {}: {}", page_number, e))?;
+
+    // Render at specified DPI
+    let scale = dpi as f32 / 72.0;
+    let width = (page.width().value * scale) as u16;
+    let height = (page.height().value * scale) as u16;
+
+    let bitmap = page
+        .render_with_config(&PdfRenderConfig::new().set_target_width(width as i32).set_maximum_height(height as i32))
+        .map_err(|e| format!("Failed to render page: {}", e))?;
+
+    let image = bitmap.as_image();
+
+    // Encode to JPEG
+    let mut buf = std::io::Cursor::new(Vec::new());
+    image
+        .write_to(&mut buf, image::ImageFormat::Jpeg)
+        .map_err(|e| format!("Failed to encode JPEG: {}", e))?;
+
+    let b64 = base64::engine::general_purpose::STANDARD.encode(buf.into_inner());
+    Ok(b64)
+}
+
+/// Fallback: render using pdftoppm (system command)
+fn render_page_with_pdftoppm(pdf_path: &str, page_number: usize, dpi: u32) -> Result<String, String> {
     let pdftoppm = find_pdftoppm()
-        .ok_or("pdftoppm not found. Install poppler: brew install poppler")?;
+        .ok_or("No PDF renderer available. Install PDFium or poppler.")?;
 
     let temp_dir = std::env::temp_dir().join("socratic-novel-pdf");
     std::fs::create_dir_all(&temp_dir)
@@ -204,18 +286,50 @@ fn render_page_to_base64(pdf_path: &str, page_number: usize, dpi: u32) -> Result
 
     let image_bytes = std::fs::read(&jpeg_path)
         .map_err(|e| format!("Failed to read rendered image: {}", e))?;
-
-    // Cleanup temp file
     let _ = std::fs::remove_file(&jpeg_path);
 
     let b64 = base64::engine::general_purpose::STANDARD.encode(&image_bytes);
     Ok(b64)
 }
 
-/// Check if pdftoppm is available
+fn find_pdftoppm() -> Option<String> {
+    let candidates = ["pdftoppm", "/opt/homebrew/bin/pdftoppm", "/usr/local/bin/pdftoppm"];
+    for cmd in candidates {
+        if std::process::Command::new(cmd)
+            .arg("-v")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .is_ok()
+        {
+            return Some(cmd.to_string());
+        }
+    }
+    None
+}
+
+/// Render a page using the best available renderer (PDFium → pdftoppm fallback)
+fn render_page_to_base64(pdf_path: &str, page_number: usize, dpi: u32) -> Result<String, String> {
+    // Try PDFium first
+    match render_page_with_pdfium(pdf_path, page_number, dpi) {
+        Ok(b64) => return Ok(b64),
+        Err(_) => {}
+    }
+    // Fallback to pdftoppm
+    render_page_with_pdftoppm(pdf_path, page_number, dpi)
+}
+
+/// Check rendering capability status
 #[tauri::command]
-pub fn check_pdftoppm() -> bool {
-    find_pdftoppm().is_some()
+pub fn check_pdf_renderer() -> serde_json::Value {
+    let has_pdfium = get_pdfium_path().is_some();
+    let has_pdftoppm = find_pdftoppm().is_some();
+    serde_json::json!({
+        "hasPdfium": has_pdfium,
+        "hasPdftoppm": has_pdftoppm,
+        "available": has_pdfium || has_pdftoppm,
+        "renderer": if has_pdfium { "pdfium" } else if has_pdftoppm { "pdftoppm" } else { "none" },
+    })
 }
 
 /// Render a PDF page to base64 JPEG
