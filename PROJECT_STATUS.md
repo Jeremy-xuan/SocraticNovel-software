@@ -1,7 +1,7 @@
 # SocraticNovel — 项目状态文档
 
-> 最后更新：2026-03-24
-> 当前版本：Phase 2（练习模式 + 笔记系统 + 学习进度页）
+> 最后更新：2026-07-22
+> 当前版本：Phase 2（练习模式 + 笔记系统 + 学习进度页 + Meta Prompt + 间隔复习 + PDF 导入）
 
 ## 项目概述
 
@@ -44,6 +44,8 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 | **AI Commands** | `commands/ai_commands.rs` | Tauri 命令 + 会话持久化（save/restore/clear） |
 | **FS Commands** | `commands/fs_commands.rs` | 沙箱化文件操作 + workspace 初始化 |
 | **Settings** | `commands/settings_commands.rs` | macOS Keychain 存取 API Key |
+| **Review Engine** | `commands/review_commands.rs` | SM-2 间隔复习引擎（卡片管理、调度、JSON 持久化） |
+| **PDF Import** | `commands/pdf_commands.rs` | PDF 文本提取 + PDFium 页面渲染 + AI 增强 |
 | **CLI Practice** | `bin/cli_practice.rs` | 交互式命令行练习模式（无 GUI 测试用） |
 | **Dev Test** | `bin/dev_test.rs` | 后端单元测试二进制 |
 
@@ -64,6 +66,8 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 | **Notes Templates** | `lib/notesTemplates.ts` | PDF 导出模板（手记风 / 极简风） |
 | **Practice** | `pages/PracticePage.tsx` | 练习/刷题模式页面 |
 | **Notes** | `pages/NotesPage.tsx` | AI 笔记生成 + Anki 导出 + PDF 导出 |
+| **Review** | `pages/ReviewPage.tsx` | SM-2 间隔复习卡片翻转 UI + 键盘快捷键 |
+| **PDF Import** | `pages/PdfImportPage.tsx` | PDF 导入：文件选择 → 预览 → AI 增强 → 保存 |
 | **Agent Log** | `components/debug/AgentLogPanel.tsx` | Agent 活动日志查看器 |
 
 ### 可用工具（AI Agent）
@@ -211,6 +215,39 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 35. **✅ Cargo default-run** — 添加二进制后 cargo run 歧义
     - 修复：Cargo.toml 添加 `default-run = "socratic-novel"`
 
+### Phase 2 续 — ✅ Meta Prompt + 间隔复习 + PDF 导入
+
+37. **✅ Meta Prompt 引导式 Workspace 创建** — AI 引导用户创建自定义教学系统
+    - 新增 `AgentPhase::MetaPrompt`，复用 `run_phase_loop()` 引擎
+    - MetaPrompt Agent 工具集：respond_to_student + think + write_file + list_files + read_file
+    - 多轮对话引导用户定义：学科/教学风格/角色/课程大纲
+    - AI 自动生成完整 workspace 文件（system.md / curriculum.md / characters / story.md 等）
+    - 前端集成到 LandingPage "🔨创建教学系统" 入口
+38. **✅ SM-2 间隔复习引擎** — 基于 SM-2 算法的智能复习调度系统
+    - `review_commands.rs`：卡片 CRUD + SM-2 调度（1→3→7→14→30 天间隔）
+    - JSON 持久化：`{workspace}/teacher/runtime/review_queue.json`
+    - 四级评分：😣忘了(reset) / 😰模糊(×0.8) / 🤔想起来了(保持) / 😊容易(×1.3+ease)
+    - 6 次成功复习后自动标记为 "mastered"
+    - ReviewPage：卡片翻转 UI + 键盘快捷键（Space=翻转, 1-4=评分）
+    - LandingPage 显示今日到期卡片数量徽章
+    - 5 个 Tauri 命令：get_review_queue / get_review_stats / get_due_cards / update_review_card / add_review_cards
+39. **✅ PDF→Markdown 导入** — 将 PDF 教材导入 workspace 并转为 Markdown
+    - `pdf-extract` crate 全文提取（按 form-feed 分页）
+    - `tauri-plugin-dialog` 原生文件选择器
+    - 自动清理文本 + 生成结构化 Markdown
+    - 保存到 `{workspace}/materials/imported_md/`
+40. **✅ AI 增强 PDF 导入** — 两种 AI 增强模式
+    - **文本优化模式**：原始文本 → AI → 格式化 Markdown + LaTeX 公式
+    - **Vision OCR 模式**：PDF 页面图片 → Vision API → 完整内容识别
+    - `ContentBlock::Image` 变体支持：Claude 原生 / OpenAI image_url 格式
+    - 逐页增强进度条 + 原始/增强对比预览
+41. **✅ PDFium 页面渲染引擎** — Google PDFium 集成用于 PDF 页面转图片
+    - `pdfium-render` crate 动态加载（编译不需要库文件）
+    - 自动搜索：app bundle → 项目 libs/ → Homebrew → 系统路径
+    - `pdftoppm` 自动 fallback（系统安装 poppler 即可）
+    - `scripts/download-pdfium.sh`：从 `bblanchon/pdfium-binaries` 下载
+    - Tauri bundling 配置：`tauri.conf.json` resources 打包 libs/
+
 ## 未完成 / 需要改进
 
 ### 优先级高
@@ -224,6 +261,8 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 3. **Workspace 选择器** — 路径现已从 Rust 动态返回（不再硬编码），但 UI 仍无法手动切换 workspace
 4. **✅ 模型选择器** — Settings 页面按提供商显示可选模型列表（Anthropic×4 / OpenAI×4 / DeepSeek×2 / Google×3）；切换提供商自动重置模型；`null` 表示使用 Rust 侧默认值；model 通过 `startAiSession` payload 传入后端
 5. **极简风笔记模板重新设计** — 当前极简风用户不太满意，需要重新设计
+6. **左侧栏章节大纲** — 课堂页面左侧显示章节目录树，快速跳转
+7. **课后自动生成复习卡片** — Post Agent 课后自动向间隔复习队列添加卡片
 
 ### 优先级低
 
@@ -239,6 +278,8 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 ~/socratic-novel-软件开发/                   # 项目根目录
 ├── src/                             # 前端 (React + TS)
 ├── src-tauri/src/                   # 后端 (Rust)
+├── src-tauri/libs/                  # PDFium 共享库（运行时需要）
+├── scripts/                         # 工具脚本（download-pdfium.sh）
 ├── workspaces/ap-physics-em/        # AI 读写的 workspace
 ├── package.json                     # 前端依赖
 ├── src-tauri/Cargo.toml             # 后端依赖
@@ -281,6 +322,9 @@ cd src-tauri && ~/.cargo/bin/cargo check
 # TypeScript 类型检查
 npx tsc --noEmit
 
+# 下载 PDFium 库（PDF 页面渲染需要）
+bash scripts/download-pdfium.sh
+
 # CLI 练习模式（无 GUI 测试）
 cd src-tauri
 API_KEY=<your-key> PROVIDER=deepseek cargo run --bin cli_practice
@@ -309,3 +353,7 @@ API_KEY=<your-key> PROVIDER=deepseek cargo run --bin dev_test
 12. **Practice Mode 复用架构** — 练习模式直接复用 `run_phase_loop()` + `AgentPhase::Practice`，仅需新增 tools 和 prompt 函数，不需要新循环逻辑。CLI 二进制进一步验证了后端与 UI 的解耦。
 13. **笔记生成策略** — 使用 `call_ai_simple()` 非流式调用生成结构化 Markdown，前端用 ReactMarkdown + KaTeX 渲染。PDF 导出采用 HTML 模板 + 新窗口打印方案（比 headless Chrome CLI 更可靠，不需要额外依赖）。
 14. **个性化错误分析** — NOTES_PROMPT 包含「你的弱点」和「举一反三」板块，AI 分析学生在对话中的具体错误并生成针对性练习题，使笔记不只是知识总结而是个人学习诊断报告。
+15. **SM-2 间隔复习** — 使用经典 SM-2 算法变体：初始间隔 1→3→7→14→30 天，ease factor 按评分动态调整（忘记重置、困难×0.8、简单×1.3+ease+0.1）。卡片以 JSON 存储在 workspace 中（`review_queue.json`），保持文件系统即状态的设计原则。
+16. **PDF 导入分层架构** — 三层设计：(1) `pdf-extract` 文本提取作为基础层，(2) PDFium/pdftoppm 页面渲染作为可选增强，(3) AI Vision/文本优化作为最高层。每层独立可用，逐级增强。
+17. **PDFium 动态加载** — 使用 `pdfium-render` 的运行时动态绑定（dlopen），编译不需要 PDFium 库文件。运行时按优先级搜索：app bundle → 项目 libs/ → Homebrew → 系统路径。找不到时自动 fallback 到 pdftoppm。这比静态链接更灵活，避免编译复杂度。
+18. **ContentBlock::Image 多平台适配** — AI 图像内容块统一为 Claude 格式（ImageSource::Base64），OpenAI 客户端在 `build_request_body()` 中自动转换为 `image_url` data URI 格式。单纯文本消息保持 string 简单格式以兼容旧 API。
