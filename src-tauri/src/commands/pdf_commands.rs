@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use base64::Engine as _;
+use crate::ai::types::{Message, ContentBlock, ImageSource};
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -138,4 +140,174 @@ pub fn import_pdf_to_workspace(
         .map_err(|e| format!("Failed to write file: {}", e))?;
 
     Ok(target_path.to_string_lossy().to_string())
+}
+
+// ─── PDF Page Rendering (pdftoppm) ───────────────────────────────
+
+/// Check if pdftoppm is available on the system
+fn find_pdftoppm() -> Option<String> {
+    let candidates = [
+        "pdftoppm",
+        "/opt/homebrew/bin/pdftoppm",
+        "/usr/local/bin/pdftoppm",
+        "/usr/bin/pdftoppm",
+    ];
+    for cmd in candidates {
+        if std::process::Command::new(cmd)
+            .arg("-v")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .is_ok()
+        {
+            return Some(cmd.to_string());
+        }
+    }
+    None
+}
+
+/// Render a single PDF page to a JPEG image using pdftoppm.
+/// Returns base64-encoded JPEG data.
+fn render_page_to_base64(pdf_path: &str, page_number: usize, dpi: u32) -> Result<String, String> {
+    let pdftoppm = find_pdftoppm()
+        .ok_or("pdftoppm not found. Install poppler: brew install poppler")?;
+
+    let temp_dir = std::env::temp_dir().join("socratic-novel-pdf");
+    std::fs::create_dir_all(&temp_dir)
+        .map_err(|e| format!("Failed to create temp dir: {}", e))?;
+
+    let output_prefix = temp_dir.join(format!("page_{}", page_number));
+
+    let status = std::process::Command::new(&pdftoppm)
+        .args([
+            "-jpeg",
+            "-r", &dpi.to_string(),
+            "-f", &page_number.to_string(),
+            "-l", &page_number.to_string(),
+            "-singlefile",
+            pdf_path,
+            output_prefix.to_str().unwrap_or("page"),
+        ])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::piped())
+        .status()
+        .map_err(|e| format!("Failed to run pdftoppm: {}", e))?;
+
+    if !status.success() {
+        return Err(format!("pdftoppm failed with status: {}", status));
+    }
+
+    let jpeg_path = temp_dir.join(format!("page_{}.jpg", page_number));
+    if !jpeg_path.exists() {
+        return Err(format!("Rendered image not found at {:?}", jpeg_path));
+    }
+
+    let image_bytes = std::fs::read(&jpeg_path)
+        .map_err(|e| format!("Failed to read rendered image: {}", e))?;
+
+    // Cleanup temp file
+    let _ = std::fs::remove_file(&jpeg_path);
+
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&image_bytes);
+    Ok(b64)
+}
+
+/// Check if pdftoppm is available
+#[tauri::command]
+pub fn check_pdftoppm() -> bool {
+    find_pdftoppm().is_some()
+}
+
+/// Render a PDF page to base64 JPEG
+#[tauri::command]
+pub fn render_pdf_page(pdf_path: String, page_number: usize) -> Result<String, String> {
+    render_page_to_base64(&pdf_path, page_number, 200)
+}
+
+// ─── AI Enhancement ──────────────────────────────────────────────
+
+const AI_TEXT_ENHANCE_PROMPT: &str = r#"你是一个教材文本格式化专家。将以下从 PDF 提取的粗糙文本转换为干净的 Markdown 格式。
+
+要求：
+1. 识别并正确格式化标题（# ## ###）
+2. 识别数学公式，转为 LaTeX 格式（行内用 $...$，独立公式用 $$...$$）
+3. 保持段落结构
+4. 修复断行、连字符问题
+5. 保留原文语言（不要翻译）
+6. 如果有表格，转为 Markdown 表格
+
+只返回格式化后的 Markdown，不要解释。"#;
+
+const AI_VISION_ENHANCE_PROMPT: &str = r#"你是一个教材 OCR 专家。请仔细查看这个 PDF 页面图片，将其内容完整转录为 Markdown 格式。
+
+要求：
+1. 识别并正确格式化标题（# ## ###）
+2. 所有数学公式转为 LaTeX（行内 $...$，独立公式 $$...$$）
+3. 图表用文字描述（[图: 描述]）
+4. 表格转为 Markdown 表格
+5. 保持原文语言
+6. 保持文字顺序和结构
+
+只返回 Markdown 内容，不要解释。"#;
+
+/// AI text enhancement: send raw text to AI for formatting as proper Markdown
+#[tauri::command]
+pub async fn ai_enhance_text(
+    text: String,
+    api_key: String,
+    provider: String,
+    model: String,
+) -> Result<String, String> {
+    let messages = vec![Message {
+        role: "user".to_string(),
+        content: vec![ContentBlock::Text {
+            text: format!("请将以下 PDF 提取文本格式化为 Markdown：\n\n{}", text),
+        }],
+    }];
+
+    crate::ai::runtime::call_ai_simple(
+        &api_key,
+        &provider,
+        &model,
+        AI_TEXT_ENHANCE_PROMPT,
+        messages,
+    )
+    .await
+}
+
+/// AI Vision enhancement: render PDF page to image, send to Vision API
+#[tauri::command]
+pub async fn ai_vision_enhance_page(
+    pdf_path: String,
+    page_number: usize,
+    api_key: String,
+    provider: String,
+    model: String,
+) -> Result<String, String> {
+    // Render page to image
+    let image_b64 = render_page_to_base64(&pdf_path, page_number, 300)?;
+
+    let messages = vec![Message {
+        role: "user".to_string(),
+        content: vec![
+            ContentBlock::Image {
+                source: ImageSource::Base64 {
+                    media_type: "image/jpeg".to_string(),
+                    data: image_b64,
+                },
+            },
+            ContentBlock::Text {
+                text: "请转录这个 PDF 页面的完整内容。".to_string(),
+            },
+        ],
+    }];
+
+    crate::ai::runtime::call_ai_simple(
+        &api_key,
+        &provider,
+        &model,
+        AI_VISION_ENHANCE_PROMPT,
+        messages,
+    )
+    .await
 }

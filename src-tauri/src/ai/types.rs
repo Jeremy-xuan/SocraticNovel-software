@@ -37,6 +37,12 @@ pub enum ContentBlock {
         #[serde(skip_serializing_if = "Option::is_none")]
         is_error: Option<bool>,
     },
+    /// Image block for Vision API calls.
+    /// Claude format: { "type": "image", "source": { "type": "base64", "media_type": "...", "data": "..." } }
+    #[serde(rename = "image")]
+    Image {
+        source: ImageSource,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,6 +50,17 @@ pub struct ToolDefinition {
     pub name: String,
     pub description: String,
     pub input_schema: serde_json::Value,
+}
+
+/// Image source for Vision API (matches Claude's native format)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum ImageSource {
+    #[serde(rename = "base64")]
+    Base64 {
+        media_type: String,
+        data: String,
+    },
 }
 
 // ─── Claude Streaming Event Types ─────────────────────────────────

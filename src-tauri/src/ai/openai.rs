@@ -83,22 +83,40 @@ impl OpenAiClient {
                             }
                         }
                     } else {
-                        let text: String = msg
-                            .content
-                            .iter()
-                            .filter_map(|b| {
-                                if let ContentBlock::Text { text } = b {
-                                    Some(text.as_str())
-                                } else {
-                                    None
+                        // Build content array (may include text and images)
+                        let mut content_parts: Vec<serde_json::Value> = Vec::new();
+                        for block in &msg.content {
+                            match block {
+                                ContentBlock::Text { text } => {
+                                    content_parts.push(serde_json::json!({
+                                        "type": "text",
+                                        "text": text,
+                                    }));
                                 }
-                            })
-                            .collect::<Vec<_>>()
-                            .join("");
-                        oai_messages.push(serde_json::json!({
-                            "role": "user",
-                            "content": text,
-                        }));
+                                ContentBlock::Image { source } => {
+                                    let ImageSource::Base64 { media_type, data } = source;
+                                    content_parts.push(serde_json::json!({
+                                        "type": "image_url",
+                                        "image_url": {
+                                            "url": format!("data:{};base64,{}", media_type, data),
+                                        }
+                                    }));
+                                }
+                                _ => {}
+                            }
+                        }
+                        // If only text content, use simple string format for compatibility
+                        if content_parts.len() == 1 && content_parts[0]["type"] == "text" {
+                            oai_messages.push(serde_json::json!({
+                                "role": "user",
+                                "content": content_parts[0]["text"],
+                            }));
+                        } else {
+                            oai_messages.push(serde_json::json!({
+                                "role": "user",
+                                "content": content_parts,
+                            }));
+                        }
                     }
                 }
                 "assistant" => {

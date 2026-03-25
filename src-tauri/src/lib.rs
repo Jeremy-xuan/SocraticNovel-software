@@ -60,6 +60,10 @@ pub fn run() {
             // PDF import
             pdf_commands::extract_pdf_text,
             pdf_commands::import_pdf_to_workspace,
+            pdf_commands::check_pdftoppm,
+            pdf_commands::render_pdf_page,
+            pdf_commands::ai_enhance_text,
+            pdf_commands::ai_vision_enhance_page,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

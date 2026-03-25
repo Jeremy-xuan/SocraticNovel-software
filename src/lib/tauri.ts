@@ -113,3 +113,30 @@ export async function importPdfToWorkspace(
 ): Promise<string> {
   return invoke('import_pdf_to_workspace', { pdfPath, workspacePath, targetName });
 }
+
+export async function checkPdftoppm(): Promise<boolean> {
+  return invoke('check_pdftoppm');
+}
+
+export async function renderPdfPage(pdfPath: string, pageNumber: number): Promise<string> {
+  return invoke('render_pdf_page', { pdfPath, pageNumber });
+}
+
+export async function aiEnhanceText(
+  text: string,
+  apiKey: string,
+  provider: string,
+  model: string,
+): Promise<string> {
+  return invoke('ai_enhance_text', { text, apiKey, provider, model });
+}
+
+export async function aiVisionEnhancePage(
+  pdfPath: string,
+  pageNumber: number,
+  apiKey: string,
+  provider: string,
+  model: string,
+): Promise<string> {
+  return invoke('ai_vision_enhance_page', { pdfPath, pageNumber, apiKey, provider, model });
+}

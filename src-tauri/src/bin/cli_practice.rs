@@ -293,6 +293,9 @@ fn print_debug(messages: &[Message]) {
                     println!("      ToolResult: {} err={:?}", tool_use_id, is_error);
                     println!("        {}", truncate(content, 80));
                 }
+                ContentBlock::Image { .. } => {
+                    println!("      Image: [base64 data]");
+                }
             }
         }
     }

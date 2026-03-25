@@ -718,6 +718,9 @@ fn generate_conversation_summary(messages: &[Message]) -> String {
                     // Skip tool results in summary
                     let _ = content;
                 }
+                ContentBlock::Image { .. } => {
+                    // Skip images in summary
+                }
             }
         }
     }
