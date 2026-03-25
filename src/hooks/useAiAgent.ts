@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '../stores/appStore';
+import i18n from '../i18n';
 import { startAiSession, sendChatMessage, sendTeachingMessage, sendPracticeMessage, sendMetaPromptMessage, setPracticePrompt, setMetaPromptPrompt, runPrepPhase, runPostLesson, setTeachingPrompt, onAgentEvent, onCanvasEvent, onGroupChatEvent, getMetaPromptContent } from '../lib/ai';
 import { getApiKey, readFile } from '../lib/tauri';
 import type { ChatMessage, CanvasItem } from '../types';
@@ -30,18 +31,18 @@ export function useAiAgent() {
 
           case 'tool_call_start': {
             const toolLabels: Record<string, string> = {
-              read_file: '📖 正在读取文件…',
-              list_files: '📂 正在浏览目录…',
-              think: '🧠 正在思考…',
-              search_file: '🔍 正在搜索文件…',
-              write_file: '📝 正在写入文件…',
-              append_file: '📝 正在更新文件…',
-              respond_to_student: '✍️ 正在组织回复…',
-              render_canvas: '🎨 正在绘制白板…',
-              show_group_chat: '💬 正在准备群聊…',
-              submit_lesson_brief: '📋 正在生成课程大纲…',
+              read_file: i18n.t('useAiAgent.readingFile'),
+              list_files: i18n.t('useAiAgent.browsingDir'),
+              think: i18n.t('useAiAgent.thinking'),
+              search_file: i18n.t('useAiAgent.searchingFile'),
+              write_file: i18n.t('useAiAgent.writingFile'),
+              append_file: i18n.t('useAiAgent.updatingFile'),
+              respond_to_student: i18n.t('useAiAgent.composingReply'),
+              render_canvas: i18n.t('useAiAgent.drawingCanvas'),
+              show_group_chat: i18n.t('useAiAgent.preparingGroupChat'),
+              submit_lesson_brief: i18n.t('useAiAgent.generatingOutline'),
             };
-            setThinkingStatus(toolLabels[event.name] || `⏳ 正在处理 ${event.name}…`);
+            setThinkingStatus(toolLabels[event.name] || i18n.t('useAiAgent.processingTool', { name: event.name }));
             addAgentLog({
               id: event.id,
               timestamp: Date.now(),
@@ -78,7 +79,7 @@ export function useAiAgent() {
             addMessage({
               id: crypto.randomUUID(),
               role: 'system',
-              text: `❌ 错误: ${event.message}`,
+              text: i18n.t('common.errorPrefix', { message: event.message }),
               timestamp: Date.now(),
             });
             setStreaming(false);
@@ -203,7 +204,7 @@ export function useAiAgent() {
       addMessage({
         id: crypto.randomUUID(),
         role: 'system',
-        text: '⚠️ 请先在设置中配置 API Key',
+        text: i18n.t('common.configureApiKey'),
         timestamp: Date.now(),
       });
       return;
@@ -228,7 +229,7 @@ export function useAiAgent() {
         addMessage({
           id: crypto.randomUUID(),
           role: 'system',
-          text: `❌ 发送失败: ${err}`,
+          text: i18n.t('common.sendFailed', { error: err }),
           timestamp: Date.now(),
         });
       }
@@ -245,7 +246,7 @@ export function useAiAgent() {
       addMessage({
         id: crypto.randomUUID(),
         role: 'system',
-        text: '⚠️ 请先在设置中配置 API Key',
+        text: i18n.t('common.configureApiKey'),
         timestamp: Date.now(),
       });
       return;
@@ -270,7 +271,7 @@ export function useAiAgent() {
         addMessage({
           id: crypto.randomUUID(),
           role: 'system',
-          text: `❌ 发送失败: ${err}`,
+          text: i18n.t('common.sendFailed', { error: err }),
           timestamp: Date.now(),
         });
       }
@@ -342,7 +343,7 @@ export function useAiAgent() {
       addMessage({
         id: crypto.randomUUID(),
         role: 'system',
-        text: '⚠️ 请先在设置中配置 API Key',
+        text: i18n.t('common.configureApiKey'),
         timestamp: Date.now(),
       });
       return;
@@ -367,7 +368,7 @@ export function useAiAgent() {
         addMessage({
           id: crypto.randomUUID(),
           role: 'system',
-          text: `❌ 发送失败: ${err}`,
+          text: i18n.t('common.sendFailed', { error: err }),
           timestamp: Date.now(),
         });
       }
@@ -399,7 +400,7 @@ export function useAiAgent() {
       addMessage({
         id: crypto.randomUUID(),
         role: 'system',
-        text: '⚠️ 请先在设置中配置 API Key',
+        text: i18n.t('common.configureApiKey'),
         timestamp: Date.now(),
       });
       return;
@@ -424,7 +425,7 @@ export function useAiAgent() {
         addMessage({
           id: crypto.randomUUID(),
           role: 'system',
-          text: `❌ 发送失败: ${err}`,
+          text: i18n.t('common.sendFailed', { error: err }),
           timestamp: Date.now(),
         });
       }

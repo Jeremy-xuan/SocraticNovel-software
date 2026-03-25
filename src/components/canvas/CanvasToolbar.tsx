@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { AnnotationType } from '../../types';
 
 export type ToolType = AnnotationType | 'eraser';
@@ -11,22 +12,6 @@ interface Props {
   onClearAll: () => void;
 }
 
-const TOOLS: { type: ToolType; icon: string; label: string }[] = [
-  { type: 'pen', icon: '🖊️', label: '画笔' },
-  { type: 'text', icon: '📝', label: '文字' },
-  { type: 'arrow', icon: '↗️', label: '箭头' },
-  { type: 'highlight', icon: '🟡', label: '高亮' },
-  { type: 'eraser', icon: '🗑️', label: '橡皮擦' },
-];
-
-const COLORS = [
-  { value: '#ef4444', label: '红' },
-  { value: '#3b82f6', label: '蓝' },
-  { value: '#22c55e', label: '绿' },
-  { value: '#eab308', label: '黄' },
-  { value: '#1e293b', label: '黑' },
-];
-
 export default function CanvasToolbar({
   activeTool,
   activeColor,
@@ -35,10 +20,28 @@ export default function CanvasToolbar({
   onUndo,
   onClearAll,
 }: Props) {
+  const { t } = useTranslation();
+
+  const tools: { type: ToolType; icon: string; label: string }[] = [
+    { type: 'pen', icon: '🖊️', label: t('canvas.toolPen') },
+    { type: 'text', icon: '📝', label: t('canvas.toolText') },
+    { type: 'arrow', icon: '↗️', label: t('canvas.toolArrow') },
+    { type: 'highlight', icon: '🟡', label: t('canvas.toolHighlight') },
+    { type: 'eraser', icon: '🗑️', label: t('canvas.toolEraser') },
+  ];
+
+  const colors = [
+    { value: '#ef4444', label: t('canvas.colorRed') },
+    { value: '#3b82f6', label: t('canvas.colorBlue') },
+    { value: '#22c55e', label: t('canvas.colorGreen') },
+    { value: '#eab308', label: t('canvas.colorYellow') },
+    { value: '#1e293b', label: t('canvas.colorBlack') },
+  ];
+
   return (
     <div className="flex items-center gap-1 rounded-full bg-white px-2 py-1 shadow-md dark:bg-slate-800">
       {/* Tool buttons */}
-      {TOOLS.map((tool) => (
+      {tools.map((tool) => (
         <button
           key={tool.type}
           title={tool.label}
@@ -57,7 +60,7 @@ export default function CanvasToolbar({
       <div className="mx-1 h-4 w-px bg-gray-300 dark:bg-slate-600" />
 
       {/* Color picker */}
-      {COLORS.map((c) => (
+      {colors.map((c) => (
         <button
           key={c.value}
           title={c.label}
@@ -76,14 +79,14 @@ export default function CanvasToolbar({
 
       {/* Undo / Clear */}
       <button
-        title="撤销"
+        title={t('canvas.undo')}
         onClick={onUndo}
         className="flex h-7 w-7 items-center justify-center rounded text-sm hover:bg-gray-100 dark:hover:bg-slate-700"
       >
         ↩️
       </button>
       <button
-        title="清除全部"
+        title={t('canvas.clearAll')}
         onClick={onClearAll}
         className="flex h-7 w-7 items-center justify-center rounded text-sm hover:bg-gray-100 dark:hover:bg-slate-700"
       >

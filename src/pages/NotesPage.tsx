@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
@@ -53,12 +54,13 @@ async function pushToAnkiConnect(cards: AnkiCard[], deckName: string): Promise<{
     const success = results.filter((r: unknown) => r !== null).length;
     return { success, failed: results.length - success };
   } catch {
-    throw new Error('无法连接 AnkiConnect。请确保 Anki 已打开并安装了 AnkiConnect 插件。');
+    throw new Error('ANKI_CONNECT_ERROR');
   }
 }
 
 export default function NotesPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { canvasItems } = useAppStore();
   const [notes, setNotes] = useState<string | null>(null);
   const [ankiCards, setAnkiCards] = useState<AnkiCard[]>([]);
@@ -77,7 +79,7 @@ export default function NotesPage() {
       const settings = useAppStore.getState().settings;
       const apiKey = await getApiKey(settings.aiProvider);
       if (!apiKey) {
-        setError('请先在设置中配置 API Key');
+        setError(t('notes.configApiKeyFirst'));
         setLoading(false);
         return;
       }
@@ -110,14 +112,14 @@ export default function NotesPage() {
       const settings = useAppStore.getState().settings;
       const apiKey = await getApiKey(settings.aiProvider);
       if (!apiKey) {
-        setAnkiStatus('❌ 请先配置 API Key');
+        setAnkiStatus(t('notes.ankiConfigApiKey'));
         setAnkiLoading(false);
         return;
       }
       const tsv = await generateAnkiCards({ apiKey });
       const cards = parseTsvCards(tsv);
       setAnkiCards(cards);
-      setAnkiStatus(`✅ 生成了 ${cards.length} 张卡片`);
+      setAnkiStatus(t('notes.ankiGenerated', { count: cards.length }));
     } catch (err) {
       setAnkiStatus(`❌ ${err}`);
     } finally {
@@ -139,12 +141,17 @@ export default function NotesPage() {
 
   const handlePushAnkiConnect = async () => {
     if (ankiCards.length === 0) return;
-    setAnkiStatus('⏳ 正在推送到 Anki…');
+    setAnkiStatus(t('notes.ankiPushing'));
     try {
       const result = await pushToAnkiConnect(ankiCards, 'SocraticNovel::AP_Physics_EM');
-      setAnkiStatus(`✅ 推送完成: ${result.success} 成功, ${result.failed} 失败`);
+      setAnkiStatus(t('notes.ankiPushResult', { success: result.success, failed: result.failed }));
     } catch (err) {
-      setAnkiStatus(`❌ ${err}`);
+      const errStr = String(err);
+      if (errStr.includes('ANKI_CONNECT_ERROR')) {
+        setAnkiStatus(`❌ ${t('notes.ankiConnectError')}`);
+      } else {
+        setAnkiStatus(`❌ ${err}`);
+      }
     }
   };
 
@@ -162,10 +169,10 @@ export default function NotesPage() {
           onClick={() => navigate(-1)}
           className="text-aux text-text-sub hover:text-text-main dark:text-text-placeholder dark:hover:text-text-main-dark"
         >
-          ← 返回
+          {t('notes.back')}
         </button>
         <span className="text-aux font-medium text-text-main dark:text-text-main-dark">
-          📝 学习笔记
+          {t('notes.title')}
         </span>
         <div className="flex gap-2">
           {notes && (
@@ -174,21 +181,21 @@ export default function NotesPage() {
                 onClick={handleCopyMarkdown}
                 className="rounded-btn border border-border-light px-3 py-1.5 text-tag tracking-[0.04em] text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-main-dark dark:hover:bg-slate-700"
               >
-                📋 复制 Markdown
+                {t('notes.copyMarkdown')}
               </button>
               <button
                 onClick={() => handleExportPdf()}
                 className="rounded-btn bg-primary px-3 py-1.5 text-tag tracking-[0.04em] font-medium text-white hover:bg-[#BF6A4E] h-[38px]"
-                title="使用当前风格导出 PDF"
+                title={t('notes.exportPdfTitle')}
               >
-                📄 导出 PDF
+                {t('notes.exportPdf')}
               </button>
               {/* Style picker dropdown */}
               <div className="relative">
                 <button
                   onClick={() => setShowStylePicker(!showStylePicker)}
                   className="rounded-btn border border-border-light px-2 py-1.5 text-tag tracking-[0.04em] text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-placeholder"
-                  title="选择 PDF 风格"
+                  title={t('notes.selectPdfStyle')}
                 >
                   🎨
                 </button>
@@ -198,15 +205,15 @@ export default function NotesPage() {
                       onClick={() => { setPdfStyle('journal'); setShowStylePicker(false); handleExportPdf('journal'); }}
                       className={`flex w-full items-center gap-2 px-3 py-2 text-left text-tag tracking-[0.04em] hover:bg-bg-light dark:hover:bg-slate-700 ${pdfStyle === 'journal' ? 'text-primary font-medium' : 'text-text-sub dark:text-text-main-dark'}`}
                     >
-                      ✒️ 手记风
-                      <span className="ml-auto text-[10px] text-text-placeholder">手写字体 · 笔记本纸</span>
+                      {t('notes.styleHandwritten')}
+                      <span className="ml-auto text-[10px] text-text-placeholder">{t('notes.styleHandwrittenDesc')}</span>
                     </button>
                     <button
                       onClick={() => { setPdfStyle('minimal'); setShowStylePicker(false); handleExportPdf('minimal'); }}
                       className={`flex w-full items-center gap-2 px-3 py-2 text-left text-tag tracking-[0.04em] hover:bg-bg-light dark:hover:bg-slate-700 border-t border-slate-100 dark:border-border-dark ${pdfStyle === 'minimal' ? 'text-primary font-medium' : 'text-text-sub dark:text-text-main-dark'}`}
                     >
-                      📐 极简风
-                      <span className="ml-auto text-[10px] text-text-placeholder">衬线标题 · 大留白</span>
+                      {t('notes.styleMinimal')}
+                      <span className="ml-auto text-[10px] text-text-placeholder">{t('notes.styleMinimalDesc')}</span>
                     </button>
                   </div>
                 )}
@@ -222,17 +229,17 @@ export default function NotesPage() {
           <div className="flex h-full flex-col items-center justify-center gap-4">
             <div className="text-center">
               <p className="mb-2 text-subtitle font-medium text-text-main dark:text-text-main-dark">
-                生成本次课堂的复习笔记
+                {t('notes.generateDesc')}
               </p>
               <p className="mb-6 text-aux text-text-placeholder">
-                AI 将分析对话内容，提取核心概念、公式、解题方法和易错点
+                {t('notes.generateHint')}
               </p>
             </div>
             <button
               onClick={handleGenerate}
               className="rounded-btn bg-primary px-6 py-3 text-aux font-medium text-white shadow-card hover:bg-[#BF6A4E] transition-colors h-[38px]"
             >
-              📝 生成笔记
+              {t('notes.generateNotes')}
             </button>
           </div>
         )}
@@ -241,7 +248,7 @@ export default function NotesPage() {
           <div className="flex h-full flex-col items-center justify-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
             <p className="text-aux text-text-sub animate-pulse">
-              正在分析对话并生成笔记…（约 15-30 秒）
+              {t('notes.generatingNotes')}
             </p>
           </div>
         )}
@@ -253,7 +260,7 @@ export default function NotesPage() {
               onClick={handleGenerate}
               className="rounded-btn bg-primary px-4 py-2 text-aux text-white hover:bg-[#BF6A4E] h-[38px]"
             >
-              🔄 重试
+              {t('common.retry')}
             </button>
           </div>
         )}
@@ -263,7 +270,7 @@ export default function NotesPage() {
             {/* Title — visible in both screen and print */}
             <div className="mb-8 border-b border-border-light pb-6 dark:border-border-dark print:border-black">
               <h1 className="text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark print:text-black">
-                AP Physics C: E&M — 学习笔记
+                {t('notes.notesTitle')}
               </h1>
               <p className="mt-1 text-aux text-text-placeholder print:text-text-sub">{today}</p>
             </div>
@@ -282,7 +289,7 @@ export default function NotesPage() {
             {canvasItems.length > 0 && (
               <div className="mt-10 border-t border-border-light pt-6 dark:border-border-dark">
                 <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
-                  📐 白板图示
+                  {t('notes.canvasDiagrams')}
                 </h2>
                 <div className="grid gap-4">
                   {canvasItems.map((item) => (
@@ -309,7 +316,7 @@ export default function NotesPage() {
             <div className="mt-10 border-t border-border-light pt-6 dark:border-border-dark print:hidden">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-subtitle font-medium text-text-main dark:text-text-main-dark">
-                  🃏 Anki 闪卡
+                  {t('notes.ankiFlashcards')}
                 </h2>
                 <div className="flex gap-2">
                   {ankiCards.length > 0 && (
@@ -318,13 +325,13 @@ export default function NotesPage() {
                         onClick={handleDownloadTsv}
                         className="rounded-btn border border-border-light px-3 py-1.5 text-tag tracking-[0.04em] text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-main-dark"
                       >
-                        📥 下载 TSV
+                        {t('notes.downloadTsv')}
                       </button>
                       <button
                         onClick={handlePushAnkiConnect}
                         className="rounded-btn border border-emerald-200 px-3 py-1.5 text-tag tracking-[0.04em] text-success hover:bg-emerald-50 dark:border-emerald-600 dark:text-emerald-400"
                       >
-                        🔗 推送到 Anki
+                        {t('notes.pushToAnki')}
                       </button>
                     </>
                   )}
@@ -333,7 +340,7 @@ export default function NotesPage() {
                     disabled={ankiLoading}
                     className="rounded-btn bg-emerald-600 px-3 py-1.5 text-tag tracking-[0.04em] font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
                   >
-                    {ankiLoading ? '⏳ 生成中…' : '🃏 生成 Anki 卡片'}
+                    {ankiLoading ? t('notes.generatingAnki') : t('notes.generateAnki')}
                   </button>
                 </div>
               </div>
@@ -380,7 +387,7 @@ export default function NotesPage() {
 
               {ankiCards.length === 0 && !ankiLoading && (
                 <p className="text-aux text-text-placeholder">
-                  点击「生成 Anki 卡片」从本次课堂内容创建闪卡
+                  {t('notes.ankiHint')}
                 </p>
               )}
             </div>

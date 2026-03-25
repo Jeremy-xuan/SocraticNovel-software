@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import mermaid from 'mermaid';
 import type { CanvasItem } from '../../types';
 import { useAppStore } from '../../stores/appStore';
@@ -61,6 +62,7 @@ interface Props {
 }
 
 export default function CanvasPanel({ items }: Props) {
+  const { t } = useTranslation();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<ToolType>('pen');
   const [activeColor, setActiveColor] = useState('#ef4444');
@@ -82,7 +84,7 @@ export default function CanvasPanel({ items }: Props) {
         <div className="text-center">
           <span className="text-title leading-tight tracking-[0.04em]">🎨</span>
           <p className="mt-2 text-aux text-text-placeholder dark:text-text-sub">
-            AI 会在这里展示图表和公式
+            {t('canvas.emptyTitle')}
           </p>
           <p className="mt-1 text-tag tracking-[0.04em] text-text-main-dark dark:text-text-sub">
             (render_canvas)
@@ -120,7 +122,7 @@ export default function CanvasPanel({ items }: Props) {
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600'
                 }`}
               >
-                ✏️ 标注
+                {t('canvas.annotate')}
               </button>
             </div>
 

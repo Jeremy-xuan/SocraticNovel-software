@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Annotation } from '../../types';
 import type { ToolType } from './CanvasToolbar';
 
@@ -35,6 +36,7 @@ export default function AnnotationLayer({
   onAddAnnotation,
   onRemoveAnnotation,
 }: Props) {
+  const { t } = useTranslation();
   const svgRef = useRef<SVGSVGElement>(null);
   const [drawing, setDrawing] = useState(false);
   const [currentPoints, setCurrentPoints] = useState<{ x: number; y: number }[]>([]);
@@ -290,7 +292,7 @@ export default function AnnotationLayer({
             minWidth: 80,
             color: activeColor,
           }}
-          placeholder="输入文字..."
+          placeholder={t('canvas.textPlaceholder')}
         />
       )}
     </div>

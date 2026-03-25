@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../../stores/appStore';
 import { readFile } from '../../lib/tauri';
 import {
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export default function ChapterOutline({ isInClass }: Props) {
+  const { t } = useTranslation();
   const { settings } = useAppStore();
   const wsPath = settings.currentWorkspacePath;
 
@@ -93,16 +95,16 @@ export default function ChapterOutline({ isInClass }: Props) {
     return (
       <div className="p-4">
         <h3 className="mb-2 text-tag tracking-[0.04em] font-medium uppercase tracking-wider text-text-placeholder">
-          课堂信息
+          {t('chapterOutline.classInfo')}
         </h3>
         <div className="space-y-2 text-aux text-text-sub dark:text-text-main-dark">
           <div className="rounded-btn bg-surface-light p-3 shadow-card dark:bg-surface-dark">
-            <p className="font-medium">状态</p>
+            <p className="font-medium">{t('chapterOutline.statusLabel')}</p>
             <p className={isInClass ? 'text-green-500' : 'text-text-placeholder'}>
-              {isInClass ? '🟢 上课中' : '⚪ 未开始'}
+              {isInClass ? t('chapterOutline.inClass') : t('chapterOutline.notStarted')}
             </p>
           </div>
-          <p className="text-tag tracking-[0.04em] text-text-placeholder">暂无课程大纲</p>
+          <p className="text-tag tracking-[0.04em] text-text-placeholder">{t('chapterOutline.noOutline')}</p>
         </div>
       </div>
     );
@@ -119,12 +121,12 @@ export default function ChapterOutline({ isInClass }: Props) {
       {/* Header */}
       <div className="shrink-0 border-b border-border-light p-3 dark:border-border-dark">
         <h3 className="text-tag tracking-[0.04em] font-medium uppercase tracking-wider text-text-placeholder">
-          章节大纲
+          {t('chapterOutline.outlineTitle')}
         </h3>
         <div className="mt-1 flex items-center gap-2">
           <span className={`inline-block h-2 w-2 rounded-full ${isInClass ? 'bg-green-400' : 'bg-slate-300'}`} />
           <span className="text-tag tracking-[0.04em] text-text-sub dark:text-text-placeholder">
-            {isInClass ? '上课中' : '未开始'}
+            {isInClass ? t('chapterOutline.inClassShort') : t('chapterOutline.notStartedShort')}
           </span>
           <span className="ml-auto text-tag tracking-[0.04em] text-text-placeholder">
             {completedChapters}/{totalChapters}

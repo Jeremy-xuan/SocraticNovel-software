@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { listen } from '@tauri-apps/api/event';
 import { useAppStore } from '../stores/appStore';
 import { useAiAgent } from '../hooks/useAiAgent';
@@ -19,6 +20,7 @@ function getWorkspacePath(): string {
 
 export default function LessonPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { messages, addMessage, isStreaming, isInClass, setInClass, canvasItems, groupChatMessages, hasError, agentLogs } = useAppStore();
   const { initSession, sendMessage: aiSendMessage, sendTeaching, runPrep, runPostLesson } = useAiAgent();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -65,7 +67,7 @@ export default function LessonPage() {
         addMessage({
           id: crypto.randomUUID(),
           role: 'system',
-          text: '⚠️ 响应超时，请重试',
+          text: t('common.timeoutRetry'),
           timestamp: Date.now(),
         });
       }
@@ -80,7 +82,7 @@ export default function LessonPage() {
         useAppStore.getState().addMessage({
           id: crypto.randomUUID(),
           role: 'system',
-          text: `📚 已自动生成 ${count} 张复习卡片`,
+          text: t('lesson.reviewCardsGenerated', { count }),
           timestamp: Date.now(),
         });
       }
@@ -113,11 +115,11 @@ export default function LessonPage() {
       await initSession(workspacePath, systemPrompt);
 
       if (useMultiAgent) {
-        addMessage({ id: crypto.randomUUID(), role: 'system', text: '📋 正在准备课程…（Prep Agent 读取文件中）', timestamp: Date.now() });
+        addMessage({ id: crypto.randomUUID(), role: 'system', text: t('lesson.preparingLesson'), timestamp: Date.now() });
         const brief = await runPrep(workspacePath);
         if (brief) {
           setPrepComplete(true);
-          addMessage({ id: crypto.randomUUID(), role: 'system', text: '✅ 课程准备完成，开始教学', timestamp: Date.now() });
+          addMessage({ id: crypto.randomUUID(), role: 'system', text: t('lesson.prepComplete'), timestamp: Date.now() });
           if (isFirstLaunch) {
             await sendTeaching('[系统：序章已由应用展示给学习者。请直接生成群聊消息（使用 show_group_chat），然后开始第一节课。]');
           } else {
@@ -140,17 +142,17 @@ export default function LessonPage() {
         }
       }
     } catch (err) {
-      addMessage({ id: crypto.randomUUID(), role: 'system', text: `❌ 启动失败: ${err}`, timestamp: Date.now() });
+      addMessage({ id: crypto.randomUUID(), role: 'system', text: t('common.startFailed', { error: err }), timestamp: Date.now() });
       setInClass(false);
     }
   };
 
   const handleEndClass = async () => {
-    addMessage({ id: crypto.randomUUID(), role: 'system', text: '正在结束课堂…', timestamp: Date.now() });
+    addMessage({ id: crypto.randomUUID(), role: 'system', text: t('lesson.endingClass'), timestamp: Date.now() });
     setRightPanel('chat');
 
     if (useMultiAgent) {
-      addMessage({ id: crypto.randomUUID(), role: 'system', text: '📝 Post-Lesson Agent 正在更新文件…', timestamp: Date.now() });
+      addMessage({ id: crypto.randomUUID(), role: 'system', text: t('lesson.postLessonAgent'), timestamp: Date.now() });
       try { await runPostLesson(); } catch (err) { }
     } else {
       try { await aiSendMessage('今天到这里吧，下课。'); } catch (err) { }
@@ -190,13 +192,13 @@ export default function LessonPage() {
           <svg className="h-4 w-4 transition-transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
-          返回
+          {t('lesson.backLabel')}
         </button>
 
         <div className="text-[14px] font-medium tracking-wide flex items-center gap-2">
           <span className="text-text-main dark:text-text-main-dark">AP Physics C: E&M</span>
           <span className="text-border-border-light/80 dark:text-border-dark">/</span>
-          <span className="text-text-sub dark:text-text-placeholder">课堂</span>
+          <span className="text-text-sub dark:text-text-placeholder">{t('lesson.classroom')}</span>
         </div>
 
         <div className="flex items-center gap-3">
@@ -205,16 +207,16 @@ export default function LessonPage() {
               onClick={() => navigate('/notes')}
               className="flex h-[32px] items-center justify-center rounded-btn border border-border-light bg-surface-light px-4 text-[13px] font-medium text-text-sub transition-all hover:border-primary hover:text-primary hover:shadow-sm dark:border-border-dark dark:bg-surface-dark dark:text-text-placeholder dark:hover:border-primary"
             >
-              📝 笔记
+              {t('lesson.notes')}
             </button>
           )}
           {!isInClass ? (
             <button onClick={handleStartClass} className="h-[32px] rounded-btn bg-primary px-5 text-[13px] font-medium tracking-wide text-white transition-all hover:scale-105 hover:bg-[#BF6A4E] shadow-sm">
-              开始上课
+              {t('lesson.startClass')}
             </button>
           ) : (
             <button onClick={handleEndClass} className="h-[32px] rounded-btn border border-danger/30 bg-danger/10 px-5 text-[13px] font-medium tracking-wide text-danger transition-all hover:bg-danger hover:text-white">
-              下课
+              {t('lesson.endClass')}
             </button>
           )}
         </div>
@@ -236,8 +238,8 @@ export default function LessonPage() {
                 <div className="flex h-full items-center justify-center">
                   <div className="text-center">
                     <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-border-light/30 dark:bg-border-dark/30 text-3xl">📖</div>
-                    <h3 className="text-lg font-medium text-text-main dark:text-text-main-dark mb-2">等待上课</h3>
-                    <p className="text-sm text-text-placeholder tracking-wide">点击右上角「开始上课」进入课堂</p>
+                    <h3 className="text-lg font-medium text-text-main dark:text-text-main-dark mb-2">{t('lesson.waitingForClass')}</h3>
+                    <p className="text-sm text-text-placeholder tracking-wide">{t('lesson.clickToStart')}</p>
                   </div>
                 </div>
               )}
@@ -249,7 +251,7 @@ export default function LessonPage() {
                 <div className="my-8 flex justify-center">
                   <button onClick={handleRetry} className="flex h-[38px] items-center gap-2 rounded-btn bg-primary px-6 text-sm font-medium text-white transition-all hover:scale-105 hover:bg-[#BF6A4E] shadow-sm">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                    重试
+                    {t('common.retry')}
                   </button>
                 </div>
               )}
@@ -275,7 +277,7 @@ export default function LessonPage() {
                       : 'text-text-placeholder hover:text-text-main dark:hover:text-text-main-dark'
                     }`}
                 >
-                  {tab === 'canvas' ? '🎨 白板' : tab === 'chat' ? '💬 群聊' : '🔧 日志'}
+                  {tab === 'canvas' ? t('lesson.canvasTab') : tab === 'chat' ? t('lesson.groupChatTab') : t('lesson.logTab')}
                 </button>
               ))}
             </div>
@@ -293,7 +295,7 @@ export default function LessonPage() {
                   {groupChatMessages.length === 0 ? (
                     <div className="flex h-full flex-col items-center justify-center text-text-placeholder opacity-80">
                       <div className="mb-3 text-3xl">💬</div>
-                      <p className="text-[13px] tracking-wide">群聊暂无新消息</p>
+                      <p className="text-[13px] tracking-wide">{t('lesson.noGroupChat')}</p>
                     </div>
                   ) : (
                     groupChatMessages.map((msg, i) => {

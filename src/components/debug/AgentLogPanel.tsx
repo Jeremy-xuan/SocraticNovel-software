@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AgentLogEntry } from '../../types';
 
 const TOOL_ICONS: Record<string, string> = {
@@ -24,6 +25,7 @@ function LogEntry({ entry, onToggle, isExpanded }: {
   onToggle: () => void;
   isExpanded: boolean;
 }) {
+  const { t } = useTranslation();
   const time = formatTime(entry.timestamp);
 
   if (entry.type === 'tool_start') {
@@ -72,7 +74,7 @@ function LogEntry({ entry, onToggle, isExpanded }: {
         <span className="shrink-0 text-[10px] text-text-placeholder font-mono">{time}</span>
         <span className="shrink-0">💬</span>
         <span className="text-tag tracking-[0.04em] text-text-sub dark:text-text-main-dark truncate">
-          回复完成
+          {t('agentLog.responseComplete')}
         </span>
       </div>
     );
@@ -111,6 +113,7 @@ function LogEntry({ entry, onToggle, isExpanded }: {
 }
 
 export default function AgentLogPanel({ logs }: { logs: AgentLogEntry[] }) {
+  const { t } = useTranslation();
   const bottomRef = useRef<HTMLDivElement>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -130,7 +133,7 @@ export default function AgentLogPanel({ logs }: { logs: AgentLogEntry[] }) {
   if (logs.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-aux text-text-placeholder">
-        Agent 活动日志将在此显示
+        {t('agentLog.empty')}
       </div>
     );
   }

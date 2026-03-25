@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { readFile } from '../lib/tauri';
 import { useAppStore } from '../stores/appStore';
 
@@ -107,6 +108,7 @@ function parseDiary(md: string): DiaryEntry[] {
 // ─── Component ──────────────────────────────────────────────
 export default function ProgressPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const workspacePath = useAppStore((s) => s.settings.currentWorkspacePath);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -157,22 +159,22 @@ export default function ProgressPage() {
             onClick={() => navigate('/')}
             className="text-text-placeholder hover:text-text-sub dark:hover:text-text-main-dark"
           >
-            ← 返回
+            {t('progress.back')}
           </button>
           <h1 className="text-subtitle font-medium text-text-main dark:text-text-main-dark">
-            📊 学习进度
+            {t('progress.title')}
           </h1>
         </div>
         <button
           onClick={loadData}
           className="rounded-btn border border-border-light px-3 py-1 text-tag tracking-[0.04em] text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-placeholder"
         >
-          🔄 刷新
+          {t('progress.refresh')}
         </button>
       </header>
 
       {loading ? (
-        <div className="flex flex-1 items-center justify-center text-text-placeholder">加载中...</div>
+        <div className="flex flex-1 items-center justify-center text-text-placeholder">{t('common.loading')}</div>
       ) : error ? (
         <div className="flex flex-1 items-center justify-center text-red-400">{error}</div>
       ) : (
@@ -180,17 +182,21 @@ export default function ProgressPage() {
           {/* Stats Cards */}
           <div className="mx-auto max-w-5xl px-6 pt-6">
             <div className="grid grid-cols-4 gap-4">
-              <StatCard label="总体进度" value={`${overallPct}%`} sub={`${doneKP}/${totalKP} 知识点`} color="blue" />
-              <StatCard label="已完成章节" value={`${completedChapters}`} sub={`共 ${chapters.length} 章`} color="green" />
-              <StatCard label="已上课次" value={`${sessions.length}`} sub="节" color="purple" />
-              <StatCard label="日记" value={`${diary.length}`} sub="篇" color="amber" />
+              <StatCard label={t('progress.overallProgress')} value={`${overallPct}%`} sub={t('progress.knowledgePoints', { done: doneKP, total: totalKP })} color="blue" />
+              <StatCard label={t('progress.completedChapters')} value={`${completedChapters}`} sub={t('progress.totalChapters', { count: chapters.length })} color="green" />
+              <StatCard label={t('progress.lessonsCompleted')} value={`${sessions.length}`} sub={t('progress.lessonsUnit')} color="purple" />
+              <StatCard label={t('progress.diary')} value={`${diary.length}`} sub={t('progress.diaryUnit')} color="amber" />
             </div>
           </div>
 
           {/* Tab bar */}
           <div className="mx-auto max-w-5xl px-6 pt-6">
             <div className="flex gap-1 rounded-btn bg-bg-light p-1 dark:bg-surface-dark">
-              {([['overview', '📋 总览'], ['knowledge', '🧠 知识点'], ['log', '📖 课堂记录']] as const).map(([key, label]) => (
+              {([
+                { key: 'overview' as const, label: t('progress.tabOverview') },
+                { key: 'knowledge' as const, label: t('progress.tabKnowledge') },
+                { key: 'log' as const, label: t('progress.tabLog') },
+              ]).map(({ key, label }) => (
                 <button
                   key={key}
                   onClick={() => setTab(key)}
@@ -237,11 +243,12 @@ function StatCard({ label, value, sub, color }: { label: string; value: string; 
 }
 
 function OverviewTab({ chapters, lessons, diary }: { chapters: ChapterKP[]; lessons: LessonRecord[]; diary: DiaryEntry[] }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-6">
       {/* Chapter Progress Bars */}
       <section>
-        <h2 className="mb-3 text-aux font-medium text-text-sub dark:text-text-main-dark">章节覆盖率</h2>
+        <h2 className="mb-3 text-aux font-medium text-text-sub dark:text-text-main-dark">{t('progress.chapterCoverage')}</h2>
         <div className="space-y-2">
           {chapters.map(ch => {
             const total = ch.points.length;
@@ -275,21 +282,21 @@ function OverviewTab({ chapters, lessons, diary }: { chapters: ChapterKP[]; less
           })}
         </div>
         <div className="mt-2 flex gap-4 text-[10px] text-text-placeholder">
-          <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" /> 已掌握</span>
-          <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-amber-400" /> 部分掌握</span>
-          <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-slate-200 dark:bg-slate-700" /> 未覆盖</span>
+          <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" /> {t('progress.masteredLabel')}</span>
+          <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-amber-400" /> {t('progress.partialLabel')}</span>
+          <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-slate-200 dark:bg-slate-700" /> {t('progress.uncoveredLabel')}</span>
         </div>
       </section>
 
       {/* Lesson History */}
       {lessons.length > 0 && (
         <section>
-          <h2 className="mb-3 text-aux font-medium text-text-sub dark:text-text-main-dark">课程记录</h2>
+          <h2 className="mb-3 text-aux font-medium text-text-sub dark:text-text-main-dark">{t('progress.sessionLog')}</h2>
           <div className="overflow-hidden rounded-btn border border-border-light dark:border-border-dark">
             <table className="w-full text-tag tracking-[0.04em]">
               <thead className="bg-bg-light dark:bg-surface-dark">
                 <tr>
-                  {['日期', '章节', '主题', '老师', '概念', '计算'].map(h => (
+                  {[t('progress.dateHeader'), t('progress.chapterHeader'), t('progress.topicHeader'), t('progress.teacherHeader'), t('progress.conceptHeader'), t('progress.computeHeader')].map(h => (
                     <th key={h} className="px-3 py-2 text-left font-medium text-text-sub">{h}</th>
                   ))}
                 </tr>
@@ -314,7 +321,7 @@ function OverviewTab({ chapters, lessons, diary }: { chapters: ChapterKP[]; less
       {/* Latest Diary */}
       {diary.length > 0 && (
         <section>
-          <h2 className="mb-3 text-aux font-medium text-text-sub dark:text-text-main-dark">最近日记</h2>
+          <h2 className="mb-3 text-aux font-medium text-text-sub dark:text-text-main-dark">{t('progress.recentDiary')}</h2>
           <div className="rounded-btn border border-border-light bg-surface-light p-4 dark:border-border-dark dark:bg-surface-dark">
             <p className="mb-1 text-[10px] text-text-placeholder">{diary[0].date}</p>
             <p className="text-aux leading-relaxed text-text-sub dark:text-text-main-dark italic">
@@ -327,7 +334,7 @@ function OverviewTab({ chapters, lessons, diary }: { chapters: ChapterKP[]; less
       {/* Empty state */}
       {lessons.length === 0 && diary.length === 0 && (
         <div className="rounded-btn border border-dashed border-border-light p-8 text-center text-aux text-text-placeholder dark:border-slate-600">
-          还没有课堂记录。上完第一节课后，Post-Lesson Agent 会自动更新进度数据。
+          {t('progress.noRecords')}
         </div>
       )}
     </div>
@@ -335,6 +342,7 @@ function OverviewTab({ chapters, lessons, diary }: { chapters: ChapterKP[]; less
 }
 
 function KnowledgeTab({ chapters }: { chapters: ChapterKP[] }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
@@ -359,7 +367,7 @@ function KnowledgeTab({ chapters }: { chapters: ChapterKP[] }) {
                   {ch.chapter} — {ch.title}
                 </span>
                 <span className="ml-2 text-tag tracking-[0.04em] text-text-placeholder">
-                  {done}/{total} 已掌握{partial > 0 ? `，${partial} 部分` : ''}
+                  {t('progress.knowledgeMastered', { done, total })}{partial > 0 ? t('progress.knowledgePartial', { count: partial }) : ''}
                 </span>
               </div>
               <span className="text-text-placeholder">{isOpen ? '▾' : '▸'}</span>
@@ -396,11 +404,12 @@ function KnowledgeTab({ chapters }: { chapters: ChapterKP[] }) {
 }
 
 function LogTab({ sessions, diary }: { sessions: SessionEntry[]; diary: DiaryEntry[] }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-4">
       {sessions.length === 0 && diary.length === 0 && (
         <div className="rounded-btn border border-dashed border-border-light p-8 text-center text-aux text-text-placeholder dark:border-slate-600">
-          还没有课堂记录
+          {t('progress.noRecordsShort')}
         </div>
       )}
 
@@ -421,7 +430,7 @@ function LogTab({ sessions, diary }: { sessions: SessionEntry[]; diary: DiaryEnt
               <p className="text-tag tracking-[0.04em] leading-relaxed text-text-sub dark:text-text-placeholder">{s.summary}</p>
               {matchingDiary && (
                 <div className="mt-3 rounded-btn bg-bg-light p-3 dark:bg-surface-dark/80">
-                  <p className="mb-1 text-[10px] font-medium text-text-placeholder">📓 日记</p>
+                  <p className="mb-1 text-[10px] font-medium text-text-placeholder">{t('progress.diaryLabel')}</p>
                   <p className="text-tag tracking-[0.04em] italic leading-relaxed text-text-sub dark:text-text-placeholder">
                     {matchingDiary.content}
                   </p>
@@ -437,7 +446,7 @@ function LogTab({ sessions, diary }: { sessions: SessionEntry[]; diary: DiaryEnt
         <div key={`diary-${i}`} className="rounded-btn border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark">
           <div className="px-4 py-3">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-medium text-text-placeholder">📓 日记</p>
+              <p className="text-[10px] font-medium text-text-placeholder">{t('progress.diaryLabel')}</p>
               <span className="text-tag tracking-[0.04em] text-text-placeholder">{d.date}</span>
             </div>
             <p className="text-tag tracking-[0.04em] italic leading-relaxed text-text-sub dark:text-text-placeholder">

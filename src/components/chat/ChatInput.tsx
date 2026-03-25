@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   onSend: (text: string) => void;
@@ -6,6 +7,7 @@ interface Props {
 }
 
 export default function ChatInput({ onSend, disabled }: Props) {
+  const { t } = useTranslation();
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -45,7 +47,7 @@ export default function ChatInput({ onSend, disabled }: Props) {
             onKeyDown={handleKeyDown}
             onInput={handleInput}
             disabled={disabled}
-            placeholder={disabled ? '等待 AI 回复...' : '输入消息...（Enter 发送，Shift+Enter 换行）'}
+            placeholder={disabled ? t('chatInput.placeholderDisabled') : t('chatInput.placeholderEnabled')}
             rows={1}
             className="flex-1 max-h-[150px] resize-none bg-transparent px-6 py-4 text-[15px] leading-relaxed text-text-main placeholder-text-placeholder focus:outline-none disabled:opacity-50 dark:text-text-main-dark"
           />
@@ -63,7 +65,7 @@ export default function ChatInput({ onSend, disabled }: Props) {
           </div>
         </div>
         <div className="mt-3 text-center text-[11px] tracking-wide text-text-placeholder">
-          AI 可能会犯错。核实重要信息。
+          {t('chatInput.disclaimer')}
         </div>
       </div>
     </div>

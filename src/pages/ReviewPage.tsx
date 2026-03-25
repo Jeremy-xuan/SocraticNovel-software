@@ -1,22 +1,24 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../stores/appStore';
 import { getDueCards, updateReviewCard, getReviewStats, addReviewCards } from '../lib/tauri';
 import type { ReviewCard, ReviewRating, ReviewStats } from '../types';
 
 type Phase = 'loading' | 'idle' | 'reviewing' | 'flipped' | 'complete';
 
-const RATING_OPTIONS: { value: ReviewRating; emoji: string; label: string; color: string }[] = [
-  { value: 1, emoji: '😣', label: '忘了', color: 'bg-danger hover:bg-red-600' },
-  { value: 2, emoji: '😰', label: '模糊', color: 'bg-orange-500 hover:bg-orange-600' },
-  { value: 3, emoji: '🤔', label: '想起来了', color: 'bg-primary hover:bg-primary' },
-  { value: 4, emoji: '😊', label: '容易', color: 'bg-green-500 hover:bg-green-600' },
-];
-
 export default function ReviewPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { settings } = useAppStore();
   const wsPath = settings.currentWorkspacePath;
+
+  const RATING_OPTIONS: { value: ReviewRating; emoji: string; label: string; color: string }[] = [
+    { value: 1, emoji: '😣', label: t('review.forgot'), color: 'bg-danger hover:bg-red-600' },
+    { value: 2, emoji: '😰', label: t('review.fuzzy'), color: 'bg-orange-500 hover:bg-orange-600' },
+    { value: 3, emoji: '🤔', label: t('review.recalled'), color: 'bg-primary hover:bg-primary' },
+    { value: 4, emoji: '😊', label: t('review.easy'), color: 'bg-green-500 hover:bg-green-600' },
+  ];
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [dueCards, setDueCards] = useState<ReviewCard[]>([]);
@@ -90,7 +92,7 @@ export default function ReviewPage() {
       await addReviewCards(wsPath, [
         {
           knowledgePoint: newFront.split('\n')[0].slice(0, 50),
-          sourceChapter: '手动添加',
+          sourceChapter: t('review.manualAdd'),
           cardType: newType,
           front: newFront,
           back: newBack,
@@ -128,7 +130,7 @@ export default function ReviewPage() {
   if (!wsPath) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <p className="text-text-sub">请先选择工作区</p>
+        <p className="text-text-sub">{t('review.selectWorkspace')}</p>
       </div>
     );
   }
@@ -141,14 +143,14 @@ export default function ReviewPage() {
           onClick={() => navigate('/')}
           className="text-aux text-text-sub hover:text-text-main dark:text-text-placeholder dark:hover:text-text-main-dark"
         >
-          ← 返回主页
+          {t('review.back')}
         </button>
-        <h1 className="text-subtitle font-medium text-text-main dark:text-text-main-dark">🧠 间隔复习</h1>
+        <h1 className="text-subtitle font-medium text-text-main dark:text-text-main-dark">{t('review.title')}</h1>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
           className="rounded-btn border border-border-light px-3 py-1 text-aux text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-main-dark dark:hover:bg-slate-700"
         >
-          + 添加卡片
+          {t('review.addCard')}
         </button>
       </div>
 
@@ -156,39 +158,39 @@ export default function ReviewPage() {
       {error && (
         <div className="mx-6 mt-3 rounded-btn bg-red-50 px-4 py-2 text-aux text-danger dark:bg-red-900/30 dark:text-red-300">
           {error}
-          <button onClick={() => setError(null)} className="ml-2 underline">关闭</button>
+          <button onClick={() => setError(null)} className="ml-2 underline">{t('common.close')}</button>
         </div>
       )}
 
       {/* Add card form */}
       {showAddForm && (
         <div className="mx-auto mt-6 w-full max-w-lg rounded-block border border-border-light bg-surface-light p-6 shadow-card dark:border-border-dark dark:bg-surface-dark">
-          <h3 className="mb-4 text-base font-medium text-text-main dark:text-text-main-dark">添加复习卡片</h3>
+          <h3 className="mb-4 text-base font-medium text-text-main dark:text-text-main-dark">{t('review.addCardTitle')}</h3>
           <div className="mb-3 flex gap-2">
             <button
               onClick={() => setNewType('concept')}
               className={`rounded-btn px-3 py-1 text-aux ${newType === 'concept' ? 'bg-primary text-white' : 'bg-bg-light text-text-sub dark:bg-slate-700 dark:text-text-main-dark'}`}
             >
-              概念
+              {t('review.concept')}
             </button>
             <button
               onClick={() => setNewType('compute')}
               className={`rounded-btn px-3 py-1 text-aux ${newType === 'compute' ? 'bg-primary text-white' : 'bg-bg-light text-text-sub dark:bg-slate-700 dark:text-text-main-dark'}`}
             >
-              计算
+              {t('review.compute')}
             </button>
           </div>
           <textarea
             value={newFront}
             onChange={(e) => setNewFront(e.target.value)}
-            placeholder="正面（问题）"
+            placeholder={t('review.frontPlaceholder')}
             className="mb-3 w-full rounded-btn border border-border-light bg-bg-light px-3 py-2 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
             rows={3}
           />
           <textarea
             value={newBack}
             onChange={(e) => setNewBack(e.target.value)}
-            placeholder="背面（答案）"
+            placeholder={t('review.backPlaceholder')}
             className="mb-4 w-full rounded-btn border border-border-light bg-bg-light px-3 py-2 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
             rows={3}
           />
@@ -198,13 +200,13 @@ export default function ReviewPage() {
               disabled={!newFront.trim() || !newBack.trim()}
               className="rounded-btn bg-primary px-4 py-2 text-aux font-medium text-white hover:bg-primary disabled:opacity-50 h-[38px]"
             >
-              添加
+              {t('review.add')}
             </button>
             <button
               onClick={() => setShowAddForm(false)}
               className="rounded-btn border border-border-light px-4 py-2 text-aux text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-main-dark"
             >
-              取消
+              {t('common.cancel')}
             </button>
           </div>
         </div>
@@ -213,17 +215,17 @@ export default function ReviewPage() {
       {/* Main content */}
       <div className="flex flex-1 flex-col items-center justify-center">
         {phase === 'loading' && (
-          <p className="animate-pulse text-text-sub">加载复习队列...</p>
+          <p className="animate-pulse text-text-sub">{t('review.loading')}</p>
         )}
 
         {/* Idle: show stats + start button */}
         {phase === 'idle' && stats && (
           <div className="text-center">
             <div className="mb-8 grid grid-cols-4 gap-4">
-              <StatBox label="总卡片" value={stats.totalCards} color="text-text-main dark:text-text-main-dark" />
-              <StatBox label="今日待复习" value={stats.dueToday} color="text-warning dark:text-amber-400" />
-              <StatBox label="已掌握" value={stats.mastered} color="text-green-600 dark:text-green-400" />
-              <StatBox label="今日已复习" value={reviewedCount} color="text-primary dark:text-blue-400" />
+              <StatBox label={t('review.totalCards')} value={stats.totalCards} color="text-text-main dark:text-text-main-dark" />
+              <StatBox label={t('review.dueToday')} value={stats.dueToday} color="text-warning dark:text-amber-400" />
+              <StatBox label={t('review.mastered')} value={stats.mastered} color="text-green-600 dark:text-green-400" />
+              <StatBox label={t('review.reviewedToday')} value={reviewedCount} color="text-primary dark:text-blue-400" />
             </div>
 
             {dueCards.length > 0 ? (
@@ -231,13 +233,13 @@ export default function ReviewPage() {
                 onClick={handleStartReview}
                 className="rounded-btn bg-primary px-8 py-4 text-subtitle font-medium text-white shadow-lg transition-all hover:bg-primary hover:shadow-xl h-[38px]"
               >
-                开始复习 ({dueCards.length} 张卡片)
+                {t('review.startReview', { count: dueCards.length })}
               </button>
             ) : (
               <div className="text-center">
                 <p className="mb-2 text-title leading-tight tracking-[0.04em]">🎉</p>
-                <p className="text-subtitle text-text-sub dark:text-text-main-dark">今日复习已完成！</p>
-                <p className="mt-1 text-aux text-text-placeholder">添加新卡片或等待下次复习时间</p>
+                <p className="text-subtitle text-text-sub dark:text-text-main-dark">{t('review.reviewDone')}</p>
+                <p className="mt-1 text-aux text-text-placeholder">{t('review.reviewDoneHint')}</p>
               </div>
             )}
           </div>
@@ -252,12 +254,12 @@ export default function ReviewPage() {
               className="mx-auto mt-6 cursor-pointer rounded-block border border-border-light bg-surface-light p-10 shadow-lg transition-all hover:shadow-xl dark:border-border-dark dark:bg-surface-dark"
             >
               <span className="mb-2 inline-block rounded-full bg-blue-100 px-3 py-1 text-tag tracking-[0.04em] font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                {currentCard.cardType === 'concept' ? '概念' : '计算'}
+                {currentCard.cardType === 'concept' ? t('review.concept') : t('review.compute')}
               </span>
               <p className="mt-4 whitespace-pre-wrap text-subtitle text-text-main dark:text-text-main-dark">
                 {currentCard.front}
               </p>
-              <p className="mt-6 text-aux text-text-placeholder">点击翻转 (Space)</p>
+              <p className="mt-6 text-aux text-text-placeholder">{t('review.flipHint')}</p>
             </div>
           </div>
         )}
@@ -268,7 +270,7 @@ export default function ReviewPage() {
             <ProgressBar current={currentIdx + 1} total={dueCards.length} />
             <div className="mx-auto mt-6 rounded-block border border-emerald-200 bg-surface-light p-10 shadow-lg dark:border-emerald-700 dark:bg-surface-dark">
               <span className="mb-2 inline-block rounded-full bg-emerald-100 px-3 py-1 text-tag tracking-[0.04em] font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-                答案
+                {t('review.answer')}
               </span>
               <p className="mt-4 whitespace-pre-wrap text-subtitle text-text-main dark:text-text-main-dark">
                 {currentCard.back}
@@ -295,16 +297,16 @@ export default function ReviewPage() {
           <div className="text-center">
             <p className="mb-4 text-title leading-tight tracking-[0.04em]">🎉</p>
             <h2 className="mb-2 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">
-              复习完成！
+              {t('review.sessionComplete')}
             </h2>
             <p className="mb-6 text-text-sub dark:text-text-placeholder">
-              本次复习了 {reviewedCount} 张卡片
+              {t('review.sessionReviewed', { count: reviewedCount })}
             </p>
             {stats && (
               <div className="mb-8 grid grid-cols-3 gap-4">
-                <StatBox label="总卡片" value={stats.totalCards} color="text-text-main dark:text-text-main-dark" />
-                <StatBox label="已掌握" value={stats.mastered} color="text-green-600 dark:text-green-400" />
-                <StatBox label="剩余待学" value={stats.totalCards - stats.mastered} color="text-warning dark:text-amber-400" />
+                <StatBox label={t('review.totalCards')} value={stats.totalCards} color="text-text-main dark:text-text-main-dark" />
+                <StatBox label={t('review.mastered')} value={stats.mastered} color="text-green-600 dark:text-green-400" />
+                <StatBox label={t('review.remaining')} value={stats.totalCards - stats.mastered} color="text-warning dark:text-amber-400" />
               </div>
             )}
             <div className="flex justify-center gap-3">
@@ -312,13 +314,13 @@ export default function ReviewPage() {
                 onClick={() => { loadData(); setPhase('loading'); }}
                 className="rounded-btn bg-primary px-6 py-3 text-aux font-medium text-white hover:bg-primary h-[38px]"
               >
-                继续复习
+                {t('review.continueReview')}
               </button>
               <button
                 onClick={() => navigate('/')}
                 className="rounded-card border border-border-light px-6 py-3 text-aux text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-main-dark"
               >
-                返回主页
+                {t('review.returnHome')}
               </button>
             </div>
           </div>
