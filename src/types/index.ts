@@ -112,6 +112,7 @@ export interface AgentLogEntry {
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   homeLayout?: 'input' | 'cards';
+  language: 'zh' | 'en' | 'auto';
   currentWorkspaceId: string | null;
   currentWorkspacePath: string | null;
   aiProvider: 'anthropic' | 'openai' | 'google' | 'deepseek' | 'custom';

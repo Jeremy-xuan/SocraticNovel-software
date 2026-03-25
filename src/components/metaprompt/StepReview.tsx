@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { MetaPromptQuestionnaire } from '../../types';
 import { TEACHING_STYLE_LABELS } from '../../types';
 
@@ -7,28 +8,29 @@ interface Props {
 
 export default function StepReview({ data }: Props) {
   const { subject, course, characters, world, story } = data;
+  const { t } = useTranslation();
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="mb-1 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">✅ 确认总览</h2>
-        <p className="text-aux text-text-sub">请检查以下设计，确认无误后点击"开始生成"</p>
+        <h2 className="mb-1 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">{t('stepReview.title')}</h2>
+        <p className="text-aux text-text-sub">{t('stepReview.desc')}</p>
       </div>
 
       {/* Subject & Course */}
-      <Section title="📋 基础信息">
-        <Row label="学科" value={subject.subjectName} />
-        <Row label="教材" value={subject.textbook || '（未指定）'} />
-        <Row label="教材格式" value={subject.textbookFormat} />
-        <Row label="练习册" value={subject.hasWorkbook ? '有' : '无'} />
-        <Row label="总章节" value={`${course.totalChapters} 章`} />
-        {course.completedChapters && <Row label="已完成" value={course.completedChapters} />}
-        {course.learningPeriod && <Row label="学习周期" value={course.learningPeriod} />}
-        {course.topicOverview && <Row label="主题" value={course.topicOverview} />}
+      <Section title={t('stepReview.basicInfo')}>
+        <Row label={t('stepReview.subject')} value={subject.subjectName} />
+        <Row label={t('stepReview.textbook')} value={subject.textbook || t('stepReview.notSpecified')} />
+        <Row label={t('stepReview.textbookFormat')} value={subject.textbookFormat} />
+        <Row label={t('stepReview.workbook')} value={subject.hasWorkbook ? t('stepReview.workbookYes') : t('stepReview.workbookNo')} />
+        <Row label={t('stepReview.totalChapters')} value={t('stepReview.chaptersUnit', { count: course.totalChapters })} />
+        {course.completedChapters && <Row label={t('stepReview.completed')} value={course.completedChapters} />}
+        {course.learningPeriod && <Row label={t('stepReview.learningPeriod')} value={course.learningPeriod} />}
+        {course.topicOverview && <Row label={t('stepReview.topic')} value={course.topicOverview} />}
       </Section>
 
       {/* Characters */}
-      <Section title="🎭 角色设计">
+      <Section title={t('stepReview.characterDesign')}>
         {characters.map((char, i) => (
           <div key={i} className="mb-4 rounded-btn border border-slate-100 bg-bg-light p-4 last:mb-0 dark:border-slate-600 dark:bg-slate-700/50">
             <div className="mb-2 flex items-center gap-2">
@@ -38,40 +40,40 @@ export default function StepReview({ data }: Props) {
               </span>
               {char.source === 'preset' && (
                 <span className="rounded-full bg-green-100 px-2 py-0.5 text-tag tracking-[0.04em] text-green-600 dark:bg-green-900/30 dark:text-green-300">
-                  预设
+                  {t('stepReview.presetBadge')}
                 </span>
               )}
             </div>
             <div className="space-y-1 text-aux text-text-sub dark:text-text-main-dark">
-              <div><span className="text-text-placeholder">性别/年龄：</span>{char.gender} / {char.age}</div>
-              <div><span className="text-text-placeholder">外貌：</span>{char.appearanceKeywords}</div>
-              <div><span className="text-text-placeholder">性格：</span>{char.personalityCore.slice(0, 80)}{char.personalityCore.length > 80 ? '...' : ''}</div>
-              <div><span className="text-text-placeholder">暗线：</span>{char.backstoryAutoGenerate ? '🤖 AI 自动设计' : (char.backstoryHints || '（未填写）')}</div>
-              <div><span className="text-text-placeholder">关系温度：</span>{'❄️'.repeat(Math.max(0, 5 - Math.round(char.initialWarmth / 2)))}{'🔥'.repeat(Math.round(char.initialWarmth / 2))}</div>
+              <div><span className="text-text-placeholder">{t('stepReview.genderAge')}</span>{char.gender} / {char.age}</div>
+              <div><span className="text-text-placeholder">{t('stepReview.appearance')}</span>{char.appearanceKeywords}</div>
+              <div><span className="text-text-placeholder">{t('stepReview.personality')}</span>{char.personalityCore.slice(0, 80)}{char.personalityCore.length > 80 ? '...' : ''}</div>
+              <div><span className="text-text-placeholder">{t('stepReview.backstory')}</span>{char.backstoryAutoGenerate ? t('stepReview.backstoryAuto') : (char.backstoryHints || t('stepReview.backstoryEmpty'))}</div>
+              <div><span className="text-text-placeholder">{t('stepReview.warmthLabel')}</span>{'❄️'.repeat(Math.max(0, 5 - Math.round(char.initialWarmth / 2)))}{'🔥'.repeat(Math.round(char.initialWarmth / 2))}</div>
             </div>
           </div>
         ))}
       </Section>
 
       {/* World */}
-      <Section title="🌍 世界观">
-        <Row label="地点风格" value={{
-          enclosed: '封闭空间 🏔️', 'semi-open': '半开放空间 🏡',
-          everyday: '日常空间 🏙️', custom: '自定义 ✨',
+      <Section title={t('stepReview.worldSection')}>
+        <Row label={t('stepReview.locationStyle')} value={{
+          enclosed: t('stepReview.locationStyleEnclosed'), 'semi-open': t('stepReview.locationStyleSemiOpen'),
+          everyday: t('stepReview.locationStyleEveryday'), custom: t('stepReview.locationStyleCustom'),
         }[world.locationStyle]} />
-        <Row label="地点描述" value={world.location} />
-        <Row label="到来方式" value={{
-          arranged: '被安排的 📋', 'self-sought': '自己找来的 🔍', accidental: '意外的 🎲',
+        <Row label={t('stepReview.locationDesc')} value={world.location} />
+        <Row label={t('stepReview.arrivalType')} value={{
+          arranged: t('stepReview.arrivalArranged'), 'self-sought': t('stepReview.arrivalSelfSought'), accidental: t('stepReview.arrivalAccidental'),
         }[world.arrivalType]} />
-        {world.arrivalReason && <Row label="到来原因" value={world.arrivalReason} />}
-        {world.characterRelations && <Row label="角色关系" value={world.characterRelations} />}
-        <Row label="超自然设定" value={world.hasSupernatural ? world.supernaturalElement : '无'} />
+        {world.arrivalReason && <Row label={t('stepReview.arrivalReason')} value={world.arrivalReason} />}
+        {world.characterRelations && <Row label={t('stepReview.characterRelations')} value={world.characterRelations} />}
+        <Row label={t('stepReview.supernatural')} value={world.hasSupernatural ? world.supernaturalElement : t('stepReview.supernaturalNone')} />
       </Section>
 
       {/* Story */}
-      <Section title="📖 故事设计">
+      <Section title={t('stepReview.storySection')}>
         <div className="mb-3">
-          <span className="text-tag tracking-[0.04em] font-medium text-text-sub">情感阶段</span>
+          <span className="text-tag tracking-[0.04em] font-medium text-text-sub">{t('stepReview.emotionalPhases')}</span>
           <div className="mt-1 space-y-1">
             {story.emotionalPhases.map((phase, i) => (
               <div key={i} className="flex items-center gap-2 text-aux text-text-sub dark:text-text-main-dark">
@@ -83,10 +85,10 @@ export default function StepReview({ data }: Props) {
           </div>
         </div>
         {data.characterCount > 1 && (
-          <Row label="轮值方式" value={story.rotationStyle === 'round-robin' ? '等距轮换 🔄' : '专题分组 📚'} />
+          <Row label={t('stepReview.rotationStyle')} value={story.rotationStyle === 'round-robin' ? t('stepReview.rotationRoundRobin') : t('stepReview.rotationThematic')} />
         )}
-        <Row label="群聊" value={story.enableGroupChat ? `启用「${story.groupChatName || '未命名'}」` : '不启用'} />
-        {story.keyEvents && <Row label="关键事件" value={story.keyEvents} />}
+        <Row label={t('stepReview.groupChat')} value={story.enableGroupChat ? t('stepReview.groupChatEnabled', { name: story.groupChatName || t('stepReview.groupChatUnnamed') }) : t('stepReview.groupChatDisabled')} />
+        {story.keyEvents && <Row label={t('stepReview.keyEvents')} value={story.keyEvents} />}
       </Section>
     </div>
   );

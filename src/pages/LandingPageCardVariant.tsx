@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+import i18n from '../i18n';
 import { useAppStore } from '../stores/appStore';
-import { initBuiltinWorkspace, listWorkspaces, createWorkspace, deleteWorkspace, updateWorkspaceMeta, hasApiKey, getReviewStats } from '../lib/tauri';
+import { initBuiltinWorkspace, listWorkspaces, createWorkspace, deleteWorkspace, updateWorkspaceMeta, hasApiKey, getReviewStats, exportWorkspace, importWorkspace } from '../lib/tauri';
+import { open } from '@tauri-apps/plugin-dialog';
 import type { ReviewStats } from '../types';
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { settings, updateSettings } = useAppStore();
 
   const [loading, setLoading] = useState(true);
@@ -18,6 +23,8 @@ export default function LandingPage() {
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -71,7 +78,7 @@ export default function LandingPage() {
 
   const handleDeleteWorkspace = async (ws: any) => {
     if (ws.id === 'ap-physics-em') return;
-    if (!confirm(`确定要删除工作区 '${ws.name}' 吗？此操作不可撤销。`)) return;
+    if (!confirm(t('landing.deleteConfirm', { name: ws.name }))) return;
     try {
       setIsDeleting(true);
       await deleteWorkspace(ws.id);
@@ -91,27 +98,59 @@ export default function LandingPage() {
         }
       }
     } catch (err) {
-      alert("删除失败: " + String(err));
+      alert(t('landing.deleteFailed', { error: String(err) }));
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const formatLastOpened = (ts: string | null | undefined) => {
+  const formatLastOpened = (ts: string | null | undefined, t: TFunction) => {
     if (!ts) return null;
     try {
       const d = new Date(ts);
       const now = new Date();
       const diffMs = now.getTime() - d.getTime();
       const diffMin = Math.floor(diffMs / 60000);
-      if (diffMin < 1) return '刚刚';
-      if (diffMin < 60) return `${diffMin}分钟前`;
+      if (diffMin < 1) return t('time.justNow');
+      if (diffMin < 60) return t('time.minutesAgo', { count: diffMin });
       const diffHr = Math.floor(diffMin / 60);
-      if (diffHr < 24) return `${diffHr}小时前`;
+      if (diffHr < 24) return t('time.hoursAgo', { count: diffHr });
       const diffDay = Math.floor(diffHr / 24);
-      if (diffDay < 30) return `${diffDay}天前`;
-      return d.toLocaleDateString('zh-CN');
+      if (diffDay < 30) return t('time.daysAgo', { count: diffDay });
+      return d.toLocaleDateString(i18n.language === 'zh' ? 'zh-CN' : 'en-US');
     } catch { return null; }
+  };
+
+  const handleExportWorkspace = async (ws: any) => {
+    try {
+      setIsExporting(true);
+      const savedPath = await exportWorkspace(ws.id);
+      alert(t('landing.exportSuccess', { path: savedPath }));
+    } catch (err) {
+      alert(t('landing.exportFailed', { error: String(err) }));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportWorkspace = async () => {
+    try {
+      const selected = await open({
+        filters: [{ name: 'SocraticNovel Workspace', extensions: ['snworkspace'] }],
+        multiple: false,
+      });
+      if (!selected) return;
+      setIsImporting(true);
+      const ws = await importWorkspace(selected as string);
+      const wsList = await listWorkspaces();
+      setWorkspaces(wsList);
+      await handleSwitchWorkspace(ws);
+      alert(t('landing.importSuccess', { name: ws.name }));
+    } catch (err) {
+      alert(t('landing.importFailed', { error: String(err) }));
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const handleCreateWorkspace = async (e: React.FormEvent) => {
@@ -125,7 +164,7 @@ export default function LandingPage() {
       await handleSwitchWorkspace(newWs);
       setNewWorkspaceName('');
     } catch (err) {
-      alert("创建失败: " + String(err));
+      alert(t('landing.createFailed', { error: String(err) }));
     } finally {
       setIsCreating(false);
     }
@@ -179,24 +218,34 @@ export default function LandingPage() {
                           <div className="flex flex-col gap-0.5 min-w-0 pr-2">
                             <span className="truncate">{ws.name}</span>
                             {ws.lastOpened && (
-                              <span className="text-[10px] text-text-placeholder truncate">最近打开: {formatLastOpened(ws.lastOpened)}</span>
+                              <span className="text-[10px] text-text-placeholder truncate">{t('landing.lastOpened', { time: formatLastOpened(ws.lastOpened, t) })}</span>
                             )}
                           </div>
                           {activeWorkspace.id === ws.id && <svg className="shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
                         </button>
                         {ws.id === 'ap-physics-em' ? (
-                          <div className="shrink-0 w-7 h-7 flex items-center justify-center" title="内置工作区不可删除">
+                          <div className="shrink-0 w-7 h-7 flex items-center justify-center" title={t('landing.builtinLocked')}>
                             <span className="text-[12px] text-text-placeholder/40 cursor-not-allowed">🔒</span>
                           </div>
                         ) : (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteWorkspace(ws); }}
-                            disabled={isDeleting}
-                            className="shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-text-placeholder/60 opacity-0 group-hover/item:opacity-100 hover:text-danger hover:bg-danger/10 transition-all"
-                            title="删除工作区"
-                          >
-                            🗑️
-                          </button>
+                          <div className="flex items-center gap-0.5">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleExportWorkspace(ws); }}
+                              disabled={isExporting}
+                              className="shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-text-placeholder/60 opacity-0 group-hover/item:opacity-100 hover:text-primary hover:bg-primary/10 transition-all"
+                              title={t('landing.exportWorkspace')}
+                            >
+                              📤
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteWorkspace(ws); }}
+                              disabled={isDeleting}
+                              className="shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-text-placeholder/60 opacity-0 group-hover/item:opacity-100 hover:text-danger hover:bg-danger/10 transition-all"
+                              title={t('landing.deleteWorkspace')}
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         )}
                       </div>
                     ))}
@@ -205,18 +254,29 @@ export default function LandingPage() {
                   <form onSubmit={handleCreateWorkspace} className="flex flex-col gap-2 px-1 pb-1">
                     <input
                       type="text"
-                      placeholder="新学科 (如 ap-chem)"
+                      placeholder={t('landing.newSubjectPlaceholderCard')}
                       value={newWorkspaceName}
                       onChange={(e) => setNewWorkspaceName(e.target.value)}
                       className="w-full rounded-[8px] bg-bg-light px-3 py-2 text-[12px] text-text-main outline-none focus:ring-1 focus:ring-black/20 dark:focus:ring-white/20 dark:bg-bg-dark"
                     />
-                    <button
-                      type="submit"
-                      disabled={isCreating || !newWorkspaceName.trim()}
-                      className="w-full rounded-[8px] bg-black/80 py-1.5 text-[12px] font-medium text-white transition-all hover:bg-black disabled:opacity-50 dark:bg-white/80 dark:text-black dark:hover:bg-white"
-                    >
-                      {isCreating ? '创建中...' : '+ 新建档案'}
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={isCreating || !newWorkspaceName.trim()}
+                        className="flex-1 rounded-[8px] bg-black/80 py-1.5 text-[12px] font-medium text-white transition-all hover:bg-black disabled:opacity-50 dark:bg-white/80 dark:text-black dark:hover:bg-white"
+                      >
+                        {isCreating ? t('landing.creating') : t('landing.createArchive')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleImportWorkspace}
+                        disabled={isImporting}
+                        className="rounded-[8px] bg-black/5 px-3 py-1.5 text-[12px] font-medium text-text-sub transition-all hover:bg-black/10 disabled:opacity-50 dark:bg-white/10 dark:text-text-placeholder dark:hover:bg-white/15"
+                        title={t('landing.importWorkspaceTitle')}
+                      >
+                        {isImporting ? t('landing.importing') : t('landing.importBtn')}
+                      </button>
+                    </div>
                   </form>
                 </div>
               </>
@@ -234,7 +294,7 @@ export default function LandingPage() {
           {!loading && !settings.apiKeyConfigured && (
             <div className="flex cursor-pointer items-center gap-2 rounded-full border border-danger/10 bg-danger/5 px-3 py-1.5 text-[11px] font-medium text-danger transition-colors hover:bg-danger/10" onClick={() => navigate('/settings')}>
               <span className="h-1.5 w-1.5 rounded-full bg-danger animate-pulse"></span>
-              API Key 缺失
+              {t('landing.apiKeyMissingCard')}
             </div>
           )}
           <button
@@ -255,7 +315,7 @@ export default function LandingPage() {
             SocraticNovel
           </h1>
           <p className="text-[15px] sm:text-[16px] text-text-placeholder dark:text-text-placeholder tracking-widest uppercase">
-            让学习不再孤独
+            {t('landing.subtitleCard')}
           </p>
         </div>
 
@@ -282,15 +342,15 @@ export default function LandingPage() {
               </svg>
 
               <span className="rounded-full bg-black/5 dark:bg-white/5 px-2.5 py-1 text-[11px] font-medium text-text-sub dark:text-text-placeholder tracking-wide">
-                核心伴读
+                {t('landing.coreReading')}
               </span>
             </div>
 
             <h2 className="font-serif text-[28px] sm:text-[32px] text-text-main dark:text-text-main-dark mb-2 tracking-tight group-hover:text-primary transition-colors">
-              学习模式
+              {t('landing.lessonMode')}
             </h2>
             <p className="text-[14px] leading-relaxed text-text-sub dark:text-text-placeholder">
-              苏格拉底式学习+轻小说式叙述，让AI像人一样陪伴你学习。
+              {t('landing.lessonModeCardDesc')}
             </p>
           </button>
 
@@ -310,15 +370,15 @@ export default function LandingPage() {
               </svg>
 
               <span className="rounded-full bg-black/5 dark:bg-white/5 px-2.5 py-1 text-[11px] font-medium text-text-sub dark:text-text-placeholder tracking-wide">
-                沉浸复习
+                {t('landing.immersiveReview')}
               </span>
             </div>
 
             <h2 className="font-serif text-[28px] sm:text-[32px] text-text-main dark:text-text-main-dark mb-2 tracking-tight group-hover:text-success transition-colors">
-              刷题模式
+              {t('landing.reviewMode')}
             </h2>
             <p className="text-[14px] leading-relaxed text-text-sub dark:text-text-placeholder">
-              沉浸式辅导协议，在读轻小说之余把题给刷完，独立于学习模式存在。
+              {t('landing.reviewModeCardDesc')}
             </p>
           </button>
 
@@ -331,7 +391,7 @@ export default function LandingPage() {
             className="relative flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium text-text-sub transition-colors hover:bg-black/5 hover:text-text-main dark:text-text-placeholder dark:hover:bg-white/5 dark:hover:text-text-main-dark"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>
-            间隔复习
+            {t('landing.spacedReview')}
             {reviewStats && reviewStats.dueToday > 0 && (
               <span className="absolute top-1.5 right-1.5 flex h-2 w-2 rounded-full bg-primary/80 animate-pulse"></span>
             )}
@@ -342,7 +402,7 @@ export default function LandingPage() {
             className="flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium text-text-sub transition-colors hover:bg-black/5 hover:text-text-main dark:text-text-placeholder dark:hover:bg-white/5 dark:hover:text-text-main-dark"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-            构建系统
+            {t('landing.buildSystem')}
           </button>
         </div>
 
@@ -351,12 +411,12 @@ export default function LandingPage() {
       {/* Discrete Ghost Footer */}
       <div className="absolute bottom-8 w-full px-12 flex justify-between items-center text-text-placeholder z-20 pointer-events-none">
         <div className="flex gap-8 pointer-events-auto opacity-70 hover:opacity-100 transition-opacity duration-300">
-          <button onClick={() => navigate('/notes')} className="text-[12px] font-medium hover:text-text-main transition-colors dark:hover:text-text-main-dark">课程笔记</button>
-          <button onClick={() => navigate('/pdf-import')} className="text-[12px] font-medium hover:text-text-main transition-colors dark:hover:text-text-main-dark">提取教材</button>
+          <button onClick={() => navigate('/notes')} className="text-[12px] font-medium hover:text-text-main transition-colors dark:hover:text-text-main-dark">{t('landing.courseNotes')}</button>
+          <button onClick={() => navigate('/pdf-import')} className="text-[12px] font-medium hover:text-text-main transition-colors dark:hover:text-text-main-dark">{t('landing.extractTextbook')}</button>
         </div>
         <div className="pointer-events-auto opacity-70 hover:opacity-100 transition-opacity duration-300">
           <button onClick={() => navigate('/progress')} className="text-[12px] font-medium hover:text-text-main flex items-center gap-1 transition-colors dark:hover:text-text-main-dark">
-            学习档案 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17l9.2-9.2M17 17V7H7" /></svg>
+            {t('landing.learningProfile')} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17l9.2-9.2M17 17V7H7" /></svg>
           </button>
         </div>
       </div>

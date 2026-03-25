@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+import i18n from '../i18n';
 import { useAppStore } from '../stores/appStore';
 import { initBuiltinWorkspace, listWorkspaces, createWorkspace, deleteWorkspace, updateWorkspaceMeta, hasApiKey, getReviewStats } from '../lib/tauri';
 import type { ReviewStats } from '../types';
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { settings, updateSettings } = useAppStore();
 
   const [loading, setLoading] = useState(true);
@@ -73,7 +77,7 @@ export default function LandingPage() {
 
   const handleDeleteWorkspace = async (ws: any) => {
     if (ws.id === 'ap-physics-em') return;
-    if (!confirm(`确定要删除工作区 '${ws.name}' 吗？此操作不可撤销。`)) return;
+    if (!confirm(t('landing.deleteConfirm', { name: ws.name }))) return;
     try {
       setIsDeleting(true);
       await deleteWorkspace(ws.id);
@@ -93,26 +97,26 @@ export default function LandingPage() {
         }
       }
     } catch (err) {
-      alert("删除失败: " + String(err));
+      alert(t('landing.deleteFailed', { error: String(err) }));
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const formatLastOpened = (ts: string | null | undefined) => {
+  const formatLastOpened = (ts: string | null | undefined, t: TFunction) => {
     if (!ts) return null;
     try {
       const d = new Date(ts);
       const now = new Date();
       const diffMs = now.getTime() - d.getTime();
       const diffMin = Math.floor(diffMs / 60000);
-      if (diffMin < 1) return '刚刚';
-      if (diffMin < 60) return `${diffMin}分钟前`;
+      if (diffMin < 1) return t('time.justNow');
+      if (diffMin < 60) return t('time.minutesAgo', { count: diffMin });
       const diffHr = Math.floor(diffMin / 60);
-      if (diffHr < 24) return `${diffHr}小时前`;
+      if (diffHr < 24) return t('time.hoursAgo', { count: diffHr });
       const diffDay = Math.floor(diffHr / 24);
-      if (diffDay < 30) return `${diffDay}天前`;
-      return d.toLocaleDateString('zh-CN');
+      if (diffDay < 30) return t('time.daysAgo', { count: diffDay });
+      return d.toLocaleDateString(i18n.language === 'zh' ? 'zh-CN' : 'en-US');
     } catch { return null; }
   };
 
@@ -127,7 +131,7 @@ export default function LandingPage() {
       await handleSwitchWorkspace(newWs);
       setNewWorkspaceName('');
     } catch (err) {
-      alert("创建失败: " + String(err));
+      alert(t('landing.createFailed', { error: String(err) }));
     } finally {
       setIsCreating(false);
     }
@@ -162,7 +166,7 @@ export default function LandingPage() {
         {!loading && !settings.apiKeyConfigured && (
           <div className="flex cursor-pointer items-center gap-2 rounded-full border border-danger/10 bg-danger/5 px-3 py-1.5 text-[12px] font-medium text-danger backdrop-blur-md transition-colors hover:bg-danger/10" onClick={() => navigate('/settings')}>
             <span className="h-1.5 w-1.5 rounded-full bg-danger animate-pulse"></span>
-            未配置 API Key
+            {t('landing.apiKeyMissing')}
           </div>
         )}
         <button
@@ -206,13 +210,13 @@ export default function LandingPage() {
                           <div className="flex flex-col gap-0.5 min-w-0 pr-2">
                             <span className="truncate">{ws.name}</span>
                             {ws.lastOpened && (
-                              <span className="text-[10px] text-text-placeholder truncate">最近打开: {formatLastOpened(ws.lastOpened)}</span>
+                              <span className="text-[10px] text-text-placeholder truncate">{t('landing.lastOpened', { time: formatLastOpened(ws.lastOpened, t) })}</span>
                             )}
                           </div>
                           {activeWorkspace.id === ws.id && <svg className="shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
                         </button>
                         {ws.id === 'ap-physics-em' ? (
-                          <div className="shrink-0 w-7 h-7 flex items-center justify-center" title="内置工作区不可删除">
+                          <div className="shrink-0 w-7 h-7 flex items-center justify-center" title={t('landing.builtinLocked')}>
                             <span className="text-[12px] text-text-placeholder/40 cursor-not-allowed">🔒</span>
                           </div>
                         ) : (
@@ -220,7 +224,7 @@ export default function LandingPage() {
                             onClick={(e) => { e.stopPropagation(); handleDeleteWorkspace(ws); }}
                             disabled={isDeleting}
                             className="shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-text-placeholder/60 opacity-0 group-hover/item:opacity-100 hover:text-danger hover:bg-danger/10 transition-all"
-                            title="删除工作区"
+                            title={t('landing.deleteWorkspace')}
                           >
                             🗑️
                           </button>
@@ -232,7 +236,7 @@ export default function LandingPage() {
                   <form onSubmit={handleCreateWorkspace} className="flex flex-col gap-2 px-1 pb-1">
                     <input
                       type="text"
-                      placeholder="新学科域 (如 default)"
+                      placeholder={t('landing.newSubjectPlaceholder')}
                       value={newWorkspaceName}
                       onChange={(e) => setNewWorkspaceName(e.target.value)}
                       className="w-full rounded-[8px] bg-bg-light px-3 py-2 text-[12px] text-text-main outline-none focus:ring-1 focus:ring-primary dark:bg-bg-dark"
@@ -242,7 +246,7 @@ export default function LandingPage() {
                       disabled={isCreating || !newWorkspaceName.trim()}
                       className="w-full rounded-[8px] bg-text-main py-1.5 text-[12px] font-medium text-surface-light transition-all hover:bg-black disabled:opacity-50 dark:bg-text-main-dark dark:text-surface-dark dark:hover:bg-white"
                     >
-                      {isCreating ? '创建中...' : '+ 新建档案'}
+                      {isCreating ? t('landing.creating') : t('landing.createArchive')}
                     </button>
                   </form>
                 </div>
@@ -262,7 +266,7 @@ export default function LandingPage() {
             SocraticNovel
           </h1>
           <p className="text-[15px] sm:text-[17px] text-text-sub dark:text-text-placeholder font-serif italic tracking-wide">
-            让学习不再孤独。
+            {t('landing.subtitle')}
           </p>
         </div>
 
@@ -278,7 +282,7 @@ export default function LandingPage() {
                 : 'text-text-placeholder hover:text-text-main dark:hover:text-text-main-dark'
                 }`}
             >
-              学习模式
+              {t('landing.lessonMode')}
             </button>
             <button
               onClick={() => setActiveTab('review')}
@@ -287,7 +291,7 @@ export default function LandingPage() {
                 : 'text-text-placeholder hover:text-text-main dark:hover:text-text-main-dark'
                 }`}
             >
-              刷题模式
+              {t('landing.reviewMode')}
             </button>
           </div>
 
@@ -311,7 +315,7 @@ export default function LandingPage() {
                   )}
                 </div>
                 <span className="text-[16px] text-text-sub font-medium group-hover:text-text-main transition-colors text-left flex items-center gap-3">
-                  {activeTab === 'lesson' ? '开启苏格拉底式陪伴学习...' : '启动沉浸式辅导协议，快速刷题...'}
+                  {activeTab === 'lesson' ? t('landing.lessonModeDesc') : t('landing.reviewModeDesc')}
                 </span>
               </div>
 
@@ -330,7 +334,7 @@ export default function LandingPage() {
             className="group relative flex flex-row items-center justify-center gap-2 rounded-full border border-black/[0.06] bg-transparent px-4 py-1.5 text-[12px] font-medium text-text-sub transition-colors hover:bg-black/[0.03] dark:border-white/[0.05] dark:text-text-placeholder dark:hover:bg-white/5"
           >
             <svg className="text-text-placeholder group-hover:text-text-main transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>
-            间隔复习
+            {t('landing.spacedReview')}
             {reviewStats && reviewStats.dueToday > 0 && (
               <span className="absolute -top-1 -right-0.5 flex h-2.5 w-2.5 rounded-full bg-primary animate-pulse shadow-sm"></span>
             )}
@@ -341,7 +345,7 @@ export default function LandingPage() {
             className="group flex flex-row items-center justify-center gap-2 rounded-full border border-black/[0.06] bg-transparent px-4 py-1.5 text-[12px] font-medium text-text-sub transition-colors hover:bg-black/[0.03] dark:border-white/[0.05] dark:text-text-placeholder dark:hover:bg-white/5"
           >
             <svg className="text-text-placeholder group-hover:text-text-main transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-            构建世界
+            {t('landing.buildWorld')}
           </button>
         </div>
 
@@ -350,12 +354,12 @@ export default function LandingPage() {
       {/* Discrete Ghost Footer */}
       <div className="absolute bottom-8 w-full px-12 flex justify-between items-center text-text-placeholder z-20 pointer-events-none">
         <div className="flex gap-8 pointer-events-auto opacity-70 hover:opacity-100 transition-opacity duration-300">
-          <button onClick={() => navigate('/notes')} className="text-[12px] font-medium hover:text-text-main transition-colors">课程笔记</button>
-          <button onClick={() => navigate('/pdf-import')} className="text-[12px] font-medium hover:text-text-main transition-colors">提取教材</button>
+          <button onClick={() => navigate('/notes')} className="text-[12px] font-medium hover:text-text-main transition-colors">{t('landing.courseNotes')}</button>
+          <button onClick={() => navigate('/pdf-import')} className="text-[12px] font-medium hover:text-text-main transition-colors">{t('landing.extractTextbook')}</button>
         </div>
         <div className="pointer-events-auto opacity-70 hover:opacity-100 transition-opacity duration-300">
           <button onClick={() => navigate('/progress')} className="text-[12px] font-medium hover:text-text-main flex items-center gap-1 transition-colors">
-            学习档案 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17l9.2-9.2M17 17V7H7" /></svg>
+            {t('landing.learningProfile')} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17l9.2-9.2M17 17V7H7" /></svg>
           </button>
         </div>
       </div>

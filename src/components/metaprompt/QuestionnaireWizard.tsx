@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { MetaPromptQuestionnaire } from '../../types';
 import StepSubject from './StepSubject';
 import StepCharacters from './StepCharacters';
@@ -7,11 +8,11 @@ import StepStory from './StepStory';
 import StepReview from './StepReview';
 
 const STEPS = [
-  { id: 1, label: '基础信息', icon: '📋' },
-  { id: 2, label: '角色创建', icon: '🎭' },
-  { id: 3, label: '世界观', icon: '🌍' },
-  { id: 4, label: '故事设计', icon: '📖' },
-  { id: 5, label: '确认总览', icon: '✅' },
+  { id: 1, labelKey: 'wizard.stepBasicInfo', icon: '📋' },
+  { id: 2, labelKey: 'wizard.stepCharacters', icon: '🎭' },
+  { id: 3, labelKey: 'wizard.stepWorld', icon: '🌍' },
+  { id: 4, labelKey: 'wizard.stepStory', icon: '📖' },
+  { id: 5, labelKey: 'wizard.stepReview', icon: '✅' },
 ];
 
 const DEFAULT_QUESTIONNAIRE: MetaPromptQuestionnaire = {
@@ -47,6 +48,7 @@ interface Props {
 }
 
 export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
+  const { t } = useTranslation();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<MetaPromptQuestionnaire>(DEFAULT_QUESTIONNAIRE);
 
@@ -81,7 +83,7 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
       {/* Left sidebar — step indicator */}
       <div className="flex w-56 flex-col border-r border-border-light bg-surface-light/50 p-6 dark:border-border-dark dark:bg-surface-dark/50">
         <h2 className="mb-6 text-subtitle font-medium text-text-main dark:text-text-main-dark">
-          🔨 创建教学系统
+          {t('wizard.createSystem')}
         </h2>
         <div className="space-y-2">
           {STEPS.map(s => (
@@ -96,7 +98,7 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
               }`}
             >
               <span className="text-base">{s.id < step ? '✅' : s.icon}</span>
-              <span>{s.label}</span>
+              <span>{t(s.labelKey)}</span>
             </div>
           ))}
         </div>
@@ -105,7 +107,7 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
             onClick={onBack}
             className="text-aux text-text-placeholder hover:text-text-sub dark:hover:text-text-main-dark"
           >
-            ← 返回首页
+            {t('wizard.backToHome')}
           </button>
         </div>
       </div>
@@ -128,7 +130,7 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
             onClick={handlePrev}
             className="rounded-btn border border-border-light px-5 py-2.5 text-aux font-medium text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-main-dark dark:hover:bg-slate-700"
           >
-            ← {step === 1 ? '返回' : '上一步'}
+            {step === 1 ? t('common.back') : t('common.prev')}
           </button>
           <span className="text-aux text-text-placeholder">
             {step} / {STEPS.length}
@@ -138,7 +140,7 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
             disabled={!canNext()}
             className="rounded-btn bg-primary px-6 py-2.5 text-aux font-medium text-white hover:bg-[#BF6A4E] disabled:opacity-40 h-[38px]"
           >
-            {step === 5 ? '🚀 开始生成' : '下一步 →'}
+            {step === 5 ? t('wizard.startGenerate') : t('common.next')}
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
 import { setApiKey, initBuiltinWorkspace } from '../lib/tauri';
@@ -6,6 +7,7 @@ import { setApiKey, initBuiltinWorkspace } from '../lib/tauri';
 type Step = 'welcome' | 'provider' | 'apikey' | 'workspace' | 'done';
 
 export default function SetupWizardPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { updateSettings } = useAppStore();
   const [step, setStep] = useState<Step>('welcome');
@@ -77,19 +79,19 @@ export default function SetupWizardPage() {
           <div className="text-center">
             <div className="mb-4 text-5xl">📖</div>
             <h1 className="mb-2 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">
-              欢迎使用 SocraticNovel
+              {t('setup.welcomeTitle')}
             </h1>
             <p className="mb-8 text-text-sub dark:text-text-placeholder">
-              沉浸式 AI 苏格拉底教学——让三位轻小说角色成为你的物理家教。
+              {t('setup.welcomeDesc')}
             </p>
             <p className="mb-8 text-aux text-text-placeholder dark:text-text-sub">
-              接下来只需要几步简单设置，就可以开始上课了。
+              {t('setup.welcomeHint')}
             </p>
             <button
               onClick={() => setStep('provider')}
               className="rounded-btn bg-primary px-8 py-3 font-medium text-white transition-colors hover:bg-[#BF6A4E] h-[38px]"
             >
-              开始设置 →
+              {t('setup.startSetup')}
             </button>
           </div>
         )}
@@ -98,14 +100,14 @@ export default function SetupWizardPage() {
         {step === 'provider' && (
           <div>
             <h2 className="mb-2 text-subtitle font-medium text-text-main dark:text-text-main-dark">
-              选择 AI 提供商
+              {t('setup.selectProvider')}
             </h2>
             <p className="mb-6 text-aux text-text-sub dark:text-text-placeholder">
-              SocraticNovel 需要一个 AI API Key 来驱动教学。推荐使用 Anthropic (Claude)。
+              {t('setup.selectProviderDesc')}
             </p>
             <div className="mb-6 grid grid-cols-2 gap-3">
               {([
-                { id: 'anthropic' as const, label: '🟣 Anthropic', sub: 'Claude (推荐)' },
+                { id: 'anthropic' as const, label: '🟣 Anthropic', sub: t('setup.providerRecommended') },
                 { id: 'openai' as const, label: '🟢 OpenAI', sub: 'GPT-4o' },
                 { id: 'google' as const, label: '🔵 Google', sub: 'Gemini' },
                 { id: 'deepseek' as const, label: '🔷 DeepSeek', sub: 'DeepSeek' },
@@ -129,13 +131,13 @@ export default function SetupWizardPage() {
                 onClick={() => setStep('welcome')}
                 className="text-aux text-text-placeholder hover:text-text-sub dark:hover:text-text-main-dark"
               >
-                ← 返回
+                {t('common.back')}
               </button>
               <button
                 onClick={() => setStep('apikey')}
                 className="rounded-btn bg-primary px-6 py-2 font-medium text-white hover:bg-[#BF6A4E] h-[38px]"
               >
-                下一步 →
+                {t('common.next')}
               </button>
             </div>
           </div>
@@ -145,16 +147,16 @@ export default function SetupWizardPage() {
         {step === 'apikey' && (
           <div>
             <h2 className="mb-2 text-subtitle font-medium text-text-main dark:text-text-main-dark">
-              输入 API Key
+              {t('setup.enterApiKey')}
             </h2>
             <p className="mb-6 text-aux text-text-sub dark:text-text-placeholder">
-              你的 API Key 将安全存储在 macOS Keychain 中，不会发送到任何第三方服务器。
+              {t('setup.apiKeySecure')}
             </p>
             <input
               type="password"
               value={apiKeyInput}
               onChange={(e) => setApiKeyInput(e.target.value)}
-              placeholder={`输入 ${provider} API Key (sk-...)...`}
+              placeholder={t('setup.apiKeyPlaceholder', { provider })}
               className="mb-4 w-full rounded-btn border border-border-light bg-surface-light px-4 py-3 text-aux text-text-main placeholder-text-placeholder focus:bg-surface-light focus:border-blue-500 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
               autoFocus
             />
@@ -164,14 +166,14 @@ export default function SetupWizardPage() {
                 onClick={() => setStep('provider')}
                 className="text-aux text-text-placeholder hover:text-text-sub dark:hover:text-text-main-dark"
               >
-                ← 返回
+                {t('common.back')}
               </button>
               <button
                 onClick={handleSaveKey}
                 disabled={!apiKeyInput.trim() || saving}
                 className="rounded-btn bg-primary px-6 py-2 font-medium text-white hover:bg-[#BF6A4E] disabled:opacity-50 h-[38px]"
               >
-                {saving ? '保存中...' : '保存并继续 →'}
+                {saving ? t('setup.saving') : t('setup.saveAndContinue')}
               </button>
             </div>
           </div>
@@ -181,10 +183,10 @@ export default function SetupWizardPage() {
         {step === 'workspace' && (
           <div>
             <h2 className="mb-2 text-subtitle font-medium text-text-main dark:text-text-main-dark">
-              选择教学内容
+              {t('setup.selectContent')}
             </h2>
             <p className="mb-6 text-aux text-text-sub dark:text-text-placeholder">
-              选择你要体验的教学系统。
+              {t('setup.selectContentDesc')}
             </p>
             <div className="mb-6 space-y-3">
               <button
@@ -195,10 +197,10 @@ export default function SetupWizardPage() {
                   <span className="text-title leading-tight tracking-[0.04em]">⚡</span>
                   <div>
                     <div className="font-medium text-text-main dark:text-text-main-dark">
-                      体验 AP Physics C: E&M
+                      {t('setup.builtinTitle')}
                     </div>
                     <div className="text-tag tracking-[0.04em] text-text-placeholder">
-                      内置完整教学系统——三位老师、苏格拉底教学、轻小说叙事
+                      {t('setup.builtinDesc')}
                     </div>
                   </div>
                 </div>
@@ -211,10 +213,10 @@ export default function SetupWizardPage() {
                   <span className="text-title leading-tight tracking-[0.04em]">🔨</span>
                   <div>
                     <div className="font-medium text-text-main dark:text-text-main-dark">
-                      从零创建教学系统
+                      {t('setup.createFromScratch')}
                     </div>
                     <div className="text-tag tracking-[0.04em] text-text-placeholder">
-                      使用 Meta Prompt AI 引导创建自定义教学系统
+                      {t('setup.createFromScratchDesc')}
                     </div>
                   </div>
                 </div>
@@ -227,10 +229,10 @@ export default function SetupWizardPage() {
                   <span className="text-title leading-tight tracking-[0.04em]">📁</span>
                   <div>
                     <div className="font-medium text-text-main dark:text-text-main-dark">
-                      导入已有 Workspace
+                      {t('setup.importWorkspace')}
                     </div>
                     <div className="text-tag tracking-[0.04em] text-text-placeholder">
-                      从文件夹导入已有的 SocraticNovel workspace（即将推出）
+                      {t('setup.importWorkspaceDesc')}
                     </div>
                   </div>
                 </div>
@@ -241,7 +243,7 @@ export default function SetupWizardPage() {
               onClick={() => setStep('apikey')}
               className="text-aux text-text-placeholder hover:text-text-sub dark:hover:text-text-main-dark"
             >
-              ← 返回
+              {t('common.back')}
             </button>
           </div>
         )}
@@ -251,16 +253,16 @@ export default function SetupWizardPage() {
           <div className="text-center">
             <div className="mb-4 text-5xl">🎉</div>
             <h2 className="mb-2 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">
-              设置完成！
+              {t('setup.setupComplete')}
             </h2>
             <p className="mb-8 text-text-sub dark:text-text-placeholder">
-              一切就绪。点击下方按钮，开始你的苏格拉底教学之旅。
+              {t('setup.setupCompleteDesc')}
             </p>
             <button
               onClick={handleFinish}
               className="rounded-btn bg-primary px-8 py-3 font-medium text-white transition-colors hover:bg-[#BF6A4E] h-[38px]"
             >
-              进入 SocraticNovel →
+              {t('setup.enterApp')}
             </button>
           </div>
         )}

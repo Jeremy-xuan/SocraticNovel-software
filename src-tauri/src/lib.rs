@@ -26,6 +26,8 @@ pub fn run() {
             fs_commands::init_builtin_workspace,
             fs_commands::delete_workspace,
             fs_commands::update_workspace_meta,
+            fs_commands::export_workspace,
+            fs_commands::import_workspace,
             // AI
             ai_commands::start_ai_session,
             ai_commands::send_chat_message,

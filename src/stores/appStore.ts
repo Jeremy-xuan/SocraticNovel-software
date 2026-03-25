@@ -109,6 +109,7 @@ export const useAppStore = create<AppState>((set) => ({
   settings: {
     theme: 'system',
     homeLayout: 'cards',
+    language: 'auto',
     currentWorkspaceId: null,
     currentWorkspacePath: null,
     aiProvider: 'anthropic',

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { MetaPromptQuestionnaire, EmotionalPhase } from '../../types';
 
 interface Props {
@@ -14,6 +15,7 @@ const DEFAULT_FOUR_STAGES: EmotionalPhase[] = [
 
 export default function StepStory({ data, onChange }: Props) {
   const { story } = data;
+  const { t } = useTranslation();
 
   const setStory = (partial: Partial<typeof story>) =>
     onChange({ story: { ...story, ...partial } });
@@ -37,14 +39,14 @@ export default function StepStory({ data, onChange }: Props) {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="mb-1 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">📖 故事设计</h2>
-        <p className="text-aux text-text-sub">设计学习体验的情感弧度</p>
+        <h2 className="mb-1 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">{t('stepStory.title')}</h2>
+        <p className="text-aux text-text-sub">{t('stepStory.desc')}</p>
       </div>
 
       {/* Emotional phases */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">情感阶段</h3>
+          <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepStory.emotionalPhases')}</h3>
           <div className="flex gap-2">
             <button
               onClick={() => setStory({ emotionalTemplate: 'four-stage', emotionalPhases: DEFAULT_FOUR_STAGES })}
@@ -54,7 +56,7 @@ export default function StepStory({ data, onChange }: Props) {
                   : 'border-border-light text-text-sub dark:border-slate-600'
               }`}
             >
-              四阶段模板（推荐）
+              {t('stepStory.fourStageTemplate')}
             </button>
             <button
               onClick={() => setStory({ emotionalTemplate: 'custom' })}
@@ -64,7 +66,7 @@ export default function StepStory({ data, onChange }: Props) {
                   : 'border-border-light text-text-sub dark:border-slate-600'
               }`}
             >
-              自定义
+              {t('stepStory.customTemplate')}
             </button>
           </div>
         </div>
@@ -83,14 +85,14 @@ export default function StepStory({ data, onChange }: Props) {
                     type="text"
                     value={phase.name}
                     onChange={e => updatePhase(idx, { name: e.target.value })}
-                    placeholder="阶段名"
+                    placeholder={t('stepStory.phaseNamePlaceholder')}
                     className="rounded border border-border-light px-3 py-1.5 text-aux dark:border-slate-500 dark:bg-slate-600 dark:text-text-main-dark"
                   />
                   <input
                     type="text"
                     value={phase.coveragePercent}
                     onChange={e => updatePhase(idx, { coveragePercent: e.target.value })}
-                    placeholder="覆盖范围（如 前25%）"
+                    placeholder={t('stepStory.coveragePlaceholder')}
                     className="rounded border border-border-light px-3 py-1.5 text-aux dark:border-slate-500 dark:bg-slate-600 dark:text-text-main-dark"
                   />
                 </div>
@@ -98,7 +100,7 @@ export default function StepStory({ data, onChange }: Props) {
                   type="text"
                   value={phase.tone}
                   onChange={e => updatePhase(idx, { tone: e.target.value })}
-                  placeholder="基调描述"
+                  placeholder={t('stepStory.tonePlaceholder')}
                   className="w-full rounded border border-border-light px-3 py-1.5 text-aux dark:border-slate-500 dark:bg-slate-600 dark:text-text-main-dark"
                 />
               </div>
@@ -117,7 +119,7 @@ export default function StepStory({ data, onChange }: Props) {
               onClick={addPhase}
               className="w-full rounded-btn border border-dashed border-border-light py-2 text-aux text-text-placeholder hover:border-slate-400 hover:text-text-sub dark:border-slate-600"
             >
-              + 添加阶段
+              {t('stepStory.addPhase')}
             </button>
           )}
         </div>
@@ -126,7 +128,7 @@ export default function StepStory({ data, onChange }: Props) {
       {/* Rotation style */}
       {data.characterCount > 1 && (
         <section className="space-y-4">
-          <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">教师轮值方式</h3>
+          <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepStory.rotationStyle')}</h3>
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => setStory({ rotationStyle: 'round-robin' })}
@@ -136,8 +138,8 @@ export default function StepStory({ data, onChange }: Props) {
                   : 'border-border-light dark:border-slate-600'
               }`}
             >
-              <div className="text-aux font-medium text-text-main dark:text-text-main-dark">🔄 等距轮换（推荐）</div>
-              <div className="text-tag tracking-[0.04em] text-text-sub">A → B → C → A → B → C...</div>
+              <div className="text-aux font-medium text-text-main dark:text-text-main-dark">{t('stepStory.roundRobin')}</div>
+              <div className="text-tag tracking-[0.04em] text-text-sub">{t('stepStory.roundRobinDesc')}</div>
             </button>
             <button
               onClick={() => setStory({ rotationStyle: 'thematic' })}
@@ -147,15 +149,15 @@ export default function StepStory({ data, onChange }: Props) {
                   : 'border-border-light dark:border-slate-600'
               }`}
             >
-              <div className="text-aux font-medium text-text-main dark:text-text-main-dark">📚 专题分组</div>
-              <div className="text-tag tracking-[0.04em] text-text-sub">按单元/主题分配给不同老师</div>
+              <div className="text-aux font-medium text-text-main dark:text-text-main-dark">{t('stepStory.thematic')}</div>
+              <div className="text-tag tracking-[0.04em] text-text-sub">{t('stepStory.thematicDesc')}</div>
             </button>
           </div>
           <input
             type="text"
             value={story.rotationNotes}
             onChange={e => setStory({ rotationNotes: e.target.value })}
-            placeholder="轮值备注（如有特殊安排）"
+            placeholder={t('stepStory.rotationNotes')}
             className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
         </section>
@@ -164,7 +166,7 @@ export default function StepStory({ data, onChange }: Props) {
       {/* Group chat */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">群聊系统</h3>
+          <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepStory.groupChat')}</h3>
           <label className="flex items-center gap-2 text-aux text-text-sub">
             <input
               type="checkbox"
@@ -172,28 +174,28 @@ export default function StepStory({ data, onChange }: Props) {
               onChange={e => setStory({ enableGroupChat: e.target.checked })}
               className="rounded"
             />
-            启用
+            {t('common.enable')}
           </label>
         </div>
         {story.enableGroupChat && (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-tag tracking-[0.04em] font-medium text-text-sub">群聊名称</label>
+              <label className="mb-1 block text-tag tracking-[0.04em] font-medium text-text-sub">{t('stepStory.groupChatName')}</label>
               <input
                 type="text"
                 value={story.groupChatName}
                 onChange={e => setStory({ groupChatName: e.target.value })}
-                placeholder="例：观测站生活群"
+                placeholder={t('stepStory.groupChatNamePlaceholder')}
                 className="w-full rounded-btn border border-border-light bg-surface-light px-3 py-2 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
               />
             </div>
             <div>
-              <label className="mb-1 block text-tag tracking-[0.04em] font-medium text-text-sub">群聊风格</label>
+              <label className="mb-1 block text-tag tracking-[0.04em] font-medium text-text-sub">{t('stepStory.groupChatStyle')}</label>
               <input
                 type="text"
                 value={story.groupChatStyle}
                 onChange={e => setStory({ groupChatStyle: e.target.value })}
-                placeholder="纯文字 / 偶尔 emoji / ..."
+                placeholder={t('stepStory.groupChatStylePlaceholder')}
                 className="w-full rounded-btn border border-border-light bg-surface-light px-3 py-2 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
               />
             </div>
@@ -203,14 +205,14 @@ export default function StepStory({ data, onChange }: Props) {
 
       {/* Key events */}
       <section className="space-y-4">
-        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">关键事件（可选）</h3>
+        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepStory.keyEvents')}</h3>
         <p className="text-tag tracking-[0.04em] text-text-sub">
-          只需要确定骨架事件（3-5 个最重要的），剩下的 AI 会在生成时补完
+          {t('stepStory.keyEventsHint')}
         </p>
         <textarea
           value={story.keyEvents}
           onChange={e => setStory({ keyEvents: e.target.value })}
-          placeholder="描述必须发生的关键事件...&#10;如：Ch.10 某角色第一次展露过去的碎片、Ch.20 群聊名称改变"
+          placeholder={t('stepStory.keyEventsPlaceholder')}
           rows={4}
           className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
         />

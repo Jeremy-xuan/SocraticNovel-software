@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../stores/appStore';
 import { useAiAgent } from '../hooks/useAiAgent';
 import ChatMessageBubble from '../components/chat/ChatMessageBubble';
@@ -63,11 +64,11 @@ async function loadAnimaTutorTemplate(
 // ---------- Yuuki Progression Options ----------
 
 const YUUKI_PROGRESSIONS = [
-  { value: '刚开始', label: '🆕 刚开始（从序章开始）' },
-  { value: '第一章', label: '📖 第一章 — 陌生人' },
-  { value: '第二章', label: '📖 第二章 — 裂缝' },
-  { value: '第三章', label: '📖 第三章 — 习惯' },
-  { value: '第四章', label: '📖 第四章 — 倒计时' },
+  { value: '刚开始', labelKey: 'practice.progressStart' },
+  { value: '第一章', labelKey: 'practice.progressCh1' },
+  { value: '第二章', labelKey: 'practice.progressCh2' },
+  { value: '第三章', labelKey: 'practice.progressCh3' },
+  { value: '第四章', labelKey: 'practice.progressCh4' },
 ] as const;
 
 // ---------- AnimaTutor Preset Characters ----------
@@ -81,10 +82,11 @@ const PRESET_CHARACTERS = [
 // ---------- Sub-Components ----------
 
 function ProtocolSelectScreen({ onSelect }: { onSelect: (protocol: 'yuuki' | 'animatutor') => void }) {
+  const { t } = useTranslation();
   return (
     <div className="flex h-full flex-col items-center justify-center px-6">
-      <h1 className="mb-2 text-2xl font-bold text-text-main dark:text-text-main-dark">选择辅导模式</h1>
-      <p className="mb-10 text-sm text-text-sub dark:text-text-placeholder">选择你的学习辅导协议</p>
+      <h1 className="mb-2 text-2xl font-bold text-text-main dark:text-text-main-dark">{t('practice.selectMode')}</h1>
+      <p className="mb-10 text-sm text-text-sub dark:text-text-placeholder">{t('practice.selectModeDesc')}</p>
       <div className="flex gap-6">
         {/* AnimaTutor Card */}
         <button
@@ -93,13 +95,13 @@ function ProtocolSelectScreen({ onSelect }: { onSelect: (protocol: 'yuuki' | 'an
         >
           <span className="mb-3 text-4xl">🎭</span>
           <h2 className="mb-1 text-left text-base font-semibold text-text-main dark:text-text-main-dark">
-            AnimaTutor — 个性化辅导
+            {t('practice.animaTutorTitle')}
           </h2>
           <p className="mb-4 text-left text-sm leading-relaxed text-text-sub dark:text-text-placeholder">
-            选择你喜欢的角色和学科，AI 自动生成专属的沉浸式辅导协议
+            {t('practice.animaTutorDesc')}
           </p>
           <span className="mt-auto inline-block self-start rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-            需要几分钟初始化
+            {t('practice.animaTutorInit')}
           </span>
         </button>
         {/* 幽鬼α Card */}
@@ -109,13 +111,13 @@ function ProtocolSelectScreen({ onSelect }: { onSelect: (protocol: 'yuuki' | 'an
         >
           <span className="mb-3 text-4xl">👻</span>
           <h2 className="mb-1 text-left text-base font-semibold text-text-main dark:text-text-main-dark">
-            幽鬼α — 即刻开始
+            {t('practice.yuukiTitle')}
           </h2>
           <p className="mb-4 text-left text-sm leading-relaxed text-text-sub dark:text-text-placeholder">
-            预设的沉浸式伴学协议 — 十七岁的职业死亡游戏玩家，用极光走廊里的场景化教学带你学习
+            {t('practice.yuukiDesc')}
           </p>
           <span className="mt-auto inline-block self-start rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-            即用型协议
+            {t('practice.yuukiReady')}
           </span>
         </button>
       </div>
@@ -124,13 +126,14 @@ function ProtocolSelectScreen({ onSelect }: { onSelect: (protocol: 'yuuki' | 'an
 }
 
 function YuukiSetupScreen({ onStart, onBack }: { onStart: (progression: string) => void; onBack: () => void }) {
+  const { t } = useTranslation();
   const [progression, setProgression] = useState('刚开始');
   return (
     <div className="flex h-full flex-col items-center justify-center px-6">
       <div className="w-full max-w-md rounded-xl border border-border-light bg-surface-light p-8 shadow-card dark:border-border-dark dark:bg-surface-dark">
-        <button onClick={onBack} className="mb-4 text-sm text-text-sub hover:text-text-main dark:text-text-placeholder dark:hover:text-text-main-dark">← 返回选择</button>
-        <h2 className="mb-1 text-lg font-semibold text-text-main dark:text-text-main-dark">👻 幽鬼α</h2>
-        <p className="mb-6 text-sm text-text-sub dark:text-text-placeholder">你目前的剧情推进到哪里了？</p>
+        <button onClick={onBack} className="mb-4 text-sm text-text-sub hover:text-text-main dark:text-text-placeholder dark:hover:text-text-main-dark">{t('common.backToSelect')}</button>
+        <h2 className="mb-1 text-lg font-semibold text-text-main dark:text-text-main-dark">{t('practice.yuukiHeading')}</h2>
+        <p className="mb-6 text-sm text-text-sub dark:text-text-placeholder">{t('practice.yuukiProgress')}</p>
         <div className="mb-6 space-y-2">
           {YUUKI_PROGRESSIONS.map(opt => (
             <label
@@ -149,7 +152,7 @@ function YuukiSetupScreen({ onStart, onBack }: { onStart: (progression: string) 
                 onChange={() => setProgression(opt.value)}
                 className="accent-primary"
               />
-              <span className="text-sm text-text-main dark:text-text-main-dark">{opt.label}</span>
+              <span className="text-sm text-text-main dark:text-text-main-dark">{t(opt.labelKey)}</span>
             </label>
           ))}
         </div>
@@ -157,7 +160,7 @@ function YuukiSetupScreen({ onStart, onBack }: { onStart: (progression: string) 
           onClick={() => onStart(progression)}
           className="w-full rounded-btn bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-[#BF6A4E] transition-colors"
         >
-          开始
+          {t('practice.start')}
         </button>
       </div>
     </div>
@@ -168,6 +171,7 @@ function AnimaTutorWizard({ onGenerate, onBack }: {
   onGenerate: (character: { name: string; source: string; intro: string }, subject: string, extra: string) => void;
   onBack: () => void;
 }) {
+  const { t } = useTranslation();
   const [step, setStep] = useState<1 | 2>(1);
   const [charName, setCharName] = useState('');
   const [charSource, setCharSource] = useState('');
@@ -188,7 +192,7 @@ function AnimaTutorWizard({ onGenerate, onBack }: {
     <div className="flex h-full flex-col items-center justify-center px-6">
       <div className="w-full max-w-lg rounded-xl border border-border-light bg-surface-light p-8 shadow-card dark:border-border-dark dark:bg-surface-dark">
         <button onClick={step === 1 ? onBack : () => setStep(1)} className="mb-4 text-sm text-text-sub hover:text-text-main dark:text-text-placeholder dark:hover:text-text-main-dark">
-          ← {step === 1 ? '返回选择' : '上一步'}
+          {step === 1 ? t('common.backToSelect') : t('common.prev')}
         </button>
         {/* Step indicator */}
         <div className="mb-6 flex items-center gap-2">
@@ -199,8 +203,8 @@ function AnimaTutorWizard({ onGenerate, onBack }: {
 
         {step === 1 && (
           <>
-            <h2 className="mb-1 text-lg font-semibold text-text-main dark:text-text-main-dark">🎭 你想让谁来辅导你？</h2>
-            <p className="mb-4 text-sm text-text-sub dark:text-text-placeholder">填写角色信息，或选择一个预设角色</p>
+            <h2 className="mb-1 text-lg font-semibold text-text-main dark:text-text-main-dark">{t('practice.whoTutors')}</h2>
+            <p className="mb-4 text-sm text-text-sub dark:text-text-placeholder">{t('practice.fillCharInfo')}</p>
             <div className="mb-4 flex flex-wrap gap-2">
               {PRESET_CHARACTERS.map(p => (
                 <button
@@ -218,31 +222,31 @@ function AnimaTutorWizard({ onGenerate, onBack }: {
             </div>
             <div className="mb-3 flex gap-3">
               <div className="flex-1">
-                <label className="mb-1 block text-xs font-medium text-text-sub dark:text-text-placeholder">角色名</label>
+                <label className="mb-1 block text-xs font-medium text-text-sub dark:text-text-placeholder">{t('practice.charName')}</label>
                 <input
                   value={charName}
                   onChange={e => setCharName(e.target.value)}
-                  placeholder="例：折木奉太郎"
+                  placeholder={t('practice.charNamePlaceholder')}
                   className="w-full rounded-btn border border-border-light bg-white px-3 py-2 text-sm text-text-main outline-none focus:border-primary dark:border-border-dark dark:bg-bg-dark dark:text-text-main-dark"
                 />
               </div>
               <div className="flex-1">
-                <label className="mb-1 block text-xs font-medium text-text-sub dark:text-text-placeholder">来源作品</label>
+                <label className="mb-1 block text-xs font-medium text-text-sub dark:text-text-placeholder">{t('practice.sourceWork')}</label>
                 <input
                   value={charSource}
                   onChange={e => setCharSource(e.target.value)}
-                  placeholder="例：冰菓"
+                  placeholder={t('practice.sourceWorkPlaceholder')}
                   className="w-full rounded-btn border border-border-light bg-white px-3 py-2 text-sm text-text-main outline-none focus:border-primary dark:border-border-dark dark:bg-bg-dark dark:text-text-main-dark"
                 />
               </div>
             </div>
             <div className="mb-5">
-              <label className="mb-1 block text-xs font-medium text-text-sub dark:text-text-placeholder">简介（3-5 句话）</label>
+              <label className="mb-1 block text-xs font-medium text-text-sub dark:text-text-placeholder">{t('practice.introLabel')}</label>
               <textarea
                 value={charIntro}
                 onChange={e => setCharIntro(e.target.value)}
                 rows={4}
-                placeholder="描述角色的性格、说话方式、和学生互动的风格……"
+                placeholder={t('practice.introPlaceholder')}
                 className="w-full resize-none rounded-btn border border-border-light bg-white px-3 py-2 text-sm text-text-main outline-none focus:border-primary dark:border-border-dark dark:bg-bg-dark dark:text-text-main-dark"
               />
             </div>
@@ -251,31 +255,31 @@ function AnimaTutorWizard({ onGenerate, onBack }: {
               onClick={() => setStep(2)}
               className="w-full rounded-btn bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#BF6A4E] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              下一步
+              {t('common.next')}
             </button>
           </>
         )}
 
         {step === 2 && (
           <>
-            <h2 className="mb-1 text-lg font-semibold text-text-main dark:text-text-main-dark">📚 你想学什么？</h2>
-            <p className="mb-4 text-sm text-text-sub dark:text-text-placeholder">输入你正在学习的科目</p>
+            <h2 className="mb-1 text-lg font-semibold text-text-main dark:text-text-main-dark">{t('practice.whatToLearn')}</h2>
+            <p className="mb-4 text-sm text-text-sub dark:text-text-placeholder">{t('practice.enterSubject')}</p>
             <div className="mb-3">
-              <label className="mb-1 block text-xs font-medium text-text-sub dark:text-text-placeholder">学科名称</label>
+              <label className="mb-1 block text-xs font-medium text-text-sub dark:text-text-placeholder">{t('practice.subjectName')}</label>
               <input
                 value={subject}
                 onChange={e => setSubject(e.target.value)}
-                placeholder="例：AP Physics C: E&M、高等数学、Java编程"
+                placeholder={t('practice.subjectPlaceholder')}
                 className="w-full rounded-btn border border-border-light bg-white px-3 py-2 text-sm text-text-main outline-none focus:border-primary dark:border-border-dark dark:bg-bg-dark dark:text-text-main-dark"
               />
             </div>
             <div className="mb-5">
-              <label className="mb-1 block text-xs font-medium text-text-sub dark:text-text-placeholder">补充要求（可选）</label>
+              <label className="mb-1 block text-xs font-medium text-text-sub dark:text-text-placeholder">{t('practice.extraRequirements')}</label>
               <textarea
                 value={extra}
                 onChange={e => setExtra(e.target.value)}
                 rows={3}
-                placeholder="例：重点讲解电磁感应部分、用中文回答……"
+                placeholder={t('practice.extraPlaceholder')}
                 className="w-full resize-none rounded-btn border border-border-light bg-white px-3 py-2 text-sm text-text-main outline-none focus:border-primary dark:border-border-dark dark:bg-bg-dark dark:text-text-main-dark"
               />
             </div>
@@ -284,7 +288,7 @@ function AnimaTutorWizard({ onGenerate, onBack }: {
               onClick={() => onGenerate({ name: charName, source: charSource, intro: charIntro }, subject, extra)}
               className="w-full rounded-btn bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#BF6A4E] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              生成辅导协议
+              {t('practice.generateProtocol')}
             </button>
           </>
         )}
@@ -294,16 +298,17 @@ function AnimaTutorWizard({ onGenerate, onBack }: {
 }
 
 function GeneratingScreen() {
+  const { t } = useTranslation();
   return (
     <div className="flex h-full flex-col items-center justify-center px-6">
       <div className="flex flex-col items-center gap-4">
         <span className="text-5xl">🎭</span>
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-border-light border-t-primary dark:border-border-dark dark:border-t-primary" />
         <p className="text-base font-medium text-text-main dark:text-text-main-dark">
-          AnimaTutor 正在为你生成专属辅导协议…
+          {t('practice.generatingProtocol')}
         </p>
         <p className="text-sm text-text-sub dark:text-text-placeholder">
-          这可能需要一到两分钟，请稍候
+          {t('practice.generatingWait')}
         </p>
       </div>
     </div>
@@ -314,13 +319,14 @@ function GeneratingScreen() {
 
 export default function PracticePage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { messages, addMessage, isStreaming, canvasItems, hasError, agentLogs } = useAppStore();
   const { sendPractice, initPractice } = useAiAgent();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sessionReady, setSessionReady] = useState(false);
   const [rightPanel, setRightPanel] = useState<'canvas' | 'log'>('canvas');
   const [phase, setPhase] = useState<Phase>('select');
-  const [protocolLabel, setProtocolLabel] = useState('练习模式');
+  const [protocolLabel, setProtocolLabel] = useState(t('practice.practiceMode'));
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -336,7 +342,7 @@ export default function PracticePage() {
         addMessage({
           id: crypto.randomUUID(),
           role: 'system',
-          text: '⚠️ 响应超时，请重试',
+          text: t('common.timeoutRetry'),
           timestamp: Date.now(),
         });
       }
@@ -348,7 +354,7 @@ export default function PracticePage() {
 
   const startYuuki = useCallback(async (progression: string) => {
     setPhase('active');
-    setProtocolLabel('幽鬼α');
+    setProtocolLabel(t('practice.yuukiLabel'));
     try {
       const prompt = await loadYuukiProtocol(progression);
       await initPractice(getWorkspacePath(), prompt);
@@ -356,18 +362,18 @@ export default function PracticePage() {
       addMessage({
         id: crypto.randomUUID(),
         role: 'system',
-        text: '👻 幽鬼α 协议已加载 — 把你不会的题目发过来吧！',
+        text: t('practice.yuukiLoaded'),
         timestamp: Date.now(),
       });
     } catch (err) {
       addMessage({
         id: crypto.randomUUID(),
         role: 'system',
-        text: `❌ 启动失败: ${err}`,
+        text: t('common.startFailed', { error: err }),
         timestamp: Date.now(),
       });
     }
-  }, [initPractice, addMessage]);
+  }, [initPractice, addMessage, t]);
 
   const startAnimaTutor = useCallback(async (
     character: { name: string; source: string; intro: string },
@@ -395,7 +401,7 @@ export default function PracticePage() {
       addMessage({
         id: crypto.randomUUID(),
         role: 'system',
-        text: `❌ 启动失败: ${err}`,
+        text: t('common.startFailed', { error: err }),
         timestamp: Date.now(),
       });
       setPhase('select');
@@ -437,7 +443,7 @@ export default function PracticePage() {
             onClick={() => navigate('/')}
             className="text-aux text-text-sub hover:text-text-main dark:text-text-placeholder dark:hover:text-text-main-dark"
           >
-            ← 返回
+            {t('common.back')}
           </button>
         </header>
         <div className="flex-1 overflow-y-auto">
@@ -478,10 +484,10 @@ export default function PracticePage() {
           onClick={() => navigate('/')}
           className="text-aux text-text-sub hover:text-text-main dark:text-text-placeholder dark:hover:text-text-main-dark"
         >
-          ← 返回
+          {t('common.back')}
         </button>
         <span className="text-aux font-medium text-text-main dark:text-text-main-dark">
-          {protocolLabel} — 练习模式
+          {t('practice.protocolLabelPractice', { label: protocolLabel })}
         </span>
         <div className="flex gap-2">
           {messages.length > 2 && (
@@ -489,14 +495,14 @@ export default function PracticePage() {
               onClick={() => navigate('/notes')}
               className="rounded-btn border border-border-light px-3 py-1.5 text-tag tracking-[0.04em] text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-main-dark dark:hover:bg-slate-700"
             >
-              📝 笔记
+              {t('practice.notes')}
             </button>
           )}
           <button
             onClick={handleEnd}
             className="rounded-btn bg-danger px-4 py-1.5 text-aux font-medium text-white hover:bg-red-600"
           >
-            结束练习
+            {t('practice.endPractice')}
           </button>
         </div>
       </header>
@@ -506,34 +512,34 @@ export default function PracticePage() {
         {/* Left sidebar — practice info */}
         <aside className="flex w-56 shrink-0 flex-col border-r border-border-light bg-bg-light p-4 dark:border-border-dark dark:bg-slate-850">
           <h3 className="mb-3 text-tag tracking-[0.04em] font-medium uppercase tracking-wider text-text-placeholder">
-            练习信息
+            {t('practice.practiceInfo')}
           </h3>
           <div className="space-y-2 text-aux text-text-sub dark:text-text-main-dark">
             <div className="rounded-btn bg-surface-light p-3 shadow-card dark:bg-surface-dark">
-              <p className="font-medium">协议</p>
+              <p className="font-medium">{t('practice.protocol')}</p>
               <p className="text-text-placeholder">{protocolLabel}</p>
             </div>
             <div className="rounded-btn bg-surface-light p-3 shadow-card dark:bg-surface-dark">
-              <p className="font-medium">引导方式</p>
-              <p className="text-text-placeholder">苏格拉底法</p>
+              <p className="font-medium">{t('practice.guidanceMethod')}</p>
+              <p className="text-text-placeholder">{t('practice.socraticMethod')}</p>
             </div>
             <div className="rounded-btn bg-surface-light p-3 shadow-card dark:bg-surface-dark">
-              <p className="font-medium">状态</p>
+              <p className="font-medium">{t('practice.status')}</p>
               <p className={sessionReady ? 'text-green-500' : 'text-warning'}>
-                {sessionReady ? '🟢 准备就绪' : '⏳ 初始化中…'}
+                {sessionReady ? t('practice.statusReady') : t('practice.statusInitializing')}
               </p>
             </div>
           </div>
 
           <div className="mt-6">
             <h3 className="mb-2 text-tag tracking-[0.04em] font-medium uppercase tracking-wider text-text-placeholder">
-              使用方法
+              {t('practice.usageTitle')}
             </h3>
             <div className="space-y-1 text-tag tracking-[0.04em] text-text-placeholder">
-              <p>• 发送题目或问题</p>
-              <p>• AI 用引导式提问帮你思考</p>
-              <p>• 可以追问或发新题</p>
-              <p>• 白板展示解题步骤</p>
+              <p>{t('practice.usage1')}</p>
+              <p>{t('practice.usage2')}</p>
+              <p>{t('practice.usage3')}</p>
+              <p>{t('practice.usage4')}</p>
             </div>
           </div>
         </aside>
@@ -544,7 +550,7 @@ export default function PracticePage() {
             {messages.length === 0 && (
               <div className="flex h-full items-center justify-center">
                 <p className="text-text-placeholder dark:text-text-sub">
-                  正在初始化练习模式…
+                  {t('practice.initializingPractice')}
                 </p>
               </div>
             )}
@@ -558,7 +564,7 @@ export default function PracticePage() {
                   onClick={handleRetry}
                   className="rounded-btn bg-primary px-4 py-1.5 text-aux font-medium text-white hover:bg-[#BF6A4E] h-[38px]"
                 >
-                  🔄 重试
+                  {t('common.retry')}
                 </button>
               </div>
             )}
@@ -578,7 +584,7 @@ export default function PracticePage() {
                   : 'text-text-placeholder hover:text-text-sub'
               }`}
             >
-              🎨 白板
+              {t('practice.canvasTab')}
             </button>
             <button
               onClick={() => setRightPanel('log')}
@@ -588,7 +594,7 @@ export default function PracticePage() {
                   : 'text-text-placeholder hover:text-text-sub'
               }`}
             >
-              🔧 日志
+              {t('practice.logTab')}
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-3">

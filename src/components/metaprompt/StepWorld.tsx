@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { MetaPromptQuestionnaire } from '../../types';
 
 interface Props {
@@ -5,21 +6,22 @@ interface Props {
   onChange: (partial: Partial<MetaPromptQuestionnaire>) => void;
 }
 
-const LOCATION_STYLES = [
-  { value: 'enclosed', label: '封闭空间', icon: '🏔️', examples: '山顶观测站、海边灯塔、老宅改的工作室' },
-  { value: 'semi-open', label: '半开放空间', icon: '🏡', examples: '森林小屋群、顶层天台、岛屿研究站' },
-  { value: 'everyday', label: '日常空间', icon: '🏙️', examples: '合租公寓、大学附近独栋、乡下老房子' },
-  { value: 'custom', label: '自定义', icon: '✨', examples: '你来设计' },
-] as const;
-
-const ARRIVAL_TYPES = [
-  { value: 'arranged', label: '被安排的', desc: '家长报名、学校分配 → 初始距离远', icon: '📋' },
-  { value: 'self-sought', label: '自己找来的', desc: '口碑、推荐、主动寻求 → 距离中等', icon: '🔍' },
-  { value: 'accidental', label: '意外的', desc: '搬家、转学、偶然发现 → 距离不确定', icon: '🎲' },
-] as const;
-
 export default function StepWorld({ data, onChange }: Props) {
   const { world } = data;
+  const { t } = useTranslation();
+
+  const locationStyles = [
+    { value: 'enclosed', label: t('stepWorld.enclosed'), icon: '🏔️', examples: t('stepWorld.enclosedExamples') },
+    { value: 'semi-open', label: t('stepWorld.semiOpen'), icon: '🏡', examples: t('stepWorld.semiOpenExamples') },
+    { value: 'everyday', label: t('stepWorld.everyday'), icon: '🏙️', examples: t('stepWorld.everydayExamples') },
+    { value: 'custom', label: t('stepWorld.custom'), icon: '✨', examples: t('stepWorld.customExamples') },
+  ] as const;
+
+  const arrivalTypes = [
+    { value: 'arranged', label: t('stepWorld.arranged'), desc: t('stepWorld.arrangedDesc'), icon: '📋' },
+    { value: 'self-sought', label: t('stepWorld.selfSought'), desc: t('stepWorld.selfSoughtDesc'), icon: '🔍' },
+    { value: 'accidental', label: t('stepWorld.accidental'), desc: t('stepWorld.accidentalDesc'), icon: '🎲' },
+  ] as const;
 
   const setWorld = (partial: Partial<typeof world>) =>
     onChange({ world: { ...world, ...partial } });
@@ -27,18 +29,18 @@ export default function StepWorld({ data, onChange }: Props) {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="mb-1 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">🌍 世界观构建</h2>
-        <p className="text-aux text-text-sub">设计故事发生的空间和关系</p>
+        <h2 className="mb-1 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">{t('stepWorld.title')}</h2>
+        <p className="text-aux text-text-sub">{t('stepWorld.desc')}</p>
       </div>
 
       {/* Location style */}
       <section className="space-y-4">
-        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">故事发生在哪里？</h3>
+        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepWorld.locationQuestion')}</h3>
         <p className="text-tag tracking-[0.04em] text-text-sub">
-          不是"线上教室"——是一个你能闻到气味、听到声音的地方
+          {t('stepWorld.locationHint')}
         </p>
         <div className="grid grid-cols-2 gap-3">
-          {LOCATION_STYLES.map(ls => (
+          {locationStyles.map(ls => (
             <button
               key={ls.value}
               onClick={() => setWorld({ locationStyle: ls.value })}
@@ -58,12 +60,12 @@ export default function StepWorld({ data, onChange }: Props) {
         </div>
         <div>
           <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">
-            地点描述 <span className="text-red-400">*</span>
+            {t('stepWorld.locationDesc')} <span className="text-red-400">*</span>
           </label>
           <textarea
             value={world.location}
             onChange={e => setWorld({ location: e.target.value })}
-            placeholder="描述具体的地点：有什么子空间？气候如何？光线条件？&#10;好的地点至少有 3 个子空间（教学区、生活区、私人区域）+ 一个共用空间"
+            placeholder={t('stepWorld.locationPlaceholder')}
             rows={4}
             className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
@@ -72,9 +74,9 @@ export default function StepWorld({ data, onChange }: Props) {
 
       {/* Arrival reason */}
       <section className="space-y-4">
-        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">学习者为什么来到这里？</h3>
+        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepWorld.arrivalQuestion')}</h3>
         <div className="grid grid-cols-3 gap-3">
-          {ARRIVAL_TYPES.map(at => (
+          {arrivalTypes.map(at => (
             <button
               key={at.value}
               onClick={() => setWorld({ arrivalType: at.value })}
@@ -91,12 +93,12 @@ export default function StepWorld({ data, onChange }: Props) {
           ))}
         </div>
         <div>
-          <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">到来原因详情</label>
+          <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">{t('stepWorld.arrivalReason')}</label>
           <input
             type="text"
             value={world.arrivalReason}
             onChange={e => setWorld({ arrivalReason: e.target.value })}
-            placeholder="简要描述学习者来到这个地方的具体原因"
+            placeholder={t('stepWorld.arrivalReasonPlaceholder')}
             className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
         </div>
@@ -105,14 +107,14 @@ export default function StepWorld({ data, onChange }: Props) {
       {/* Character relations */}
       {data.characterCount > 1 && (
         <section className="space-y-4">
-          <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">角色之间的关系</h3>
+          <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepWorld.characterRelations')}</h3>
           <p className="text-tag tracking-[0.04em] text-text-sub">
-            他们不只是"同事"——他们有前史。谁先来的？有没有紧张关系或默契？
+            {t('stepWorld.characterRelationsHint')}
           </p>
           <textarea
             value={world.characterRelations}
             onChange={e => setWorld({ characterRelations: e.target.value })}
-            placeholder="描述角色之间的关系和前史...&#10;不需要完整故事——几句关键信息就够"
+            placeholder={t('stepWorld.characterRelationsPlaceholder')}
             rows={3}
             className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
@@ -122,7 +124,7 @@ export default function StepWorld({ data, onChange }: Props) {
       {/* Supernatural element */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">特殊设定（可选）</h3>
+          <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepWorld.specialSettings')}</h3>
           <label className="flex items-center gap-2 text-aux text-text-sub">
             <input
               type="checkbox"
@@ -130,18 +132,18 @@ export default function StepWorld({ data, onChange }: Props) {
               onChange={e => setWorld({ hasSupernatural: e.target.checked })}
               className="rounded"
             />
-            启用超自然元素
+            {t('stepWorld.enableSupernatural')}
           </label>
         </div>
         {world.hasSupernatural && (
           <>
             <p className="text-tag tracking-[0.04em] text-text-sub">
-              最多只属于一个角色。稀缺性创造重量。超自然元素应该让角色更脆弱，而不是更强大
+              {t('stepWorld.supernaturalHint')}
             </p>
             <textarea
               value={world.supernaturalElement}
               onChange={e => setWorld({ supernaturalElement: e.target.value })}
-              placeholder="描述超自然设定...&#10;参考类型：感知型（能看见某种东西）/ 记忆型 / 空间型"
+              placeholder={t('stepWorld.supernaturalPlaceholder')}
               rows={3}
               className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
             />

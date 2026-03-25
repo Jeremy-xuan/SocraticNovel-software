@@ -43,6 +43,14 @@ export async function updateWorkspaceMeta(workspaceId: string): Promise<void> {
   return invoke('update_workspace_meta', { workspaceId });
 }
 
+export async function exportWorkspace(workspaceId: string): Promise<string> {
+  return invoke('export_workspace', { workspaceId });
+}
+
+export async function importWorkspace(zipPath: string): Promise<Workspace> {
+  return invoke('import_workspace', { zipPath });
+}
+
 // Settings
 export async function getApiKey(provider: string): Promise<string | null> {
   return invoke('get_api_key', { provider });

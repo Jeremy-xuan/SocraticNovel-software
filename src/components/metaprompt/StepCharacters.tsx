@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { MetaPromptQuestionnaire, CharacterDesign, TeachingStyle } from '../../types';
 import { TEACHING_STYLE_LABELS } from '../../types';
 import { CHARACTER_PRESETS } from '../../data/characterPresets';
@@ -28,6 +29,7 @@ export default function StepCharacters({ data, onChange }: Props) {
   const [tabMode, setTabMode] = useState<TabMode>('preset');
   const [searchQuery, setSearchQuery] = useState('');
   const [customSourceName, setCustomSourceName] = useState('');
+  const { t } = useTranslation();
 
   // Ensure characters array has the right length
   const ensureCharacters = (): CharacterDesign[] => {
@@ -100,8 +102,8 @@ export default function StepCharacters({ data, onChange }: Props) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="mb-1 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">🎭 角色创建</h2>
-        <p className="text-aux text-text-sub">为你的 {data.characterCount} 位老师设计角色</p>
+        <h2 className="mb-1 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">{t('stepCharacters.title')}</h2>
+        <p className="text-aux text-text-sub">{t('stepCharacters.desc', { count: data.characterCount })}</p>
       </div>
 
       {/* Character tabs */}
@@ -118,7 +120,7 @@ export default function StepCharacters({ data, onChange }: Props) {
                   : 'border-border-light text-text-sub dark:border-slate-600 dark:text-text-placeholder'
             }`}
           >
-            {characters[i]?.name ? `✅ ${characters[i].name}` : `角色 ${i + 1}`}
+            {characters[i]?.name ? `✅ ${characters[i].name}` : t('stepCharacters.characterN', { n: i + 1 })}
           </button>
         ))}
       </div>
@@ -126,9 +128,9 @@ export default function StepCharacters({ data, onChange }: Props) {
       {/* Source mode tabs */}
       <div className="flex rounded-btn border border-border-light dark:border-slate-600">
         {([
-          { mode: 'preset' as TabMode, label: '🎬 从动漫选择', desc: '内置角色库' },
-          { mode: 'custom-name' as TabMode, label: '✏️ 输入角色名', desc: 'AI 自动填充' },
-          { mode: 'original' as TabMode, label: '🆕 原创角色', desc: '手动填写' },
+          { mode: 'preset' as TabMode, label: t('stepCharacters.tabPreset'), desc: t('stepCharacters.tabPresetDesc') },
+          { mode: 'custom-name' as TabMode, label: t('stepCharacters.tabCustomName'), desc: t('stepCharacters.tabCustomNameDesc') },
+          { mode: 'original' as TabMode, label: t('stepCharacters.tabOriginal'), desc: t('stepCharacters.tabOriginalDesc') },
         ]).map(tab => (
           <button
             key={tab.mode}
@@ -155,7 +157,7 @@ export default function StepCharacters({ data, onChange }: Props) {
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="搜索角色名或作品名..."
+            placeholder={t('stepCharacters.searchPlaceholder')}
             className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
           <div className="max-h-[400px] space-y-6 overflow-y-auto pr-2">
@@ -202,7 +204,7 @@ export default function StepCharacters({ data, onChange }: Props) {
         <div className="space-y-4">
           <div className="rounded-btn border border-dashed border-border-light bg-bg-light p-6 text-center dark:border-slate-600 dark:bg-surface-dark">
             <p className="mb-4 text-aux text-text-sub dark:text-text-main-dark">
-              输入任何你喜欢的角色名，AI 会自动填充角色设定
+              {t('stepCharacters.customNameHint')}
             </p>
             <div className="mx-auto flex max-w-md gap-2">
               <input
@@ -210,7 +212,7 @@ export default function StepCharacters({ data, onChange }: Props) {
                 value={customSourceName}
                 onChange={e => setCustomSourceName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && applyCustomName()}
-                placeholder="如：折木奉太郎、哈利波特、孙悟空..."
+                placeholder={t('stepCharacters.customNamePlaceholder')}
                 className="flex-1 rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
               />
               <button
@@ -218,15 +220,14 @@ export default function StepCharacters({ data, onChange }: Props) {
                 disabled={!customSourceName.trim()}
                 className="rounded-btn bg-purple-600 px-4 py-2.5 text-aux font-medium text-white hover:bg-purple-700 disabled:opacity-40"
               >
-                确认
+                {t('common.confirm')}
               </button>
             </div>
           </div>
           {current.source === 'custom-name' && current.customSourceName && (
             <div className="rounded-btn border border-purple-200 bg-purple-50 p-4 dark:border-purple-700 dark:bg-purple-900/20">
               <p className="text-aux text-purple-700 dark:text-purple-300">
-                ✅ 已选择角色「{current.customSourceName}」— AI 将在生成阶段自动填充详细设定。
-                你也可以在下方手动调整。
+                {t('stepCharacters.customNameSelected', { name: current.customSourceName })}
               </p>
             </div>
           )}
@@ -237,17 +238,17 @@ export default function StepCharacters({ data, onChange }: Props) {
       {(current.name || tabMode === 'original') && (
         <div className="space-y-4 rounded-card border border-border-light bg-surface-light p-6 shadow-card dark:border-border-dark dark:bg-surface-dark">
           <h3 className="flex items-center gap-2 text-base font-medium text-text-main dark:text-text-main-dark">
-            {current.name ? `角色详情 — ${current.name}` : '角色详情'}
+            {current.name ? t('stepCharacters.charDetail', { name: current.name }) : t('stepCharacters.charDetailDefault')}
             {current.source === 'preset' && (
               <span className="rounded-full bg-blue-100 px-2 py-0.5 text-tag tracking-[0.04em] text-primary dark:bg-blue-900/30 dark:text-blue-300">
-                预设
+                {t('stepCharacters.presetBadge')}
               </span>
             )}
           </h3>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="mb-1 block text-tag tracking-[0.04em] font-medium text-text-sub">名字 <span className="text-red-400">*</span></label>
+              <label className="mb-1 block text-tag tracking-[0.04em] font-medium text-text-sub">{t('stepCharacters.nameLabel')} <span className="text-red-400">*</span></label>
               <input
                 type="text"
                 value={current.name}
@@ -256,17 +257,17 @@ export default function StepCharacters({ data, onChange }: Props) {
               />
             </div>
             <div>
-              <label className="mb-1 block text-tag tracking-[0.04em] font-medium text-text-sub">性别</label>
+              <label className="mb-1 block text-tag tracking-[0.04em] font-medium text-text-sub">{t('stepCharacters.genderLabel')}</label>
               <input
                 type="text"
                 value={current.gender}
                 onChange={e => updateCharacter(activeCharIdx, { gender: e.target.value })}
-                placeholder="男/女/..."
+                placeholder={t('stepCharacters.genderPlaceholder')}
                 className="w-full rounded-btn border border-border-light bg-surface-light px-3 py-2 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
               />
             </div>
             <div>
-              <label className="mb-1 block text-tag tracking-[0.04em] font-medium text-text-sub">年龄</label>
+              <label className="mb-1 block text-tag tracking-[0.04em] font-medium text-text-sub">{t('stepCharacters.ageLabel')}</label>
               <input
                 type="text"
                 value={current.age}
@@ -277,12 +278,12 @@ export default function StepCharacters({ data, onChange }: Props) {
           </div>
 
           <div>
-            <label className="mb-1 block text-tag tracking-[0.04em] font-medium text-text-sub">外貌关键词</label>
+            <label className="mb-1 block text-tag tracking-[0.04em] font-medium text-text-sub">{t('stepCharacters.appearanceLabel')}</label>
             <input
               type="text"
               value={current.appearanceKeywords}
               onChange={e => updateCharacter(activeCharIdx, { appearanceKeywords: e.target.value })}
-              placeholder="如：棕发、慵懒的眼神、校服外套搭在肩上"
+              placeholder={t('stepCharacters.appearancePlaceholder')}
               className="w-full rounded-btn border border-border-light bg-surface-light px-3 py-2 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
             />
           </div>
@@ -290,7 +291,7 @@ export default function StepCharacters({ data, onChange }: Props) {
           {/* Teaching style selector */}
           <div>
             <label className="mb-2 block text-tag tracking-[0.04em] font-medium text-text-sub">
-              教学风格 <span className="text-red-400">*</span>
+              {t('stepCharacters.teachingStyle')} <span className="text-red-400">*</span>
             </label>
             <div className="grid grid-cols-5 gap-2">
               {(Object.entries(TEACHING_STYLE_LABELS) as [TeachingStyle, { label: string; desc: string; icon: string }][]).map(
@@ -313,11 +314,11 @@ export default function StepCharacters({ data, onChange }: Props) {
           </div>
 
           <div>
-            <label className="mb-1 block text-tag tracking-[0.04em] font-medium text-text-sub">性格核心</label>
+            <label className="mb-1 block text-tag tracking-[0.04em] font-medium text-text-sub">{t('stepCharacters.personalityCore')}</label>
             <textarea
               value={current.personalityCore}
               onChange={e => updateCharacter(activeCharIdx, { personalityCore: e.target.value })}
-              placeholder="描述角色的核心性格特征..."
+              placeholder={t('stepCharacters.personalityPlaceholder')}
               rows={3}
               className="w-full rounded-btn border border-border-light bg-surface-light px-3 py-2 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
             />
@@ -325,7 +326,7 @@ export default function StepCharacters({ data, onChange }: Props) {
 
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <label className="text-tag tracking-[0.04em] font-medium text-text-sub">暗线碎片（角色背后的故事）</label>
+              <label className="text-tag tracking-[0.04em] font-medium text-text-sub">{t('stepCharacters.backstory')}</label>
               <label className="flex items-center gap-1.5 text-tag tracking-[0.04em] text-text-sub">
                 <input
                   type="checkbox"
@@ -333,13 +334,13 @@ export default function StepCharacters({ data, onChange }: Props) {
                   onChange={e => updateCharacter(activeCharIdx, { backstoryAutoGenerate: e.target.checked })}
                   className="rounded"
                 />
-                让 AI 自动设计
+                {t('stepCharacters.backstoryAuto')}
               </label>
             </div>
             <textarea
               value={current.backstoryHints}
               onChange={e => updateCharacter(activeCharIdx, { backstoryHints: e.target.value })}
-              placeholder={current.backstoryAutoGenerate ? 'AI 会根据角色性格自动设计暗线...' : '描述角色过去的碎片，不需要完整故事...'}
+              placeholder={current.backstoryAutoGenerate ? t('stepCharacters.backstoryAutoPlaceholder') : t('stepCharacters.backstoryManualPlaceholder')}
               rows={2}
               disabled={current.backstoryAutoGenerate && !current.backstoryHints}
               className="w-full rounded-btn border border-border-light bg-surface-light px-3 py-2 text-aux disabled:opacity-50 dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
@@ -349,7 +350,7 @@ export default function StepCharacters({ data, onChange }: Props) {
           {/* Warmth slider */}
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <label className="text-tag tracking-[0.04em] font-medium text-text-sub">初始关系温度</label>
+              <label className="text-tag tracking-[0.04em] font-medium text-text-sub">{t('stepCharacters.warmth')}</label>
               <span className="text-tag tracking-[0.04em] text-text-placeholder">{current.initialWarmth}/10</span>
             </div>
             <input
@@ -361,8 +362,8 @@ export default function StepCharacters({ data, onChange }: Props) {
               className="w-full accent-blue-500"
             />
             <div className="flex justify-between text-tag tracking-[0.04em] text-text-placeholder">
-              <span>❄️ 冷淡</span>
-              <span>🔥 热情</span>
+              <span>{t('stepCharacters.warmthCold')}</span>
+              <span>{t('stepCharacters.warmthWarm')}</span>
             </div>
           </div>
         </div>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { MetaPromptQuestionnaire } from '../../types';
 
 interface Props {
@@ -5,21 +6,22 @@ interface Props {
   onChange: (partial: Partial<MetaPromptQuestionnaire>) => void;
 }
 
-const FORMAT_OPTIONS = [
-  { value: 'pdf', label: 'PDF' },
-  { value: 'paper', label: '纸质' },
-  { value: 'ebook', label: '电子书' },
-  { value: 'none', label: '没有教材' },
-] as const;
-
-const CHAR_COUNT_OPTIONS = [
-  { value: 1, label: '1 位', desc: '所有课由一位老师教，故事聚焦' },
-  { value: 2, label: '2 位', desc: '两种教学风格交替（推荐）' },
-  { value: 3, label: '3 位', desc: '三种视角轮值，叙事最丰富' },
-] as const;
-
 export default function StepSubject({ data, onChange }: Props) {
   const { subject, course, characterCount } = data;
+  const { t } = useTranslation();
+
+  const formatOptions = [
+    { value: 'pdf', label: t('stepSubject.formatPdf') },
+    { value: 'paper', label: t('stepSubject.formatPaper') },
+    { value: 'ebook', label: t('stepSubject.formatEbook') },
+    { value: 'none', label: t('stepSubject.formatNone') },
+  ] as const;
+
+  const charCountOptions = [
+    { value: 1, label: t('stepSubject.charCount1'), desc: t('stepSubject.charCount1Desc') },
+    { value: 2, label: t('stepSubject.charCount2'), desc: t('stepSubject.charCount2Desc') },
+    { value: 3, label: t('stepSubject.charCount3'), desc: t('stepSubject.charCount3Desc') },
+  ] as const;
 
   const setSubject = (partial: Partial<typeof subject>) =>
     onChange({ subject: { ...subject, ...partial } });
@@ -30,42 +32,42 @@ export default function StepSubject({ data, onChange }: Props) {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="mb-1 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">📋 基础信息</h2>
-        <p className="text-aux text-text-sub">告诉我们你想学什么</p>
+        <h2 className="mb-1 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">{t('stepSubject.title')}</h2>
+        <p className="text-aux text-text-sub">{t('stepSubject.desc')}</p>
       </div>
 
       {/* Subject */}
       <section className="space-y-4">
-        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">学科与教材</h3>
+        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepSubject.subjectAndTextbook')}</h3>
         <div>
           <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">
-            学科名称 <span className="text-red-400">*</span>
+            {t('stepSubject.subjectName')} <span className="text-red-400">*</span>
           </label>
           <input
             type="text"
             value={subject.subjectName}
             onChange={e => setSubject({ subjectName: e.target.value })}
-            placeholder="例：AP Physics C: E&M、线性代数、日语 N2"
+            placeholder={t('stepSubject.subjectPlaceholder')}
             className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
         </div>
         <div>
           <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">
-            教材名称（如有）
+            {t('stepSubject.textbookName')}
           </label>
           <input
             type="text"
             value={subject.textbook}
             onChange={e => setSubject({ textbook: e.target.value })}
-            placeholder="例：Griffiths Introduction to Electrodynamics 4th"
+            placeholder={t('stepSubject.textbookPlaceholder')}
             className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
         </div>
         <div className="flex gap-4">
           <div className="flex-1">
-            <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">教材格式</label>
+            <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">{t('stepSubject.textbookFormat')}</label>
             <div className="flex flex-wrap gap-2">
-              {FORMAT_OPTIONS.map(opt => (
+              {formatOptions.map(opt => (
                 <button
                   key={opt.value}
                   onClick={() => setSubject({ textbookFormat: opt.value })}
@@ -88,7 +90,7 @@ export default function StepSubject({ data, onChange }: Props) {
                 onChange={e => setSubject({ hasWorkbook: e.target.checked })}
                 className="rounded"
               />
-              有配套练习册
+              {t('stepSubject.hasWorkbook')}
             </label>
           </div>
         </div>
@@ -96,11 +98,11 @@ export default function StepSubject({ data, onChange }: Props) {
 
       {/* Course structure */}
       <section className="space-y-4">
-        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">课程结构</h3>
+        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepSubject.courseStructure')}</h3>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">
-              总章节数 <span className="text-red-400">*</span>
+              {t('stepSubject.totalChapters')} <span className="text-red-400">*</span>
             </label>
             <input
               type="number"
@@ -108,39 +110,39 @@ export default function StepSubject({ data, onChange }: Props) {
               max={100}
               value={course.totalChapters || ''}
               onChange={e => setCourse({ totalChapters: parseInt(e.target.value) || 0 })}
-              placeholder="如 30"
+              placeholder={t('stepSubject.totalChaptersPlaceholder')}
               className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
             />
           </div>
           <div>
-            <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">学习周期</label>
+            <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">{t('stepSubject.learningPeriod')}</label>
             <input
               type="text"
               value={course.learningPeriod}
               onChange={e => setCourse({ learningPeriod: e.target.value })}
-              placeholder="一学期 / 三个月 / 不确定"
+              placeholder={t('stepSubject.learningPeriodPlaceholder')}
               className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
             />
           </div>
         </div>
         <div>
           <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">
-            已完成的章节（如有）
+            {t('stepSubject.completedChapters')}
           </label>
           <input
             type="text"
             value={course.completedChapters}
             onChange={e => setCourse({ completedChapters: e.target.value })}
-            placeholder="例：Ch.1-5 已完成"
+            placeholder={t('stepSubject.completedChaptersPlaceholder')}
             className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
         </div>
         <div>
-          <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">主题概览</label>
+          <label className="mb-1 block text-aux font-medium text-text-sub dark:text-text-main-dark">{t('stepSubject.topicOverview')}</label>
           <textarea
             value={course.topicOverview}
             onChange={e => setCourse({ topicOverview: e.target.value })}
-            placeholder="简要描述课程涵盖的主要主题..."
+            placeholder={t('stepSubject.topicOverviewPlaceholder')}
             rows={3}
             className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
@@ -149,9 +151,9 @@ export default function StepSubject({ data, onChange }: Props) {
 
       {/* Character count */}
       <section className="space-y-4">
-        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">角色数量</h3>
+        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepSubject.characterCount')}</h3>
         <div className="grid grid-cols-3 gap-3">
-          {CHAR_COUNT_OPTIONS.map(opt => (
+          {charCountOptions.map(opt => (
             <button
               key={opt.value}
               onClick={() => onChange({

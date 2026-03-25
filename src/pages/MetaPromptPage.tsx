@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../stores/appStore';
 import { useAiAgent } from '../hooks/useAiAgent';
 import { createWorkspace, listWorkspaces } from '../lib/tauri';
@@ -13,11 +14,12 @@ import type { ChatMessage, MetaPromptQuestionnaire } from '../types';
 type PagePhase = 'name' | 'questionnaire' | 'generating';
 
 const GEN_PHASES = [
-  { id: 5, label: '文件生成', icon: '⚙️' },
-  { id: 6, label: '验证测试', icon: '✅' },
+  { id: 5, labelKey: 'metaPrompt.phaseFileGen', icon: '⚙️' },
+  { id: 6, labelKey: 'metaPrompt.phaseValidation', icon: '✅' },
 ];
 
 export default function MetaPromptPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { messages, addMessage, clearMessages, isStreaming, hasError, agentLogs } = useAppStore();
   const { sendMetaPrompt, initMetaPrompt } = useAiAgent();
@@ -56,7 +58,7 @@ export default function MetaPromptPage() {
         addMessage({
           id: crypto.randomUUID(),
           role: 'system',
-          text: '⚠️ 响应超时，请重试',
+          text: t('common.timeoutRetry'),
           timestamp: Date.now(),
         });
       }
@@ -72,7 +74,7 @@ export default function MetaPromptPage() {
     try {
       const existing = await listWorkspaces();
       if (existing.some((ws) => ws.name === name || ws.id === name)) {
-        setNameError(`工作区「${name}」已存在，请换一个名称`);
+        setNameError(t('metaPrompt.workspaceExists', { name }));
         return;
       }
     } catch {
@@ -91,7 +93,7 @@ export default function MetaPromptPage() {
       addMessage({
         id: crypto.randomUUID(),
         role: 'system',
-        text: `🔨 正在创建工作区「${name}」...`,
+        text: t('metaPrompt.creatingWorkspace', { name }),
         timestamp: Date.now(),
       });
 
@@ -101,7 +103,7 @@ export default function MetaPromptPage() {
       addMessage({
         id: crypto.randomUUID(),
         role: 'system',
-        text: '✅ 工作区已创建，正在初始化 AI 生成引擎...',
+        text: t('metaPrompt.workspaceCreated'),
         timestamp: Date.now(),
       });
 
@@ -111,7 +113,7 @@ export default function MetaPromptPage() {
       addMessage({
         id: crypto.randomUUID(),
         role: 'system',
-        text: '🤖 AI 生成引擎已就绪 — 正在发送你的设计决策...',
+        text: t('metaPrompt.aiEngineReady'),
         timestamp: Date.now(),
       });
 
@@ -128,8 +130,8 @@ export default function MetaPromptPage() {
     } catch (err) {
       const errStr = String(err);
       const friendly = errStr.includes('already exists')
-        ? '工作区名称冲突，请返回修改名称后重试'
-        : `初始化失败: ${errStr}`;
+        ? t('metaPrompt.conflictError')
+        : t('metaPrompt.initFailed', { error: errStr });
       addMessage({
         id: crypto.randomUUID(),
         role: 'system',
@@ -138,7 +140,7 @@ export default function MetaPromptPage() {
       });
       if (errStr.includes('already exists')) {
         setPagePhase('name');
-        setNameError(`工作区「${name}」已存在，请换一个名称`);
+        setNameError(t('metaPrompt.workspaceExists', { name }));
       }
     }
   }, [workspaceName, clearMessages, addMessage, initMetaPrompt, sendMetaPrompt]);
@@ -177,22 +179,22 @@ export default function MetaPromptPage() {
           <div className="mb-6 text-center">
             <span className="mb-3 block text-title leading-tight tracking-[0.04em]">🔨</span>
             <h1 className="mb-2 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">
-              创建教学系统
+              {t('metaPrompt.createTitle')}
             </h1>
             <p className="text-aux text-text-sub dark:text-text-placeholder">
-              填写问卷设计你的沉浸式教学系统，AI 自动生成所有文件
+              {t('metaPrompt.createDesc')}
             </p>
           </div>
           <div className="mb-6">
             <label className="mb-2 block text-aux font-medium text-text-main dark:text-text-main-dark">
-              项目名称
+              {t('metaPrompt.projectName')}
             </label>
             <input
               type="text"
               value={workspaceName}
               onChange={(e) => { setWorkspaceName(e.target.value); setNameError(''); }}
               onKeyDown={(e) => e.key === 'Enter' && handleNameSubmit()}
-              placeholder="例如: AP-Chemistry, 高中数学, ..."
+              placeholder={t('metaPrompt.projectPlaceholder')}
               className={`w-full rounded-btn border bg-surface-light px-4 py-3 text-aux text-text-main placeholder-text-placeholder focus:bg-surface-light focus:outline-none dark:bg-slate-700 dark:text-text-main-dark ${
                 nameError
                   ? 'border-amber-400 focus:border-amber-500 dark:border-amber-500'
@@ -211,14 +213,14 @@ export default function MetaPromptPage() {
               onClick={() => navigate(-1)}
               className="text-aux text-text-placeholder hover:text-text-sub dark:hover:text-text-main-dark"
             >
-              ← 返回
+              {t('common.back')}
             </button>
             <button
               onClick={handleNameSubmit}
               disabled={!workspaceName.trim()}
               className="rounded-btn bg-primary px-6 py-2.5 font-medium text-white hover:bg-[#BF6A4E] disabled:opacity-50 h-[38px]"
             >
-              下一步 →
+              {t('common.next')}
             </button>
           </div>
         </div>
@@ -245,23 +247,23 @@ export default function MetaPromptPage() {
           onClick={() => navigate('/')}
           className="text-aux text-text-sub hover:text-text-main dark:text-text-placeholder dark:hover:text-text-main-dark"
         >
-          ← 返回
+          {t('common.back')}
         </button>
         <span className="text-aux font-medium text-text-main dark:text-text-main-dark">
-          ⚙️ 生成中 — {workspaceName}
+          {t('metaPrompt.generatingLabel', { name: workspaceName })}
         </span>
         <div className="flex gap-2">
           <button
             onClick={() => setShowLog(!showLog)}
             className="rounded-btn border border-border-light px-3 py-1.5 text-tag tracking-[0.04em] text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-main-dark dark:hover:bg-slate-700"
           >
-            {showLog ? '隐藏日志' : '🔧 日志'}
+            {showLog ? t('metaPrompt.hideLog') : t('metaPrompt.showLog')}
           </button>
           <button
             onClick={handleFinish}
             className="rounded-btn bg-green-600 px-4 py-1.5 text-aux font-medium text-white hover:bg-green-700"
           >
-            ✅ 完成创建
+            {t('metaPrompt.finishCreate')}
           </button>
         </div>
       </header>
@@ -270,11 +272,16 @@ export default function MetaPromptPage() {
         {/* Left sidebar — generation phase */}
         <aside className="flex w-56 shrink-0 flex-col border-r border-border-light bg-bg-light p-4 dark:border-border-dark dark:bg-slate-850">
           <h3 className="mb-4 text-tag tracking-[0.04em] font-medium uppercase tracking-wider text-text-placeholder">
-            生成进度
+            {t('metaPrompt.genProgress')}
           </h3>
           {/* Completed phases */}
           <div className="mb-3 space-y-1">
-            {['📋 基础信息', '🎭 角色创建', '🌍 世界观', '📖 故事设计'].map((label, i) => (
+            {[
+              t('metaPrompt.phaseBasicInfo'),
+              t('metaPrompt.phaseCharacters'),
+              t('metaPrompt.phaseWorld'),
+              t('metaPrompt.phaseStory'),
+            ].map((label, i) => (
               <div key={i} className="flex items-center gap-2 px-3 py-1.5 text-tag tracking-[0.04em] text-green-600 dark:text-green-400">
                 <span>✅</span> <span>{label}</span>
               </div>
@@ -301,7 +308,7 @@ export default function MetaPromptPage() {
                   </span>
                   <div>
                     <span className="font-medium">Phase {phase.id}</span>
-                    <p className="text-tag tracking-[0.04em] opacity-75">{phase.label}</p>
+                    <p className="text-tag tracking-[0.04em] opacity-75">{t(phase.labelKey)}</p>
                   </div>
                 </div>
               );
@@ -310,7 +317,7 @@ export default function MetaPromptPage() {
 
           <div className="mt-auto">
             <div className="rounded-btn bg-surface-light p-3 shadow-card dark:bg-surface-dark">
-              <p className="text-tag tracking-[0.04em] font-medium text-text-sub dark:text-text-main-dark">工作区</p>
+              <p className="text-tag tracking-[0.04em] font-medium text-text-sub dark:text-text-main-dark">{t('metaPrompt.workspaceLabel')}</p>
               <p className="truncate text-tag tracking-[0.04em] text-text-placeholder">{workspaceName}</p>
             </div>
           </div>
@@ -322,7 +329,7 @@ export default function MetaPromptPage() {
             {messages.length === 0 && (
               <div className="flex h-full items-center justify-center">
                 <p className="text-text-placeholder dark:text-text-sub">
-                  正在初始化…
+                  {t('common.initializing')}
                 </p>
               </div>
             )}
@@ -335,7 +342,7 @@ export default function MetaPromptPage() {
                   onClick={handleRetry}
                   className="rounded-btn bg-primary px-4 py-1.5 text-aux font-medium text-white hover:bg-[#BF6A4E] h-[38px]"
                 >
-                  🔄 重试
+                  {t('common.retry')}
                 </button>
               </div>
             )}
@@ -348,7 +355,7 @@ export default function MetaPromptPage() {
         {showLog && (
           <aside className="flex w-80 shrink-0 flex-col border-l border-border-light dark:border-border-dark">
             <div className="flex h-10 shrink-0 items-center border-b border-border-light px-3 dark:border-border-dark">
-              <span className="text-tag tracking-[0.04em] font-medium text-text-sub">🔧 Agent 日志</span>
+              <span className="text-tag tracking-[0.04em] font-medium text-text-sub">{t('metaPrompt.agentLog')}</span>
             </div>
             <div className="flex-1 overflow-y-auto p-3">
               <AgentLogPanel logs={agentLogs} />

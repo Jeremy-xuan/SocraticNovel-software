@@ -1,33 +1,46 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
 import { setApiKey, hasApiKey } from '../lib/tauri';
+import i18n from '../i18n';
 
 const PROVIDER_MODELS: Record<string, Array<{ id: string; label: string; default?: boolean }>> = {
   anthropic: [
     { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4 (2025-05-14)', default: true },
     { id: 'claude-opus-4-5', label: 'Claude Opus 4.5' },
     { id: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5' },
-    { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5（快速/省钱）' },
+    { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5', default: false },
   ],
   openai: [
     { id: 'gpt-4o', label: 'GPT-4o', default: true },
-    { id: 'gpt-4o-mini', label: 'GPT-4o mini（快速/省钱）' },
-    { id: 'o3-mini', label: 'o3-mini（推理）' },
-    { id: 'o1', label: 'o1（推理，慢）' },
+    { id: 'gpt-4o-mini', label: 'GPT-4o mini', default: false },
+    { id: 'o3-mini', label: 'o3-mini', default: false },
+    { id: 'o1', label: 'o1', default: false },
   ],
   deepseek: [
-    { id: 'deepseek-reasoner', label: 'DeepSeek-R1（推理）', default: true },
-    { id: 'deepseek-chat', label: 'DeepSeek-V3（对话）' },
+    { id: 'deepseek-reasoner', label: 'DeepSeek-R1', default: true },
+    { id: 'deepseek-chat', label: 'DeepSeek-V3', default: false },
   ],
   google: [
     { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', default: true },
-    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash（快速）' },
+    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', default: false },
     { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
   ],
 };
 
+const MODEL_LABEL_SUFFIX: Record<string, string> = {
+  'claude-haiku-4-5': 'settings.modelLabels.claudeHaikuFast',
+  'gpt-4o-mini': 'settings.modelLabels.gpt4oMiniFast',
+  'o3-mini': 'settings.modelLabels.o3MiniReasoning',
+  'o1': 'settings.modelLabels.o1Reasoning',
+  'deepseek-reasoner': 'settings.modelLabels.deepseekR1',
+  'deepseek-chat': 'settings.modelLabels.deepseekV3',
+  'gemini-2.0-flash': 'settings.modelLabels.geminiFast',
+};
+
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { settings, updateSettings } = useAppStore();
   const [apiKeyInput, setApiKeyInput] = useState('');
@@ -63,10 +76,10 @@ export default function SettingsPage() {
           onClick={() => navigate('/')}
           className="text-aux text-text-sub hover:text-text-main dark:text-text-placeholder"
         >
-          ← 返回
+          {t('common.back')}
         </button>
         <span className="ml-4 text-aux font-medium text-text-main dark:text-text-main-dark">
-          设置
+          {t('settings.title')}
         </span>
       </header>
 
@@ -74,10 +87,10 @@ export default function SettingsPage() {
         {/* AI Provider */}
         <section className="mb-8">
           <h2 className="mb-2 text-subtitle font-medium text-text-main dark:text-text-main-dark">
-            默认 AI 提供商
+            {t('settings.defaultProvider')}
           </h2>
           <p className="mb-4 text-tag tracking-[0.04em] text-text-placeholder">
-            上课时将使用选中的提供商。请确保该提供商已配置 API Key。
+            {t('settings.providerDesc')}
           </p>
           <div className="grid grid-cols-2 gap-3">
             {(['anthropic', 'openai', 'google', 'deepseek'] as const).map((provider) => (
@@ -101,10 +114,10 @@ export default function SettingsPage() {
         {/* Model */}
         <section className="mb-8">
           <h2 className="mb-2 text-subtitle font-medium text-text-main dark:text-text-main-dark">
-            模型
+            {t('settings.model')}
           </h2>
           <p className="mb-3 text-tag tracking-[0.04em] text-text-placeholder">
-            留空则使用各提供商的默认推荐模型。
+            {t('settings.modelDesc')}
           </p>
           <div className="flex flex-col gap-2">
             {(PROVIDER_MODELS[settings.aiProvider] ?? []).map((m) => (
@@ -116,10 +129,10 @@ export default function SettingsPage() {
                     : 'border-border-light text-text-sub hover:bg-bg-light dark:border-border-dark dark:text-text-main-dark'
                   }`}
               >
-                <span>{m.label}</span>
+                <span>{MODEL_LABEL_SUFFIX[m.id] ? t(MODEL_LABEL_SUFFIX[m.id]) : m.label}</span>
                 {m.default && (
                   <span className="ml-2 rounded bg-bg-light px-1.5 py-0.5 text-tag tracking-[0.04em] text-text-placeholder dark:bg-slate-700 dark:text-text-placeholder">
-                    默认
+                    {t('settings.modelDefault')}
                   </span>
                 )}
               </button>
@@ -134,7 +147,7 @@ export default function SettingsPage() {
           </h2>
           {keyExists && (
             <p className="mb-3 text-aux text-green-600 dark:text-green-400">
-              ✓ 已保存 {settings.aiProvider} API Key（存储在 macOS Keychain 中）
+              {t('settings.apiKeySaved', { provider: settings.aiProvider })}
             </p>
           )}
           <div className="flex gap-2">
@@ -142,25 +155,25 @@ export default function SettingsPage() {
               type="password"
               value={apiKeyInput}
               onChange={(e) => setApiKeyInput(e.target.value)}
-              placeholder={keyExists ? '输入新 Key 覆盖...' : `输入 ${settings.aiProvider} API Key...`}
+              placeholder={keyExists ? t('settings.apiKeyPlaceholderReplace') : t('settings.apiKeyPlaceholderNew', { provider: settings.aiProvider })}
               className="flex-1 rounded-btn border border-border-light bg-surface-light px-4 py-2 text-aux text-text-main placeholder-text-placeholder focus:bg-surface-light focus:border-blue-500 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-main-dark"
             />
             <button
               onClick={handleSaveKey}
               className="rounded-btn bg-primary px-4 py-2 text-aux font-medium text-white hover:bg-[#BF6A4E] h-[38px]"
             >
-              {saved ? '✓ 已保存' : '保存'}
+              {saved ? t('common.saved') : t('common.save')}
             </button>
           </div>
           <p className="mt-2 text-tag tracking-[0.04em] text-text-placeholder">
-            密钥将安全存储在 macOS Keychain 中
+            {t('settings.apiKeyStorage')}
           </p>
         </section>
 
         {/* Theme */}
         <section className="mb-8">
           <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
-            主题配色
+            {t('settings.theme')}
           </h2>
           <div className="flex gap-3">
             {(['light', 'dark', 'system'] as const).map((theme) => (
@@ -172,9 +185,39 @@ export default function SettingsPage() {
                     : 'border-border-light text-text-sub hover:bg-bg-light dark:border-border-dark dark:text-text-main-dark'
                   }`}
               >
-                {theme === 'light' && '☀️ 浅色'}
-                {theme === 'dark' && '🌙 深色'}
-                {theme === 'system' && '💻 跟随系统'}
+                {theme === 'light' && t('settings.themeLight')}
+                {theme === 'dark' && t('settings.themeDark')}
+                {theme === 'system' && t('settings.themeSystem')}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Language */}
+        <section className="mb-8">
+          <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
+            {t('settings.language')}
+          </h2>
+          <div className="flex gap-3">
+            {(['zh', 'en', 'auto'] as const).map((lang) => (
+              <button
+                key={lang}
+                onClick={() => {
+                  updateSettings({ language: lang });
+                  if (lang === 'auto') {
+                    i18n.changeLanguage(navigator.language.startsWith('zh') ? 'zh' : 'en');
+                  } else {
+                    i18n.changeLanguage(lang);
+                  }
+                }}
+                className={`rounded-btn border px-4 py-2 text-aux transition-colors ${settings.language === lang
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+                    : 'border-border-light text-text-sub hover:bg-bg-light dark:border-border-dark dark:text-text-main-dark'
+                  }`}
+              >
+                {lang === 'zh' && t('settings.langZh')}
+                {lang === 'en' && t('settings.langEn')}
+                {lang === 'auto' && t('settings.langAuto')}
               </button>
             ))}
           </div>
@@ -183,7 +226,7 @@ export default function SettingsPage() {
         {/* Layout Theme */}
         <section className="mb-8">
           <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
-            首页布局风格
+            {t('settings.homeLayout')}
           </h2>
           <div className="flex gap-4">
             {(['cards', 'input'] as const).map((layout) => (
@@ -195,9 +238,9 @@ export default function SettingsPage() {
                     : 'border-border-light text-text-sub hover:bg-black/5 dark:border-border-dark dark:text-text-placeholder dark:hover:bg-white/5'
                   }`}
               >
-                <div className="font-medium text-[15px] mb-1.5">{layout === 'cards' ? '手绘卡片版' : '极简长条版'}</div>
+                <div className="font-medium text-[15px] mb-1.5">{layout === 'cards' ? t('settings.layoutCards') : t('settings.layoutInput')}</div>
                 <div className="text-[12px] opacity-70 tracking-wide">
-                  {layout === 'cards' ? '插画风格与古典衬线排版' : 'Claude 纯净原生交互范式'}
+                  {layout === 'cards' ? t('settings.layoutCardsDesc') : t('settings.layoutInputDesc')}
                 </div>
               </button>
             ))}
@@ -211,7 +254,7 @@ export default function SettingsPage() {
           </h2>
           <div className="rounded-btn border border-border-light p-4 dark:border-border-dark">
             <p className="text-aux text-text-sub dark:text-text-placeholder">
-              当前: {settings.currentWorkspacePath ?? '加载中...'}
+              {t('settings.workspaceCurrent', { path: settings.currentWorkspacePath ?? t('settings.workspaceLoading') })}
             </p>
           </div>
         </section>
