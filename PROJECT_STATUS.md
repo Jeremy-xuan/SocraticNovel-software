@@ -1,7 +1,7 @@
 # SocraticNovel — 项目状态文档
 
-> 最后更新：2026-07-22
-> 当前版本：Phase 2 ✅ 完成 + 问卷化改造（练习模式 + 笔记系统 + 学习进度页 + Meta Prompt 问卷 + 间隔复习 + PDF 导入 + 章节大纲）
+> 最后更新：2026-03-25
+> 当前版本：Phase 3 ✅ 核心完成（多 workspace + 自动复习卡 + Mermaid + 笔记重设计 + 跨平台 + 白板标注 + 导入导出 + 多语言 + CI/CD）
 
 ## 项目概述
 
@@ -16,7 +16,7 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 - **前端**：React 19 + TypeScript + Tailwind CSS 4 + Zustand
 - **AI**：多提供商支持（Claude / DeepSeek / OpenAI / Google）
 - **渲染**：react-markdown + remark-math + rehype-katex（数学公式）+ SVG（白板）
-- **存储**：macOS Keychain（API Key）+ localStorage（设置 + 会话）+ 文件系统（workspace + 后端会话）
+- **存储**：跨平台 Keyring（macOS Keychain / Windows Credential Manager / Linux Secret Service）+ localStorage（设置 + 会话）+ 文件系统（workspace + 后端会话）
 
 ### 三层架构（源自教学系统设计）
 ```
@@ -277,6 +277,69 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
     - 琥珀色 ⚠️ 内联警告（非弹窗）
     - 后备 catch：捕获 "already exists" 错误，自动返回名称输入界面
 
+### Phase 3 — 打磨、跨平台与分发
+
+45. **✅ 多 Workspace 管理** — 完整的 workspace CRUD + UI 切换
+    - `LandingPageCardVariant.tsx`：workspace 下拉列表切换、创建、删除
+    - `fs_commands.rs`：`delete_workspace`、`update_workspace_meta`、`WorkspaceMeta` 持久化
+    - 内置 workspace (ap-physics-em) 保护，不可删除
+    - `last_opened` 时间戳追踪，显示"刚刚/X分钟前/X天前"
+
+46. **✅ 课后自动生成复习卡片** — Post Agent 完成后自动提取考点到 SM-2 队列
+    - `ai_commands.rs`：`auto_generate_review_cards()` + `extract_json_array()` 辅助函数
+    - Post Agent 完成 → 调用 `call_ai_simple()` 提取 3-5 张卡片 JSON → `add_review_cards_internal()`
+    - `LessonPage.tsx` 监听 `review-cards-generated` 事件
+
+47. **✅ Mermaid 图表支持** — 白板面板支持 AI 生成 Mermaid 图表
+    - `tools.rs`：`render_canvas` 工具增加 `type` 参数（svg / mermaid）
+    - `runtime.rs`：canvas 事件携带 type 字段
+    - `CanvasPanel.tsx`：`MermaidRenderer` 组件，`mermaid.render()` 前端渲染
+    - 暗色模式自动检测，唯一 ID 防冲突
+
+48. **✅ 极简风笔记模板重设计** — Notion/Craft 风格学术排版
+    - `notesTemplates.ts`：`minimalTemplate()` 完全重写
+    - JetBrains Mono 代码字体 + Indigo 主题色 + 渐变标题
+    - 响应式排版层级、KaTeX 数学公式、代码块带圆角
+
+49. **✅ 刷题模式增强** — 双协议选择 + 沉浸式辅导
+    - `PracticePage.tsx`：5 阶段状态机（select → yuuki-setup → animatutor-wizard → generating → active）
+    - **AnimaTutor v2.3**：角色/学科/偏好迷你向导，AI 动态生成协议
+    - **幽鬼α 协议**：12 文件 93KB 预置协议，含剧情进度选择（序章→第四章）
+    - `runtime.rs`：大型协议智能检测（>10K 跳过默认包装）
+    - 20 个预设角色（折木奉太郎/牧濑红莉栖/五条悟等）
+
+50. **✅ 跨平台支持** — Windows / Linux 适配
+    - `settings_commands.rs`：macOS Keychain → `keyring` crate v3（Windows Credential Manager + Linux Secret Service）
+    - `pdf_commands.rs`：PDFium/pdftoppm 跨平台路径（`#[cfg]` 条件编译）
+    - `cli_practice.rs`：硬编码路径 → `dirs::home_dir()` 动态检测
+    - `tauri.conf.json`：.ico 图标已配置
+
+51. **✅ 白板用户标注** — SVG 覆盖层手动标注功能
+    - `CanvasToolbar.tsx`：浮动工具栏（画笔/文字/箭头/高亮/橡皮擦 + 5 色选择器 + 撤销/清除）
+    - `AnnotationLayer.tsx`：SVG 覆盖层，鼠标/触摸绘制（polyline/line+marker/text/opacity）
+    - `appStore.ts`：标注数据按 canvas item ID 索引，持久化到 localStorage
+
+52. **✅ Workspace 导入/导出** — .snworkspace zip 打包分享
+    - `fs_commands.rs`：`export_workspace` 打包 → `~/Downloads/{id}.snworkspace`
+    - `fs_commands.rs`：`import_workspace` 解压 → workspaces/，自动处理名称冲突（`-imported-N`）
+    - 排除 `.DS_Store`、`.git/`、`node_modules/`、`__pycache__/`、`*.tmp`
+    - `LandingPageCardVariant.tsx`：每个 workspace 旁导出按钮 + 文件选择器导入按钮
+    - `zip` crate v2 (Rust) 实现
+
+53. **✅ 多语言 UI（中/英）** — react-i18next 国际化
+    - `src/i18n/index.ts`：i18next 初始化 + 浏览器语言检测
+    - `src/i18n/locales/zh.json` + `en.json`：609 个翻译 key
+    - 12 个页面 + 7 个组件完成 `useTranslation()` 转换
+    - `SettingsPage.tsx`：语言切换器（🇨🇳 中文 / 🇺🇸 English / 💻 Auto）
+    - `appStore.ts`：语言设置持久化
+
+54. **✅ GitHub Actions CI/CD** — 自动构建 + 发布
+    - `.github/workflows/build-release.yml`：`v*` tag 触发
+    - macOS：Universal Binary DMG（Apple Silicon + Intel，`lipo` 合成 universal PDFium）
+    - Windows：NSIS installer (.exe) + MSI
+    - 自动创建 GitHub Release (draft)，附带所有安装包
+    - Cargo + node_modules 缓存加速后续构建
+
 ## 未完成 / 需要改进
 
 ### 优先级高
@@ -285,19 +348,26 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 
 ### 优先级中
 
-1. **✅ 学习进度展示** — ProgressPage.tsx 已实现：解析 progress.md / knowledge_points.md / session_log.md / diary.md，可视化展示课程记录、知识点覆盖、日志、日记
-2. **✅ 深色模式** — `ThemeProvider` 组件（App.tsx）监听 store 中的 `theme` 设置，动态给 `document.documentElement` 加/移除 `dark` class；`system` 模式跟随 OS `prefers-color-scheme`，含 MediaQueryList 监听器
-3. **Workspace 选择器** — 路径现已从 Rust 动态返回（不再硬编码），但 UI 仍无法手动切换 workspace
-4. **✅ 模型选择器** — Settings 页面按提供商显示可选模型列表（Anthropic×4 / OpenAI×4 / DeepSeek×2 / Google×3）；切换提供商自动重置模型；`null` 表示使用 Rust 侧默认值；model 通过 `startAiSession` payload 传入后端
-5. **极简风笔记模板重新设计** — 当前极简风用户不太满意，需要重新设计
-6. **课后自动生成复习卡片** — Post Agent 课后自动向间隔复习队列添加卡片
+1. **✅ 学习进度展示** — ProgressPage.tsx 已实现
+2. **✅ 深色模式** — `ThemeProvider` 组件实现
+3. **✅ Workspace 选择器** — Phase 3 #45 多 Workspace 管理已完成
+4. **✅ 模型选择器** — Settings 页面按提供商显示可选模型列表
+5. **✅ 极简风笔记模板重新设计** — Phase 3 #48 Notion/Craft 风格
+6. **✅ 课后自动生成复习卡片** — Phase 3 #46 Post Agent → SM-2
 
-### 优先级低
+### 优先级低 / 延后
 
-7. **Windows/Linux 适配** — API Key 存储需适配（目前仅 macOS Keychain）
-8. **打包发布** — Tauri bundle 配置
-9. **多 workspace 管理** — 创建、导入、删除
-10. **render_canvas 改进** — 更丰富的图表类型、交互式图表
+7. **✅ Windows/Linux 适配** — Phase 3 #50 keyring crate 跨平台
+8. **✅ 打包发布** — Phase 3 #54 GitHub Actions CI/CD
+9. **✅ 多 workspace 管理** — Phase 3 #45 + #52 导入导出
+10. **✅ render_canvas 改进** — Phase 3 #47 Mermaid 图表支持
+
+### 延后项（Phase 4+）
+
+11. **OAuth 登录** — Anthropic 无公开 OAuth API，OpenAI 受限，仅 Google 成熟；ROI 低，暂不实现
+12. **DMG 代码签名 + 公证** — 需 Apple Developer Program ($99/年)；当前未签名 DMG 可通过右键→打开绕过 Gatekeeper
+13. **社区 Workspace 分享** — 需设计后端服务（在线仓库/浏览/搜索/下载），与当前纯本地架构不同
+14. **Tauri 自动更新** — 需 Tauri updater 插件 + 签名密钥，建议在代码签名后实现
 
 ## 关键文件路径
 
@@ -305,9 +375,12 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 ```
 ~/socratic-novel-软件开发/                   # 项目根目录
 ├── src/                             # 前端 (React + TS)
+├── src/i18n/                        # 国际化（i18next 初始化 + locale JSON）
 ├── src-tauri/src/                   # 后端 (Rust)
 ├── src-tauri/libs/                  # PDFium 共享库（运行时需要）
 ├── scripts/                         # 工具脚本（download-pdfium.sh）
+├── public/protocols/                # 内置辅导协议（幽鬼α + AnimaTutor）
+├── .github/workflows/               # CI/CD（macOS Universal DMG + Windows EXE）
 ├── workspaces/ap-physics-em/        # AI 读写的 workspace
 ├── package.json                     # 前端依赖
 ├── src-tauri/Cargo.toml             # 后端依赖
