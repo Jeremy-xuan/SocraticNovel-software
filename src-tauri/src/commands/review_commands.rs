@@ -137,13 +137,10 @@ fn calculate_next_review(card: &ReviewCard, rating: u8) -> (String, f64, u32, St
         3 => 7,
         4 => 14,
         5 => 30,
-        n => {
-            // After 5 reviews, mark as mastered
-            if n >= 6 {
-                status = "mastered".to_string();
-                return (add_days(&today, 90), ease, count, status);
-            }
-            (30.0 * ease) as i64
+        _ => {
+            // After 5 successful reviews → mastered
+            status = "mastered".to_string();
+            return (add_days(&today, 90), ease, count, status);
         }
     };
 
@@ -217,7 +214,7 @@ pub fn add_review_cards(payload: AddCardsPayload) -> Result<usize, String> {
     let count = payload.cards.len();
 
     for new_card in payload.cards {
-        let id = format!("rc-{}", uuid::Uuid::new_v4().to_string().split('-').next().unwrap_or("0000"));
+        let id = format!("rc-{}", uuid::Uuid::new_v4());
         cards.push(ReviewCard {
             id,
             knowledge_point: new_card.knowledge_point,

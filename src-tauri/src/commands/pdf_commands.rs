@@ -108,7 +108,9 @@ fn clean_text(text: &str) -> String {
 
 // ─── Tauri Commands ──────────────────────────────────────────────
 
-/// Extract text from a PDF file, returns structured result with pages
+/// Extract text from a PDF file, returns structured result with pages.
+/// Note: Accepts arbitrary paths intentionally — users pick files via the
+/// native dialog (tauri-plugin-dialog), which provides explicit consent.
 #[tauri::command]
 pub fn extract_pdf_text(path: String) -> Result<PdfExtractResult, String> {
     extract_from_path(&path)
