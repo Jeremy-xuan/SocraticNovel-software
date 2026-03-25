@@ -13,10 +13,13 @@ env:
   CARGO_TERM_COLOR: always
   NODE_VERSION: "20"
   RUST_TOOLCHAIN: stable
+  CARGO_INCREMENTAL: 0
+  # Suppress Node.js 20 deprecation warning for GitHub Actions
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # ──────────────────────────────────────────────
-  # macOS DMG
+  # macOS Universal DMG (Apple Silicon + Intel)
   # ──────────────────────────────────────────────
   build-macos:
     runs-on: macos-latest
@@ -37,8 +40,10 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install Rust toolchain
+      - name: Install Rust toolchain with universal targets
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
 
       - name: Cache Cargo registry & git
         uses: actions/cache@v4
@@ -46,15 +51,15 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: cargo-registry-macos-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: cargo-registry-macos-
+          key: cargo-registry-macos-universal-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: cargo-registry-macos-universal-
 
       - name: Cache Cargo build artifacts
         uses: actions/cache@v4
         with:
           path: src-tauri/target
-          key: cargo-target-macos-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: cargo-target-macos-
+          key: cargo-target-macos-universal-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: cargo-target-macos-universal-
 
       - name: Cache node_modules
         uses: actions/cache@v4
@@ -66,17 +71,50 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
-      - name: Download PDFium for macOS
-        run: bash scripts/download-pdfium.sh
+      - name: Download PDFium universal dylib for macOS
+        run: |
+          set -e
+          LIBS_DIR="src-tauri/libs"
+          mkdir -p "$LIBS_DIR"
 
-      - name: Build Tauri app
-        run: npm run tauri build
+          if [ -f "$LIBS_DIR/libpdfium.dylib" ]; then
+            echo "✅ PDFium already exists"
+            exit 0
+          fi
+
+          PDFIUM_TAG="chromium/7749"
+          BASE_URL="https://github.com/bblanchon/pdfium-binaries/releases/download/${PDFIUM_TAG}"
+          TEMP_DIR="$(mktemp -d)"
+
+          # Download ARM64
+          echo "📥 Downloading PDFium arm64..."
+          curl -L --fail -o "$TEMP_DIR/pdfium-arm64.tgz" "$BASE_URL/pdfium-mac-arm64.tgz"
+          mkdir -p "$TEMP_DIR/arm64"
+          tar -xzf "$TEMP_DIR/pdfium-arm64.tgz" -C "$TEMP_DIR/arm64"
+          ARM64_LIB="$(find "$TEMP_DIR/arm64" -name 'libpdfium.dylib' -type f | head -1)"
+
+          # Download x86_64
+          echo "📥 Downloading PDFium x86_64..."
+          curl -L --fail -o "$TEMP_DIR/pdfium-x64.tgz" "$BASE_URL/pdfium-mac-x64.tgz"
+          mkdir -p "$TEMP_DIR/x64"
+          tar -xzf "$TEMP_DIR/pdfium-x64.tgz" -C "$TEMP_DIR/x64"
+          X64_LIB="$(find "$TEMP_DIR/x64" -name 'libpdfium.dylib' -type f | head -1)"
+
+          # Create universal dylib with lipo
+          echo "🔗 Creating universal dylib..."
+          lipo -create "$ARM64_LIB" "$X64_LIB" -output "$LIBS_DIR/libpdfium.dylib"
+          echo "✅ Universal PDFium installed: $(lipo -info "$LIBS_DIR/libpdfium.dylib")"
+
+          rm -rf "$TEMP_DIR"
+
+      - name: Build Tauri universal app
+        run: npm run tauri build -- --target universal-apple-darwin
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-dmg
-          path: src-tauri/target/release/bundle/dmg/*.dmg
+          path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
           if-no-files-found: error
 
   # ──────────────────────────────────────────────
@@ -84,10 +122,6 @@ jobs:
   # ──────────────────────────────────────────────
   build-windows:
     runs-on: windows-latest
-    # Uncomment for Windows code signing:
-    # env:
-    #   WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
-    #   WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERT_PWD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
