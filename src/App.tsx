@@ -10,6 +10,7 @@ import SettingsPage from './pages/SettingsPage';
 import SetupWizardPage from './pages/SetupWizardPage';
 import MetaPromptPage from './pages/MetaPromptPage';
 import ReviewPage from './pages/ReviewPage';
+import PdfImportPage from './pages/PdfImportPage';
 import { useAppStore } from './stores/appStore';
 
 function ThemeProvider() {
@@ -57,6 +58,7 @@ function AppRoutes() {
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/meta-prompt" element={<MetaPromptPage />} />
       <Route path="/spaced-review" element={<ReviewPage />} />
+      <Route path="/pdf-import" element={<PdfImportPage />} />
     </Routes>
   );
 }

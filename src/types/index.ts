@@ -137,3 +137,17 @@ export interface ReviewStats {
 
 // Rating after self-assessment (1=forgot, 2=hard, 3=recalled, 4=easy)
 export type ReviewRating = 1 | 2 | 3 | 4;
+
+// ─── PDF Import ──────────────────────────────────────────────────
+
+export interface PdfPage {
+  page_number: number;
+  text: string;
+}
+
+export interface PdfExtractResult {
+  filename: string;
+  total_pages: number;
+  pages: PdfPage[];
+  fullText: string;
+}

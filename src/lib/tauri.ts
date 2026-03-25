@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { Workspace, ReviewCard, ReviewStats } from '../types';
+import type { Workspace, ReviewCard, ReviewStats, PdfExtractResult } from '../types';
 
 // File system operations (sandboxed to workspace)
 export async function readFile(workspacePath: string, filePath: string): Promise<string> {
@@ -98,4 +98,18 @@ export async function addReviewCards(
   cards: Array<{ knowledgePoint: string; sourceChapter: string; cardType: string; front: string; back: string }>,
 ): Promise<number> {
   return invoke('add_review_cards', { payload: { workspacePath, cards } });
+}
+
+// ─── PDF Import ──────────────────────────────────────────────────
+
+export async function extractPdfText(path: string): Promise<PdfExtractResult> {
+  return invoke('extract_pdf_text', { path });
+}
+
+export async function importPdfToWorkspace(
+  pdfPath: string,
+  workspacePath: string,
+  targetName: string,
+): Promise<string> {
+  return invoke('import_pdf_to_workspace', { pdfPath, workspacePath, targetName });
 }

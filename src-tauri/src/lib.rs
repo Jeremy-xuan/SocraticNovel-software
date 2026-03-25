@@ -5,12 +5,14 @@ use commands::ai_commands;
 use commands::fs_commands;
 use commands::settings_commands;
 use commands::review_commands;
+use commands::pdf_commands;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
+        .plugin(tauri_plugin_dialog::init())
         .manage(ai_commands::ConversationState::default())
         .invoke_handler(tauri::generate_handler![
             // File system
@@ -55,6 +57,9 @@ pub fn run() {
             review_commands::get_due_cards,
             review_commands::update_review_card,
             review_commands::add_review_cards,
+            // PDF import
+            pdf_commands::extract_pdf_text,
+            pdf_commands::import_pdf_to_workspace,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
