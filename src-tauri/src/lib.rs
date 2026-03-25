@@ -4,6 +4,7 @@ mod commands;
 use commands::ai_commands;
 use commands::fs_commands;
 use commands::settings_commands;
+use commands::review_commands;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -48,6 +49,12 @@ pub fn run() {
             settings_commands::get_api_key,
             settings_commands::has_api_key,
             settings_commands::delete_api_key,
+            // Spaced repetition review
+            review_commands::get_review_queue,
+            review_commands::get_review_stats,
+            review_commands::get_due_cards,
+            review_commands::update_review_card,
+            review_commands::add_review_cards,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -108,3 +108,32 @@ export interface ToolDefinition {
   description: string;
   input_schema: Record<string, unknown>;
 }
+
+// ─── Spaced Repetition ───────────────────────────────────────────
+
+export type ReviewCardType = 'concept' | 'compute';
+export type ReviewCardStatus = 'active' | 'mastered';
+
+export interface ReviewCard {
+  id: string;
+  knowledgePoint: string;
+  sourceChapter: string;
+  cardType: ReviewCardType;
+  front: string;
+  back: string;
+  addedDate: string;       // ISO date: 2025-01-15
+  nextReviewDate: string;  // ISO date
+  reviewCount: number;
+  easeFactor: number;      // SM-2 ease factor (default 2.5)
+  status: ReviewCardStatus;
+}
+
+export interface ReviewStats {
+  totalCards: number;
+  dueToday: number;
+  mastered: number;
+  reviewedToday: number;
+}
+
+// Rating after self-assessment (1=forgot, 2=hard, 3=recalled, 4=easy)
+export type ReviewRating = 1 | 2 | 3 | 4;

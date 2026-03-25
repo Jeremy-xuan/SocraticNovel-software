@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
-import { initBuiltinWorkspace, hasApiKey } from '../lib/tauri';
+import { initBuiltinWorkspace, hasApiKey, getReviewStats } from '../lib/tauri';
+import type { ReviewStats } from '../types';
 
 const PROVIDER_LABELS: Record<string, string> = {
   anthropic: 'Anthropic (Claude)',
@@ -20,6 +21,7 @@ export default function LandingPage() {
   const [workspaceReady, setWorkspaceReady] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reviewStats, setReviewStats] = useState<ReviewStats | null>(null);
 
   useEffect(() => {
     // On mount: ensure workspace exists + check API key
@@ -31,6 +33,12 @@ export default function LandingPage() {
 
         const keyOk = await hasApiKey(settings.aiProvider);
         updateSettings({ apiKeyConfigured: keyOk });
+
+        // Load review stats
+        try {
+          const rs = await getReviewStats(ws.path);
+          setReviewStats(rs);
+        } catch { /* no review data yet */ }
       } catch (err) {
         setInitError(String(err));
       } finally {
@@ -129,6 +137,30 @@ export default function LandingPage() {
           </span>
           <span className="mt-auto text-sm font-medium text-emerald-600 group-hover:text-emerald-700 dark:text-emerald-400">
             ▶ 开始刷题
+          </span>
+        </button>
+
+        {/* Spaced review card */}
+        <button
+          onClick={() => navigate('/spaced-review')}
+          className="group relative flex w-64 flex-col items-start rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:border-amber-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:border-amber-600"
+        >
+          {reviewStats && reviewStats.dueToday > 0 && (
+            <span className="absolute -right-2 -top-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white shadow">
+              {reviewStats.dueToday}
+            </span>
+          )}
+          <span className="mb-3 text-3xl">🧠</span>
+          <span className="mb-1 text-lg font-semibold text-slate-800 dark:text-slate-100">
+            间隔复习
+          </span>
+          <span className="mb-4 text-sm text-slate-500 dark:text-slate-400">
+            {reviewStats && reviewStats.totalCards > 0
+              ? `${reviewStats.dueToday} 张待复习 / ${reviewStats.mastered} 已掌握`
+              : 'SM-2 算法，科学记忆曲线'}
+          </span>
+          <span className="mt-auto text-sm font-medium text-amber-600 group-hover:text-amber-700 dark:text-amber-400">
+            ▶ 开始复习
           </span>
         </button>
 

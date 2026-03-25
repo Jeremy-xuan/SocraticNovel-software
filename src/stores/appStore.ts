@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ChatMessage, CanvasItem, SessionType, AppSettings, GroupChatMessage, AgentLogEntry } from '../types';
+import type { ChatMessage, CanvasItem, SessionType, AppSettings, GroupChatMessage, AgentLogEntry, ReviewCard, ReviewStats } from '../types';
 
 interface AppState {
   // Session
@@ -20,6 +20,10 @@ interface AppState {
 
   // Agent activity log
   agentLogs: AgentLogEntry[];
+
+  // Spaced repetition
+  reviewCards: ReviewCard[];
+  reviewStats: ReviewStats;
 
   // Settings
   settings: AppSettings;
@@ -48,6 +52,11 @@ interface AppState {
   // Actions — Agent Log
   addAgentLog: (entry: AgentLogEntry) => void;
   clearAgentLogs: () => void;
+
+  // Actions — Review
+  setReviewCards: (cards: ReviewCard[]) => void;
+  setReviewStats: (stats: ReviewStats) => void;
+  updateReviewCard: (id: string, updates: Partial<ReviewCard>) => void;
 
   // Actions — Settings
   updateSettings: (partial: Partial<AppSettings>) => void;
@@ -79,6 +88,8 @@ export const useAppStore = create<AppState>((set) => ({
   canvasItems: [],
   groupChatMessages: [],
   agentLogs: [],
+  reviewCards: [],
+  reviewStats: { totalCards: 0, dueToday: 0, mastered: 0, reviewedToday: 0 },
   settings: {
     theme: 'light',
     currentWorkspaceId: null,
@@ -123,6 +134,14 @@ export const useAppStore = create<AppState>((set) => ({
   addAgentLog: (entry) =>
     set((state) => ({ agentLogs: [...state.agentLogs, entry] })),
   clearAgentLogs: () => set({ agentLogs: [] }),
+
+  // Review
+  setReviewCards: (cards) => set({ reviewCards: cards }),
+  setReviewStats: (stats) => set({ reviewStats: stats }),
+  updateReviewCard: (id, updates) =>
+    set((state) => ({
+      reviewCards: state.reviewCards.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+    })),
 
   // Settings
   updateSettings: (partial) =>
