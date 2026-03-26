@@ -129,7 +129,7 @@ AI 模型的上下文窗口有限（约 200K tokens ≈ 150KB 中文文本）。
 | system_core.md | ~19KB（硬上限 22KB） | 超过 22KB 必须拆出内容到 reference |
 | story.md | 8-12KB | 纯世界观，不含序章 |
 | story_progression/overview.md | 3-5KB | 全局情感阶段 + 原则 |
-| learner_profile.md | 1-2KB | |
+| learner_profile.md | 1-2KB | 必须包含"学习水平"字段（初学/中等/进阶），影响教学节奏 |
 | progress.md | ~1KB | |
 | **启动小计** | **~30-38KB** | |
 | + 当课角色文件 | 10-15KB | |

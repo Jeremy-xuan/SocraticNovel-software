@@ -909,16 +909,18 @@ fn build_prep_prompt(base: &str) -> String {
         Steps:\n\
         1. Use `think` to plan which files to read\n\
         2. Read teacher/runtime/progress.md → determine current lesson number, today's teacher, chapter\n\
-        3. Read the relevant textbook PDF (materials/textbook/*.pdf) → extract key concepts\n\
-        4. Read teacher/config/story_progression.md → find story nodes for this lesson\n\
-        5. Read teacher/runtime/knowledge_points.md → identify knowledge gaps\n\
-        6. Read the character doc for today's teacher (teacher/config/characters/*.md)\n\
-        7. Read teacher/runtime/wechat_group.md → check if first launch (contains '暂无记录')\n\
-        8. Read teacher/runtime/review_queue.md → check for due reviews\n\
-        9. Call `submit_lesson_brief` with the complete brief\n\n\
+        3. Read teacher/config/learner_profile.md → get learner's level (初学/中等/进阶), math/physics background, weak points\n\
+        4. Read the relevant textbook PDF (materials/textbook/*.pdf) → extract key concepts\n\
+        5. Read teacher/config/story_progression.md → find story nodes for this lesson\n\
+        6. Read teacher/runtime/knowledge_points.md → identify knowledge gaps\n\
+        7. Read the character doc for today's teacher (teacher/config/characters/*.md)\n\
+        8. Read teacher/runtime/wechat_group.md → check if first launch (contains '暂无记录')\n\
+        9. Read teacher/runtime/review_queue.md → check for due reviews\n\
+        10. Call `submit_lesson_brief` with the complete brief\n\n\
         The lesson brief must contain:\n\
         - teacher: 今天的老师名字\n\
         - chapter: 当前教材章节\n\
+        - learner_level: 学习水平（初学/中等/进阶）— copy EXACTLY from learner_profile.md\n\
         - key_concepts: 本课关键物理概念列表\n\
         - knowledge_gaps: 学生薄弱点\n\
         - story_nodes: 本课应发生的故事事件\n\
