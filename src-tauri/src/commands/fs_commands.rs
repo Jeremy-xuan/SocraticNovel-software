@@ -4,11 +4,10 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 /// Get the base workspaces directory: ~/socratic-novel-软件开发/workspaces/
-fn workspaces_dir() -> PathBuf {
-    dirs::home_dir()
-        .expect("Could not find home directory")
-        .join("socratic-novel-软件开发")
-        .join("workspaces")
+fn workspaces_dir() -> Result<PathBuf, String> {
+    let home = dirs::home_dir()
+        .ok_or_else(|| "Could not find home directory".to_string())?;
+    Ok(home.join("socratic-novel-软件开发").join("workspaces"))
 }
 
 /// Resolve and validate a path within a workspace (sandbox enforcement).
@@ -188,7 +187,7 @@ pub struct WorkspaceInfo {
 
 #[tauri::command]
 pub fn list_workspaces() -> Result<Vec<WorkspaceInfo>, String> {
-    let base = workspaces_dir();
+    let base = workspaces_dir()?;
     if !base.exists() {
         return Ok(Vec::new());
     }
@@ -218,7 +217,7 @@ pub fn list_workspaces() -> Result<Vec<WorkspaceInfo>, String> {
 
 #[tauri::command]
 pub fn create_workspace(name: &str) -> Result<WorkspaceInfo, String> {
-    let base = workspaces_dir();
+    let base = workspaces_dir()?;
     fs::create_dir_all(&base).map_err(|e| format!("Failed to create workspaces dir: {}", e))?;
 
     let ws_path = base.join(name);
@@ -241,7 +240,7 @@ pub fn create_workspace(name: &str) -> Result<WorkspaceInfo, String> {
 
 #[tauri::command]
 pub fn init_builtin_workspace() -> Result<WorkspaceInfo, String> {
-    let base = workspaces_dir();
+    let base = workspaces_dir()?;
     let target = base.join("ap-physics-em");
 
     if target.exists() {
@@ -295,7 +294,7 @@ pub fn delete_workspace(workspace_id: &str) -> Result<(), String> {
         return Err("内置工作区不可删除".to_string());
     }
 
-    let ws_path = workspaces_dir().join(workspace_id);
+    let ws_path = workspaces_dir()?.join(workspace_id);
     if !ws_path.exists() {
         return Err(format!("工作区 '{}' 不存在", workspace_id));
     }
@@ -306,7 +305,7 @@ pub fn delete_workspace(workspace_id: &str) -> Result<(), String> {
 
 #[tauri::command]
 pub fn update_workspace_meta(workspace_id: &str) -> Result<(), String> {
-    let ws_path = workspaces_dir().join(workspace_id);
+    let ws_path = workspaces_dir()?.join(workspace_id);
     if !ws_path.exists() {
         return Err(format!("工作区 '{}' 不存在", workspace_id));
     }
@@ -361,7 +360,7 @@ fn collect_files_recursive(dir: &Path, base: &Path) -> Result<Vec<PathBuf>, Stri
 
 #[tauri::command]
 pub async fn export_workspace(workspace_id: String) -> Result<String, String> {
-    let base = workspaces_dir();
+    let base = workspaces_dir()?;
     let ws_path = base.join(&workspace_id);
     if !ws_path.exists() || !ws_path.is_dir() {
         return Err(format!("工作区 '{}' 不存在", workspace_id));
@@ -453,7 +452,7 @@ pub async fn import_workspace(zip_path: String) -> Result<WorkspaceInfo, String>
     };
 
     // Find a unique workspace name
-    let base = workspaces_dir();
+    let base = workspaces_dir()?;
     fs::create_dir_all(&base).map_err(|e| format!("Failed to create workspaces dir: {}", e))?;
 
     let mut ws_name = ws_name_base.clone();

@@ -87,8 +87,10 @@ export default function LessonPage() {
         });
       }
     });
-    return () => { unlisten.then(fn => fn()); };
-  }, []);
+    return () => {
+      unlisten.then(fn => fn());
+    };
+  }, [t]);
 
   const handleStartClass = async () => {
     setInClass(true);

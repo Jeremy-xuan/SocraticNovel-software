@@ -79,7 +79,7 @@ interface AppState {
 
 // Load persisted settings from localStorage
 function loadPersistedSettings(): Partial<AppSettings> {
-  const saved = localStorage.getItem('socratic-settings');
+  const saved = localStorage.getItem('socratic-novel-settings');
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
