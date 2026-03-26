@@ -1,7 +1,7 @@
 # SocraticNovel — 项目状态文档
 
 > 最后更新：2026-07-21
-> 当前版本：Phase 3 ✅ + 教学质量优化补丁（v0.3.1+ → OutputLimiter + 铁律提醒 + 教材只读 + 动态节奏）
+> 当前版本：Phase 4.1 进行中（v0.4.0 — 课程会话历史 + 教学质量优化）
 
 ## 项目概述
 
@@ -376,6 +376,16 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 66. **✅ Homebrew Cask** — `Jeremy-xuan/homebrew-socraticnovel` 仓库
 67. **✅ 跨项目同步指南** — `SYNC_GUIDE.md`（Framework + Desktop 两个仓库）
 
+### Phase 4 — 深度优化与用户增长
+
+68. **✅ 课程会话历史 (T4)** — 每次下课自动保存完整课堂记录（对话 + 白板 + 群聊 + 标注）
+    - Rust: `history_commands.rs` 新模块（save/list/load/delete 四命令）
+    - 前端: `HistoryPage.tsx`（列表视图 + 只读回顾模式）
+    - 存储: `workspace/session_history/{timestamp}.json`
+    - LessonPage 下课时自动保存；LandingPage 底部新增入口
+    - CanvasPanel 新增 `readOnly` 模式隐藏标注工具
+    - i18n: 17 个新翻译键（中/英）
+
 ## 未完成 / 需要改进
 
 ### 优先级高
@@ -413,6 +423,7 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 ├── src/                             # 前端 (React + TS)
 ├── src/i18n/                        # 国际化（i18next 初始化 + locale JSON）
 ├── src-tauri/src/                   # 后端 (Rust)
+├── src-tauri/src/commands/history_commands.rs  # 课堂历史 save/list/load/delete
 ├── src-tauri/libs/                  # PDFium 共享库（运行时需要）
 ├── scripts/                         # 工具脚本（download-pdfium.sh）
 ├── public/protocols/                # 内置辅导协议（幽鬼α + AnimaTutor）
@@ -502,3 +513,4 @@ cd src-tauri && cargo test --test e2e_flow -- --nocapture
 21. **OutputLimiter 四层防护** — 苏格拉底教学法通过四层机制强制执行：(1) Prompt 层：三铁律+B/C盲测+5轮自检；(2) Runtime 层：OutputLimiter 在问号后 200 字截断，1500 字硬上限；(3) Tool 层：respond_to_student 调用后移除，GRACE_PERIOD=1；(4) Reminder 层：每 10 条消息注入隐式铁律自检。任何一层被绕过，其他层仍然生效。
 22. **动态教学节奏** — 教学速度从 `learner_profile.md` 的"学习水平"字段驱动：Prep Agent 读取 → lesson_brief 携带 → `build_teaching_prompt()` 检测关键词 → 动态生成 rounds-per-idea 指令。三档：初学(3-5轮)、中等(2-3轮)、进阶(1-2轮)。
 23. **read_teaching_material 最小权限** — Teaching Phase 的文件访问通过独立工具 `read_teaching_material` 实现，仅允许 `materials/` 目录只读。这比开放 `read_file` 更安全：AI 可查课本但无法读教案（teacher/），确保教学由 lesson_brief 驱动而非"偷看答案"。
+24. **课堂历史存储策略** — 每次下课时保存完整快照（messages + canvasItems + groupChatMessages + annotations）为单个 JSON 文件到 `session_history/` 目录。ID 使用 ISO 时间戳（冒号/点替换为连字符）确保文件名安全且自然排序。列表 API 仅解析摘要字段（不加载完整 messages），保证即使积累 100+ 课堂记录仍然快速。

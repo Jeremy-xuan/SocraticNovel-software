@@ -1054,16 +1054,16 @@ CREATE TABLE canvas_items (
 | 分发改善 | ✅ | Ad-hoc 签名 + install.sh + Homebrew Cask |
 | 跨项目同步 | ✅ | SYNC_GUIDE.md（Framework↔Desktop 同步矩阵） |
 
-### Phase 4: 深度优化与用户增长
+### Phase 4: 深度优化与用户增长 (v0.4.0+)
 
 #### 4.1 — UX 深度优化
 
-| 任务 | 说明 |
-|------|------|
-| 全局键盘快捷键系统 | LessonPage 快捷键 + 全局 Cmd+,/Cmd+N + tooltip 提示 |
-| 白板增强（缩略图 + 全屏） | SVG 缩略图预览、全屏模式、缩放平移、Mermaid 导出 |
-| 对话体验优化 | 虚拟滚动、对话搜索、消息复制、长回复折叠 |
-| 课程会话历史 | 保存完整对话记录，按日期浏览，只读回顾 |
+| 任务 | 状态 | 说明 |
+|------|------|------|
+| 全局键盘快捷键系统 | 🔲 | LessonPage 快捷键 + 全局 Cmd+,/Cmd+N + tooltip 提示 |
+| 白板增强（缩略图 + 全屏） | 🔲 | SVG 缩略图预览、全屏模式、缩放平移、Mermaid 导出 |
+| 对话体验优化 | 🔲 | 虚拟滚动、对话搜索、消息复制、长回复折叠 |
+| 课程会话历史 | ✅ | `HistoryPage.tsx` + `history_commands.rs`，自动保存/按日期浏览/只读回顾 |
 
 #### 4.2 — 性能与稳定性
 
