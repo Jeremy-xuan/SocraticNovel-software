@@ -134,11 +134,49 @@ jobs:
             echo "✅ DMG created: $DMG_DIR/$DMG_NAME"
           fi
 
+      - name: Build .pkg installer
+        run: |
+          set -e
+          APP_PATH="$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -name '*.app' -maxdepth 1 | head -1)"
+          APP_NAME="$(basename "$APP_PATH")"
+          VERSION="$(grep '"version"' src-tauri/tauri.conf.json | head -1 | sed 's/.*: *"\(.*\)".*/\1/')"
+          PKG_DIR="src-tauri/target/universal-apple-darwin/release/bundle/pkg"
+          mkdir -p "$PKG_DIR"
+
+          # Create postinstall script to remove quarantine
+          SCRIPTS_DIR="$(mktemp -d)"
+          cat > "$SCRIPTS_DIR/postinstall" << 'POSTINSTALL'
+          #!/bin/bash
+          xattr -cr "/Applications/$APP_NAME" 2>/dev/null || true
+          POSTINSTALL
+          # Replace $APP_NAME in postinstall (it's inside a heredoc so we do it with sed)
+          sed -i '' "s|\$APP_NAME|$APP_NAME|g" "$SCRIPTS_DIR/postinstall"
+          chmod +x "$SCRIPTS_DIR/postinstall"
+
+          echo "📦 Building .pkg installer..."
+          pkgbuild \
+            --root "$(dirname "$APP_PATH")" \
+            --install-location /Applications \
+            --identifier "com.socraticnovel.app" \
+            --version "$VERSION" \
+            --scripts "$SCRIPTS_DIR" \
+            "$PKG_DIR/SocraticNovel_${VERSION}_universal.pkg"
+
+          echo "✅ PKG created: $(ls "$PKG_DIR"/*.pkg)"
+          rm -rf "$SCRIPTS_DIR"
+
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-dmg
           path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+
+      - name: Upload PKG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-pkg
+          path: src-tauri/target/universal-apple-darwin/release/bundle/pkg/*.pkg
           if-no-files-found: error
 
   # ──────────────────────────────────────────────
@@ -258,5 +296,6 @@ jobs:
           generate_release_notes: true
           files: |
             artifacts/macos-dmg/*.dmg
+            artifacts/macos-pkg/*.pkg
             artifacts/windows-nsis/*.exe
             artifacts/windows-msi/*.msi
