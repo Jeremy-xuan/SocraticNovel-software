@@ -1,7 +1,7 @@
 # SocraticNovel — 项目状态文档
 
-> 最后更新：2026-03-25
-> 当前版本：Phase 3 ✅ 核心完成（多 workspace + 自动复习卡 + Mermaid + 笔记重设计 + 跨平台 + 白板标注 + 导入导出 + 多语言 + CI/CD）
+> 最后更新：2026-07-21
+> 当前版本：Phase 3 ✅ + 教学质量优化补丁（v0.3.1+ → OutputLimiter + 铁律提醒 + 教材只读 + 动态节奏）
 
 ## 项目概述
 
@@ -36,18 +36,19 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 
 | 模块 | 文件 | 功能 |
 |------|------|------|
-| **AI Runtime** | `ai/runtime.rs` | Tool-use 循环引擎 + SSE 流式处理 + respond_to_student 增量内容提取 |
+| **AI Runtime** | `ai/runtime.rs` | Tool-use 循环引擎 + SSE 流式处理 + respond_to_student 增量内容提取 + OutputLimiter（问号后截断） |
 | **Claude Client** | `ai/claude.rs` | Anthropic Messages API 客户端（流式 + 非流式） |
 | **OpenAI Client** | `ai/openai.rs` | OpenAI 兼容客户端（流式 + 非流式，支持 DeepSeek/OpenAI/Google） |
-| **Tools** | `ai/tools.rs` | 工具定义 + 执行器（9 个工具，含 respond_to_student） |
+| **Tools** | `ai/tools.rs` | 工具定义 + 执行器（10 个工具，含 respond_to_student + read_teaching_material） |
 | **Types** | `ai/types.rs` | 共享类型（Message, ContentBlock, StreamEvent 等） |
 | **AI Commands** | `commands/ai_commands.rs` | Tauri 命令 + 会话持久化（save/restore/clear） |
 | **FS Commands** | `commands/fs_commands.rs` | 沙箱化文件操作 + workspace 初始化 |
 | **Settings** | `commands/settings_commands.rs` | macOS Keychain 存取 API Key |
 | **Review Engine** | `commands/review_commands.rs` | SM-2 间隔复习引擎（卡片管理、调度、JSON 持久化） |
 | **PDF Import** | `commands/pdf_commands.rs` | PDF 文本提取 + PDFium 页面渲染 + AI 增强 |
-| **CLI Practice** | `bin/cli_practice.rs` | 交互式命令行练习模式（无 GUI 测试用） |
-| **Dev Test** | `bin/dev_test.rs` | 后端单元测试二进制 |
+| **CLI Practice** | `examples/cli_practice.rs` | 交互式命令行练习模式（无 GUI 测试用） |
+| **Dev Test** | `examples/dev_test.rs` | 后端单元测试（无 GUI 测试用） |
+| **E2E Test** | `tests/e2e_flow.rs` | 端到端集成测试（15 步完整用户流程） |
 
 ### 前端模块（TypeScript, src/）
 
@@ -340,6 +341,41 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
     - 自动创建 GitHub Release (draft)，附带所有安装包
     - Cargo + node_modules 缓存加速后续构建
 
+### 教学质量优化补丁 — ✅ 四项运行时改进
+
+56. **✅ OutputLimiter 接入** — 运行时截断机制从死代码变为实际生效
+    - Teaching/Practice Phase 中 `OutputLimiter` 实例化并传入流式处理函数
+    - 问号后 200 字自动截断，1500 字硬上限
+    - 从架构层面强制苏格拉底式"问完即停"
+57. **✅ 铁律周期提醒注入** — 对抗长上下文漂移
+    - 每 10 条消息（~5 轮对话）在 user message 前注入隐式三铁律自检
+    - 利用"近因效应"强化 AI 对核心规则的遵守
+    - 学生不可见，仅 AI 内部校准
+58. **✅ 教学中教材只读访问** — `read_teaching_material` 新工具
+    - Teaching Phase 新增 `read_teaching_material` 工具，限制为 `materials/` 目录只读
+    - AI 可临时查阅课本但无法读取 teacher/ 下的教案（防止"偷看答案"）
+    - 解决 Lesson Brief 漏覆盖知识点时 AI 无法补救的问题
+59. **✅ 动态教学节奏** — 从学习者档案自动调节
+    - `learner_profile.md` 新增"学习水平"字段（初学/中等/进阶）
+    - Prep Agent 读取并传入 lesson_brief → Teaching Prompt 动态调整 rounds-per-idea
+    - 初学: 3-5 轮/概念, 中等: 2-3 轮, 进阶: 1-2 轮
+
+### Bug 修复 — ✅ Runtime 稳定性
+
+60. **✅ localStorage 键不匹配** — `loadPersistedSettings()` 读 `'socratic-settings'` 但 `updateSettings()` 写 `'socratic-novel-settings'`，导致设置每次重启丢失。统一为 `'socratic-novel-settings'`。
+61. **✅ workspaces_dir() 崩溃风险** — 使用 `.expect()` 获取 home 目录，系统无 home 时 panic。改为返回 `Result`，7 个调用点全部用 `?` 处理。
+62. **✅ LessonPage useEffect 依赖缺失** — 事件监听器缺少 `[t]` 依赖，语言切换后翻译不更新。
+
+### 测试与分发改进 — ✅
+
+63. **✅ E2E 集成测试** — `tests/e2e_flow.rs`，15 步完整用户流程测试
+    - 覆盖：Workspace CRUD、文件读写追加列搜、SM-2 复习卡片、安全沙箱、元数据
+    - 0.00s 执行完成，`cargo test --test e2e_flow`
+64. **✅ Ad-hoc 签名** — CI 中自动 codesign + DMG 重建，改善 macOS Gatekeeper 体验
+65. **✅ 一键安装脚本** — `scripts/install.sh`，自动下载/安装/去除 quarantine
+66. **✅ Homebrew Cask** — `Jeremy-xuan/homebrew-socraticnovel` 仓库
+67. **✅ 跨项目同步指南** — `SYNC_GUIDE.md`（Framework + Desktop 两个仓库）
+
 ## 未完成 / 需要改进
 
 ### 优先级高
@@ -428,10 +464,13 @@ bash scripts/download-pdfium.sh
 
 # CLI 练习模式（无 GUI 测试）
 cd src-tauri
-API_KEY=<your-key> PROVIDER=deepseek cargo run --bin cli_practice
+API_KEY=<your-key> PROVIDER=deepseek cargo run --example cli_practice
 
 # 后端单元测试
-API_KEY=<your-key> PROVIDER=deepseek cargo run --bin dev_test
+API_KEY=<your-key> PROVIDER=deepseek cargo run --example dev_test
+
+# E2E 集成测试（无需 API Key）
+cd src-tauri && cargo test --test e2e_flow -- --nocapture
 ```
 
 - Vite dev server: http://localhost:1420
@@ -460,3 +499,6 @@ API_KEY=<your-key> PROVIDER=deepseek cargo run --bin dev_test
 18. **ContentBlock::Image 多平台适配** — AI 图像内容块统一为 Claude 格式（ImageSource::Base64），OpenAI 客户端在 `build_request_body()` 中自动转换为 `image_url` data URI 格式。单纯文本消息保持 string 简单格式以兼容旧 API。
 19. **Meta Prompt 问卷化** — 将 AI 逐步提问（Phase 1-4）改为前端 5 步向导。用户填完问卷后，`serializeQuestionnaire()` 将数据序列化为结构化 Markdown（`# 用户设计决策总览`），作为 AI 的第一条 user message 发送。meta_prompt.md 中 Phase 1-4 被替换为"接收用户设计决策并直接进入 Phase 5"的指令。这将 10+ 轮对话压缩为 0 轮，同时保证 AI 获得的信息量不减。
 20. **角色预设库架构** — 20 个动漫角色按教学风格分 5 类（theory-precise / intuition-analogy / engineering / philosophy / companion），每个预设包含 name / gender / age / appearance / teachingStyle / personalityCore / backstoryHints / initialWarmth。三种创建模式（preset / custom-name / original）通过 `CharacterDesign.source` 字段区分。预设选中后所有字段可编辑微调，不锁死。
+21. **OutputLimiter 四层防护** — 苏格拉底教学法通过四层机制强制执行：(1) Prompt 层：三铁律+B/C盲测+5轮自检；(2) Runtime 层：OutputLimiter 在问号后 200 字截断，1500 字硬上限；(3) Tool 层：respond_to_student 调用后移除，GRACE_PERIOD=1；(4) Reminder 层：每 10 条消息注入隐式铁律自检。任何一层被绕过，其他层仍然生效。
+22. **动态教学节奏** — 教学速度从 `learner_profile.md` 的"学习水平"字段驱动：Prep Agent 读取 → lesson_brief 携带 → `build_teaching_prompt()` 检测关键词 → 动态生成 rounds-per-idea 指令。三档：初学(3-5轮)、中等(2-3轮)、进阶(1-2轮)。
+23. **read_teaching_material 最小权限** — Teaching Phase 的文件访问通过独立工具 `read_teaching_material` 实现，仅允许 `materials/` 目录只读。这比开放 `read_file` 更安全：AI 可查课本但无法读教案（teacher/），确保教学由 lesson_brief 驱动而非"偷看答案"。

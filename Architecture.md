@@ -641,6 +641,29 @@ AI 返回响应                            │
 - **写入审计**：所有 write 操作记录到日志
 - **无执行权限**：不提供 `execute_command` 工具
 
+#### 教学质量运行时强制（四层防护）
+
+苏格拉底教学法不仅依靠 prompt 指令，更通过架构层面的四个独立机制强制执行：
+
+| 层级 | 机制 | 触发条件 | 效果 |
+|------|------|---------|------|
+| **Prompt 层** | 三铁律 + B/C 盲测 + 5 轮自检 | 始终生效 | AI 自我约束 |
+| **Runtime 层** | `OutputLimiter` | 问号（?/？）后 200 字 / 硬限 1500 字 | 截断 AI 输出，物理阻止过度解释 |
+| **Tool 层** | `respond_to_student` 去重 | 调用一次后移除 | 每轮只能回复一次 |
+| **Reminder 层** | 铁律周期注入 | 每 10 条消息 | 隐式提醒对抗上下文漂移 |
+
+**OutputLimiter** 在 Teaching/Practice Phase 自动创建，传入流式处理函数：
+- Claude 路径：`process_claude_streaming()` 在 `TextDelta` emit 前检查
+- OpenAI 路径：`process_openai_streaming()` 同样检查
+- 截断后 `student_text` 仍完整保留（用于课后分析），仅前端显示被截断
+
+**动态教学节奏**：`build_teaching_prompt()` 从 `lesson_brief` 检测学习者水平关键词：
+- `进阶` / `advanced` → 1-2 rounds per idea
+- `中等` / `intermediate` → 2-3 rounds per idea
+- 默认 → 3-5 rounds per idea
+
+**教材临时查阅**：Teaching Phase 提供 `read_teaching_material` 工具（只读，限 `materials/` 目录），AI 可临时查阅课本但无法读取教案文件。
+
 ### 4.3 会话管理
 
 App 管理三种独立会话类型：
@@ -1017,6 +1040,19 @@ CREATE TABLE canvas_items (
 | OAuth 登录 | ⏭️ 跳过 | Anthropic 无公开 OAuth，ROI 不足 |
 | 社区 Workspace 分享 | ⏭️ 延后 | 需要后端服务，架构变更大 |
 | DMG 签名公证 | ⏭️ 延后 | 需 Apple Developer $99/年 |
+
+### Phase 3.5: 教学质量优化补丁 ✅
+
+| 任务 | 状态 | 说明 |
+|------|------|------|
+| OutputLimiter 接入 | ✅ | 运行时截断：问号后 200 字 / 硬限 1500 字，Teaching+Practice 生效 |
+| 铁律周期提醒 | ✅ | 每 10 条消息注入隐式三铁律自检，对抗长上下文漂移 |
+| 教材只读访问 | ✅ | `read_teaching_material` 工具，限 materials/ 目录 |
+| 动态教学节奏 | ✅ | learner_profile → lesson_brief → 自动调节 rounds/idea |
+| Runtime Bug 修复 | ✅ | localStorage 键统一 + workspaces_dir Result + useEffect 依赖 |
+| E2E 集成测试 | ✅ | 15 步完整流程，`cargo test --test e2e_flow` |
+| 分发改善 | ✅ | Ad-hoc 签名 + install.sh + Homebrew Cask |
+| 跨项目同步 | ✅ | SYNC_GUIDE.md（Framework↔Desktop 同步矩阵） |
 
 ### Phase 4: 深度优化与用户增长
 
