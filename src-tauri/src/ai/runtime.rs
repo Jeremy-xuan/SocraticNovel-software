@@ -200,6 +200,7 @@ async fn process_claude_streaming(
     tool_defs: &[ToolDefinition],
     student_text: &mut String,
     all_raw_text: &mut String,
+    mut output_limiter: Option<&mut OutputLimiter>,
 ) -> Result<(Vec<ContentBlock>, Option<String>), String> {
     let response = client
         .start_streaming(system_prompt, messages, Some(tool_defs.to_vec()))
@@ -258,9 +259,16 @@ async fn process_claude_streaming(
                             // Incremental respond_to_student streaming
                             if let Some(ref mut streamer) = respond_streamer {
                                 if let Some(text_chunk) = streamer.feed(&partial_json) {
-                                    let _ = app.emit("agent-event", AgentEvent::TextDelta {
-                                        text: text_chunk.clone(),
-                                    });
+                                    // Apply output limiter for Teaching phase
+                                    let should_emit = match output_limiter {
+                                        Some(ref mut limiter) => limiter.should_emit(&text_chunk),
+                                        None => true,
+                                    };
+                                    if should_emit {
+                                        let _ = app.emit("agent-event", AgentEvent::TextDelta {
+                                            text: text_chunk.clone(),
+                                        });
+                                    }
                                     student_text.push_str(&text_chunk);
                                 }
                             }
@@ -386,6 +394,7 @@ async fn process_openai_streaming(
     tool_defs: &[ToolDefinition],
     student_text: &mut String,
     all_raw_text: &mut String,
+    mut output_limiter: Option<&mut OutputLimiter>,
 ) -> Result<(Vec<ContentBlock>, Option<String>), String> {
     let response = client
         .start_streaming(system_prompt, messages, Some(tool_defs.to_vec()))
@@ -484,9 +493,16 @@ async fn process_openai_streaming(
                         // Incremental respond_to_student streaming
                         if let Some(ref mut streamer) = respond_streamers[index] {
                             if let Some(text_chunk) = streamer.feed(args) {
-                                let _ = app.emit("agent-event", AgentEvent::TextDelta {
-                                    text: text_chunk.clone(),
-                                });
+                                // Apply output limiter for Teaching phase
+                                let should_emit = match output_limiter {
+                                    Some(ref mut limiter) => limiter.should_emit(&text_chunk),
+                                    None => true,
+                                };
+                                if should_emit {
+                                    let _ = app.emit("agent-event", AgentEvent::TextDelta {
+                                        text: text_chunk.clone(),
+                                    });
+                                }
                                 student_text.push_str(&text_chunk);
                             }
                         }
@@ -589,6 +605,7 @@ pub async fn run_agent_turn(
                 process_claude_streaming(
                     app, &client, &system_prompt, messages.clone(), &tool_defs,
                     &mut student_text, &mut all_raw_text,
+                    None, // Legacy path: no output limiter
                 ).await?
             }
             "openai" | "deepseek" | "google" => {
@@ -596,6 +613,7 @@ pub async fn run_agent_turn(
                 process_openai_streaming(
                     app, &client, &system_prompt, messages.clone(), &tool_defs,
                     &mut student_text, &mut all_raw_text,
+                    None, // Legacy path: no output limiter
                 ).await?
             }
             _ => {
@@ -714,6 +732,9 @@ async fn run_phase_loop(
     let mut lesson_brief: Option<String> = None;
     // Mutable copy of tool definitions — we remove respond_to_student after it's called
     let mut active_tools: Vec<ToolDefinition> = tool_defs.to_vec();
+    // Output limiter: active only in Teaching/Practice phases to enforce Socratic pacing
+    let use_limiter = matches!(phase, AgentPhase::Teaching | AgentPhase::Practice);
+    let mut output_limiter = if use_limiter { Some(OutputLimiter::new()) } else { None };
 
     for iteration in 0..max_loops {
         let phase_label = match phase {
@@ -733,6 +754,7 @@ async fn run_phase_loop(
                 process_claude_streaming(
                     app, &client, system_prompt, messages.clone(), &active_tools,
                     &mut student_text, &mut all_raw_text,
+                    output_limiter.as_mut(),
                 ).await?
             }
             "openai" | "deepseek" | "google" => {
@@ -740,6 +762,7 @@ async fn run_phase_loop(
                 process_openai_streaming(
                     app, &client, system_prompt, messages.clone(), &active_tools,
                     &mut student_text, &mut all_raw_text,
+                    output_limiter.as_mut(),
                 ).await?
             }
             _ => return Err(format!("Unsupported provider: {}", provider)),
