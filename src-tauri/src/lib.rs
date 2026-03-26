@@ -1,5 +1,5 @@
 pub mod ai;
-mod commands;
+pub mod commands;
 
 use commands::ai_commands;
 use commands::fs_commands;

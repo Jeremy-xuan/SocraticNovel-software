@@ -178,11 +178,11 @@ fn write_workspace_meta(ws_path: &Path, meta: &WorkspaceMeta) -> Result<(), Stri
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceInfo {
-    id: String,
-    name: String,
-    path: String,
-    has_claude_md: bool,
-    last_opened: Option<String>,
+    pub id: String,
+    pub name: String,
+    pub path: String,
+    pub has_claude_md: bool,
+    pub last_opened: Option<String>,
 }
 
 #[tauri::command]
