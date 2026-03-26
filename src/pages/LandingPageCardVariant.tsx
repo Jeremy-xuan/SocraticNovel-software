@@ -411,6 +411,7 @@ export default function LandingPage() {
       {/* Discrete Ghost Footer */}
       <div className="absolute bottom-8 w-full px-12 flex justify-between items-center text-text-placeholder z-20 pointer-events-none">
         <div className="flex gap-8 pointer-events-auto opacity-70 hover:opacity-100 transition-opacity duration-300">
+          <button onClick={() => navigate('/history')} className="text-[12px] font-medium hover:text-text-main transition-colors dark:hover:text-text-main-dark">{t('landing.sessionHistory')}</button>
           <button onClick={() => navigate('/notes')} className="text-[12px] font-medium hover:text-text-main transition-colors dark:hover:text-text-main-dark">{t('landing.courseNotes')}</button>
           <button onClick={() => navigate('/pdf-import')} className="text-[12px] font-medium hover:text-text-main transition-colors dark:hover:text-text-main-dark">{t('landing.extractTextbook')}</button>
         </div>

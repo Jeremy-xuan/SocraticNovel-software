@@ -280,6 +280,30 @@ export interface MetaPromptQuestionnaire {
   story: StoryDesign;
 }
 
+// ─── Session History ─────────────────────────────────────────────
+
+export interface SessionHistorySummary {
+  id: string;
+  startedAt: string;
+  endedAt: string;
+  messageCount: number;
+  canvasCount: number;
+  summary: string;
+}
+
+export interface SessionHistoryEntry {
+  id: string;
+  startedAt: string;
+  endedAt: string;
+  messageCount: number;
+  canvasCount: number;
+  summary: string;
+  messages: ChatMessage[];
+  canvasItems: CanvasItem[];
+  groupChatMessages: GroupChatMessage[];
+  annotations: Record<string, Annotation[]>;
+}
+
 // ─── Character Presets ───────────────────────────────────────────
 
 export interface CharacterPreset {

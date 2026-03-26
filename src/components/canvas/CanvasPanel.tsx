@@ -59,9 +59,10 @@ function MermaidRenderer({ content, id }: { content: string; id: string }) {
 
 interface Props {
   items: CanvasItem[];
+  readOnly?: boolean;
 }
 
-export default function CanvasPanel({ items }: Props) {
+export default function CanvasPanel({ items, readOnly }: Props) {
   const { t } = useTranslation();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<ToolType>('pen');
@@ -114,16 +115,18 @@ export default function CanvasPanel({ items }: Props) {
               ) : (
                 <span />
               )}
-              <button
-                onClick={() => setEditingId(isEditing ? null : item.id)}
-                className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition-colors ${
-                  isEditing
-                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600'
-                }`}
-              >
-                {t('canvas.annotate')}
-              </button>
+              {!readOnly && (
+                <button
+                  onClick={() => setEditingId(isEditing ? null : item.id)}
+                  className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition-colors ${
+                    isEditing
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  {t('canvas.annotate')}
+                </button>
+              )}
             </div>
 
             {/* Toolbar */}

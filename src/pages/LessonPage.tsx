@@ -9,8 +9,8 @@ import ChatInput from '../components/chat/ChatInput';
 import CanvasPanel from '../components/canvas/CanvasPanel';
 import AgentLogPanel from '../components/debug/AgentLogPanel';
 import ChapterOutline from '../components/layout/ChapterOutline';
-import type { ChatMessage } from '../types';
-import { readFile, hasSavedSession, restoreAiSession, clearSavedSession } from '../lib/tauri';
+import type { ChatMessage, SessionHistoryEntry } from '../types';
+import { readFile, hasSavedSession, restoreAiSession, clearSavedSession, saveSessionHistory } from '../lib/tauri';
 
 function getWorkspacePath(): string {
   const path = useAppStore.getState().settings.currentWorkspacePath;
@@ -27,6 +27,7 @@ export default function LessonPage() {
   const [rightPanel, setRightPanel] = useState<'canvas' | 'chat' | 'log'>('canvas');
   const [useMultiAgent] = useState(true);
   const [prepComplete, setPrepComplete] = useState(false);
+  const [sessionStartTime] = useState(() => new Date().toISOString());
 
   useEffect(() => {
     const tryRestore = async () => {
@@ -159,6 +160,32 @@ export default function LessonPage() {
     } else {
       try { await aiSendMessage('今天到这里吧，下课。'); } catch (err) { }
     }
+
+    // Save session history before clearing
+    try {
+      const state = useAppStore.getState();
+      const now = new Date().toISOString();
+      const userMsgs = state.messages.filter(m => m.role !== 'system');
+      // Build a brief summary from the first assistant message
+      const firstAssistant = state.messages.find(m => m.role === 'assistant');
+      const summary = firstAssistant
+        ? firstAssistant.text.slice(0, 60).replace(/\n/g, ' ')
+        : t('history.untitled');
+
+      const entry: SessionHistoryEntry = {
+        id: now.replace(/[:.]/g, '-'),
+        startedAt: sessionStartTime,
+        endedAt: now,
+        messageCount: userMsgs.length,
+        canvasCount: state.canvasItems.length,
+        summary,
+        messages: state.messages.map(m => ({ ...m, isStreaming: false })),
+        canvasItems: state.canvasItems,
+        groupChatMessages: state.groupChatMessages,
+        annotations: state.annotations,
+      };
+      await saveSessionHistory(getWorkspacePath(), entry);
+    } catch { /* silently ignore save failures */ }
 
     try { await clearSavedSession(getWorkspacePath()); } catch { }
     useAppStore.getState().clearSession();

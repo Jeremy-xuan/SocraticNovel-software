@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { Workspace, ReviewCard, ReviewStats, PdfExtractResult } from '../types';
+import type { Workspace, ReviewCard, ReviewStats, PdfExtractResult, SessionHistorySummary, SessionHistoryEntry } from '../types';
 
 // File system operations (sandboxed to workspace)
 export async function readFile(workspacePath: string, filePath: string): Promise<string> {
@@ -155,4 +155,33 @@ export async function aiVisionEnhancePage(
   model: string,
 ): Promise<string> {
   return invoke('ai_vision_enhance_page', { pdfPath, pageNumber, apiKey, provider, model });
+}
+
+// ─── Session History ─────────────────────────────────────────────
+
+export async function saveSessionHistory(
+  workspacePath: string,
+  data: SessionHistoryEntry,
+): Promise<string> {
+  return invoke('save_session_history', { workspacePath, data });
+}
+
+export async function listSessionHistory(
+  workspacePath: string,
+): Promise<SessionHistorySummary[]> {
+  return invoke('list_session_history', { workspacePath });
+}
+
+export async function loadSessionHistory(
+  workspacePath: string,
+  sessionId: string,
+): Promise<SessionHistoryEntry> {
+  return invoke('load_session_history', { workspacePath, sessionId });
+}
+
+export async function deleteSessionHistory(
+  workspacePath: string,
+  sessionId: string,
+): Promise<void> {
+  return invoke('delete_session_history', { workspacePath, sessionId });
 }

@@ -101,7 +101,8 @@
     "coreReading": "核心伴读",
     "immersiveReview": "沉浸复习",
     "lessonModeCardDesc": "苏格拉底式学习+轻小说式叙述，让AI像人一样陪伴你学习。",
-    "reviewModeCardDesc": "沉浸式辅导协议，在读轻小说之余把题给刷完，独立于学习模式存在。"
+    "reviewModeCardDesc": "沉浸式辅导协议，在读轻小说之余把题给刷完，独立于学习模式存在。",
+    "sessionHistory": "课堂历史"
   },
   "time": {
     "justNow": "刚刚",
@@ -410,7 +411,7 @@
     "title": "🌍 世界观构建",
     "desc": "设计故事发生的空间和关系",
     "locationQuestion": "故事发生在哪里？",
-    "locationHint": "不是\u201c线上教室\u201d——是一个你能闻到气味、听到声音的地方",
+    "locationHint": "不是“线上教室”——是一个你能闻到气味、听到声音的地方",
     "enclosed": "封闭空间",
     "enclosedExamples": "山顶观测站、海边灯塔、老宅改的工作室",
     "semiOpen": "半开放空间",
@@ -431,7 +432,7 @@
     "arrivalReason": "到来原因详情",
     "arrivalReasonPlaceholder": "简要描述学习者来到这个地方的具体原因",
     "characterRelations": "角色之间的关系",
-    "characterRelationsHint": "他们不只是\u201c同事\u201d——他们有前史。谁先来的？有没有紧张关系或默契？",
+    "characterRelationsHint": "他们不只是“同事”——他们有前史。谁先来的？有没有紧张关系或默契？",
     "characterRelationsPlaceholder": "描述角色之间的关系和前史...\n不需要完整故事——几句关键信息就够",
     "specialSettings": "特殊设定（可选）",
     "enableSupernatural": "启用超自然元素",
@@ -465,7 +466,7 @@
   },
   "stepReview": {
     "title": "✅ 确认总览",
-    "desc": "请检查以下设计，确认无误后点击\u201c开始生成\u201d",
+    "desc": "请检查以下设计，确认无误后点击“开始生成”",
     "basicInfo": "📋 基础信息",
     "subject": "学科",
     "textbook": "教材",
@@ -605,5 +606,22 @@
     "modeVisionApi": "Vision API",
     "modeTextOptimize": "文本优化",
     "pageHeader": "第 {{page}} 页"
+  },
+  "history": {
+    "title": "课堂历史",
+    "empty": "还没有课堂记录",
+    "emptyHint": "完成一节课后，对话和白板内容会自动保存到这里。",
+    "untitled": "未命名课程",
+    "messages": "条消息",
+    "canvasItems": "张白板",
+    "delete": "删除",
+    "deleteConfirm": "确定要删除这条课堂记录吗？删除后无法恢复。",
+    "backToList": "← 返回列表",
+    "readOnly": "只读回顾",
+    "readOnlyHint": "这是历史课堂的只读回顾，无法编辑",
+    "canvasTab": "白板",
+    "groupChatTab": "群聊",
+    "noCanvas": "本次课堂没有白板内容",
+    "noGroupChat": "本次课堂没有群聊记录"
   }
 }

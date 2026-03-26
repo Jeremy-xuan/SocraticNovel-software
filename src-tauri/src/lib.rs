@@ -6,6 +6,7 @@ use commands::fs_commands;
 use commands::settings_commands;
 use commands::review_commands;
 use commands::pdf_commands;
+use commands::history_commands;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -68,6 +69,11 @@ pub fn run() {
             pdf_commands::render_pdf_page,
             pdf_commands::ai_enhance_text,
             pdf_commands::ai_vision_enhance_page,
+            // Session history
+            history_commands::save_session_history,
+            history_commands::list_session_history,
+            history_commands::load_session_history,
+            history_commands::delete_session_history,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -101,7 +101,8 @@
     "coreReading": "Core Reading",
     "immersiveReview": "Immersive Review",
     "lessonModeCardDesc": "Socratic learning + light novel narration — AI companions that feel truly human.",
-    "reviewModeCardDesc": "Immersive tutoring protocol — drill problems while reading a light novel, independent from study mode."
+    "reviewModeCardDesc": "Immersive tutoring protocol — drill problems while reading a light novel, independent from study mode.",
+    "sessionHistory": "Session History"
   },
   "time": {
     "justNow": "Just now",
@@ -605,5 +606,22 @@
     "modeVisionApi": "Vision API",
     "modeTextOptimize": "Text Optimize",
     "pageHeader": "Page {{page}}"
+  },
+  "history": {
+    "title": "Session History",
+    "empty": "No session records yet",
+    "emptyHint": "After finishing a lesson, conversations and canvas content will be saved here automatically.",
+    "untitled": "Untitled Session",
+    "messages": "messages",
+    "canvasItems": "canvas items",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this session record? This cannot be undone.",
+    "backToList": "← Back to List",
+    "readOnly": "Read Only",
+    "readOnlyHint": "This is a read-only review of a past session",
+    "canvasTab": "Canvas",
+    "groupChatTab": "Group Chat",
+    "noCanvas": "No canvas content in this session",
+    "noGroupChat": "No group chat in this session"
   }
 }
