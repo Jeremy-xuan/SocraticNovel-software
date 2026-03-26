@@ -326,16 +326,33 @@ pub async fn send_teaching_message(
         }
     };
 
-    // Add user message
-    let user_msg = Message {
-        role: "user".to_string(),
-        content: vec![ContentBlock::Text {
-            text: payload.text.clone(),
-        }],
-    };
-
+    // Add user message, with periodic Iron Law reminder injection
     let current_messages = {
         let messages = state.messages.lock().map_err(|e| e.to_string())?;
+        let message_count = messages.len();
+
+        // Every 10 messages (~5 teaching turns), inject a hidden reminder
+        // to reinforce the Three Iron Laws (combats long-context drift)
+        let user_text = if message_count > 0 && message_count % 10 == 0 {
+            format!(
+                "[SYSTEM REMINDER — not visible to student, for your internal calibration only]\n\
+                三铁律自检：\n\
+                □ 只问不说：你上一条回复有\"解释\"吗？问句 ≥ 陈述句了吗？\n\
+                □ 眼睛看学生：你的问题是从学生上一句话长出来的吗？盲测C通过了吗？\n\
+                □ 答案是学生的：你有没有替学生总结、命名、下结论？\n\
+                □ 最后一英里：学生接近答案时，追问\"你怎么理解这个词？\"而非确认。\n\
+                现在回到学生的消息：\n\n{}",
+                payload.text
+            )
+        } else {
+            payload.text.clone()
+        };
+
+        let user_msg = Message {
+            role: "user".to_string(),
+            content: vec![ContentBlock::Text { text: user_text }],
+        };
+
         let mut msgs = messages.clone();
         msgs.push(user_msg);
         msgs

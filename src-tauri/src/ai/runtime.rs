@@ -933,6 +933,18 @@ fn build_prep_prompt(base: &str) -> String {
 }
 
 fn build_teaching_prompt(base: &str, lesson_brief: &str) -> String {
+    // Dynamic pacing: detect learner level from lesson_brief
+    let pacing_instruction = if lesson_brief.contains("进阶") || lesson_brief.contains("advanced") {
+        "Adapt your pacing: this student has prior knowledge. 1-2 rounds of questions per new idea. \
+         Skip basics they already demonstrate understanding of. Still use Socratic method — just faster."
+    } else if lesson_brief.contains("中等") || lesson_brief.contains("intermediate") {
+        "Adapt your pacing: this student has some background. 2-3 rounds of questions per new idea. \
+         Verify foundational understanding before advancing."
+    } else {
+        "Be EXTREMELY slow. 3-5 rounds of questions before ONE new idea. \
+         Assume zero prior physics knowledge unless explicitly demonstrated."
+    };
+
     format!(
         "[Desktop App Instructions]\n\
         You MUST use the `respond_to_student` tool to send ALL visible content to the student. \
@@ -946,10 +958,13 @@ fn build_teaching_prompt(base: &str, lesson_brief: &str) -> String {
         - Do NOT use physics terminology until the student discovers the concept through guided questions.\n\
         - Do NOT assume the student knows anything they haven't explicitly said.\n\
         - Each question must be answerable by common sense alone.\n\
-        - Be EXTREMELY slow. 3-5 rounds of questions before ONE new idea.\n\n\
+        - {}\n\n\
+        [Reference Materials]\n\
+        - You have access to `read_teaching_material` — use it to look up textbook content in materials/ if needed.\n\
+        - Do NOT read this aloud. Use it silently to inform your questions.\n\n\
         [Lesson Brief — Your context for this lesson]\n\
         {}\n\n\
-        {}", lesson_brief, base
+        {}", pacing_instruction, lesson_brief, base
     )
 }
 

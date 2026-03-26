@@ -197,13 +197,31 @@ pub fn get_prep_tools() -> Vec<ToolDefinition> {
     ]
 }
 
-/// Teaching Phase tools: respond + show + render + think (NO file I/O)
+fn tool_read_teaching_material() -> ToolDefinition {
+    ToolDefinition {
+        name: "read_teaching_material".to_string(),
+        description: "Read a textbook or reference material file during teaching. ONLY for files in the 'materials/' directory (textbooks, practice workbooks, etc.). Cannot read teacher config or runtime files — use your lesson_brief for those.".to_string(),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Relative path within materials/ (e.g., 'materials/textbook/23_Gauss_Law.pdf')"
+                }
+            },
+            "required": ["path"]
+        }),
+    }
+}
+
+/// Teaching Phase tools: respond + show + render + think + read materials (read-only, materials/ only)
 pub fn get_teaching_tools() -> Vec<ToolDefinition> {
     vec![
         tool_respond_to_student(),
         tool_show_group_chat(),
         tool_render_canvas(),
         tool_think(),
+        tool_read_teaching_material(),
     ]
 }
 
@@ -296,6 +314,17 @@ pub fn execute_tool(
             let query = input["query"].as_str().unwrap_or("");
             match crate::commands::fs_commands::search_file(workspace_path, path, query) {
                 Ok(result) => (result, false),
+                Err(e) => (format!("Error: {}", e), true),
+            }
+        }
+        "read_teaching_material" => {
+            let path = input["path"].as_str().unwrap_or("");
+            // Restrict to materials/ directory only — prevent reading teacher config/runtime
+            if !path.starts_with("materials/") && !path.starts_with("materials\\") {
+                return ("Error: read_teaching_material can only access files in the materials/ directory. Use your lesson_brief for teacher config.".to_string(), true);
+            }
+            match crate::commands::fs_commands::read_file(workspace_path, path) {
+                Ok(content) => (content, false),
                 Err(e) => (format!("Error: {}", e), true),
             }
         }
