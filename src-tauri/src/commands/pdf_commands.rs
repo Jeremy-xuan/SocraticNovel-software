@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use base64::Engine as _;
 use pdfium_render::prelude::*;
+use tauri::AppHandle;
 use crate::ai::types::{Message, ContentBlock, ImageSource};
 
 // ─── Types ───────────────────────────────────────────────────────
@@ -20,10 +21,18 @@ pub struct PdfExtractResult {
     pub pages: Vec<PdfPage>,
     #[serde(rename = "fullText")]
     pub full_text: String,
+    /// Text quality score 0.0-1.0. Below 0.5 suggests garbled/encrypted fonts.
+    #[serde(rename = "qualityScore")]
+    pub quality_score: f64,
+    /// True if the text appears garbled (anti-copy font encoding detected)
+    #[serde(rename = "isGarbled")]
+    pub is_garbled: bool,
 }
 
 // ─── Extraction ──────────────────────────────────────────────────
 
+/// Try pdftotext (poppler) first — much faster and more robust for complex PDFs.
+/// Falls back to pdf-extract (pure Rust) if pdftotext is not installed.
 fn extract_from_path(path: &str) -> Result<PdfExtractResult, String> {
     let filepath = PathBuf::from(path);
     if !filepath.exists() {
@@ -36,16 +45,34 @@ fn extract_from_path(path: &str) -> Result<PdfExtractResult, String> {
         .to_string_lossy()
         .to_string();
 
-    // Extract full text
-    let bytes = std::fs::read(&filepath)
-        .map_err(|e| format!("Failed to read file: {}", e))?;
+    // Try pdftotext (poppler) first
+    if let Ok(result) = extract_with_pdftotext(path, &filename) {
+        return Ok(result);
+    }
 
-    let full_text = pdf_extract::extract_text_from_mem(&bytes)
-        .map_err(|e| format!("Failed to extract PDF text: {}", e))?;
+    // Fallback: pure Rust pdf-extract
+    extract_with_pdf_extract(path, &filename)
+}
 
-    // Split into pages by form-feed character (common PDF page separator)
-    // pdf-extract doesn't provide per-page extraction directly,
-    // so we use form-feed (\x0C) as page delimiter
+/// Extract using poppler's pdftotext command-line tool
+fn extract_with_pdftotext(path: &str, filename: &str) -> Result<PdfExtractResult, String> {
+    use std::process::Command;
+
+    // Check if pdftotext exists
+    let output = Command::new("pdftotext")
+        .arg("-layout")
+        .arg(path)
+        .arg("-")
+        .output()
+        .map_err(|e| format!("pdftotext not available: {}", e))?;
+
+    if !output.status.success() {
+        return Err(format!("pdftotext failed: {}", String::from_utf8_lossy(&output.stderr)));
+    }
+
+    let full_text = String::from_utf8_lossy(&output.stdout).to_string();
+
+    // Split into pages by form-feed character
     let raw_pages: Vec<&str> = full_text.split('\u{000C}').collect();
     let pages: Vec<PdfPage> = raw_pages
         .iter()
@@ -59,11 +86,48 @@ fn extract_from_path(path: &str) -> Result<PdfExtractResult, String> {
 
     let total_pages = pages.len();
 
+    let (quality_score, is_garbled) = detect_text_quality(&full_text);
+
     Ok(PdfExtractResult {
-        filename,
+        filename: filename.to_string(),
         total_pages,
         pages,
         full_text: full_text.trim().to_string(),
+        quality_score,
+        is_garbled,
+    })
+}
+
+/// Extract using pure Rust pdf-extract crate (fallback)
+fn extract_with_pdf_extract(path: &str, filename: &str) -> Result<PdfExtractResult, String> {
+    let bytes = std::fs::read(path)
+        .map_err(|e| format!("Failed to read file: {}", e))?;
+
+    let full_text = pdf_extract::extract_text_from_mem(&bytes)
+        .map_err(|e| format!("Failed to extract PDF text: {}", e))?;
+
+    let raw_pages: Vec<&str> = full_text.split('\u{000C}').collect();
+    let pages: Vec<PdfPage> = raw_pages
+        .iter()
+        .enumerate()
+        .map(|(i, text)| PdfPage {
+            page_number: i + 1,
+            text: text.trim().to_string(),
+        })
+        .filter(|p| !p.text.is_empty())
+        .collect();
+
+    let total_pages = pages.len();
+
+    let (quality_score, is_garbled) = detect_text_quality(&full_text);
+
+    Ok(PdfExtractResult {
+        filename: filename.to_string(),
+        total_pages,
+        pages,
+        full_text: full_text.trim().to_string(),
+        quality_score,
+        is_garbled,
     })
 }
 
@@ -104,6 +168,76 @@ fn clean_text(text: &str) -> String {
     }
 
     result.join("\n")
+}
+
+/// Detect if extracted text is garbled (e.g., anti-copy font encoding).
+/// Returns (quality_score, is_garbled).
+/// Samples multiple positions in the text to handle mixed-quality PDFs.
+fn detect_text_quality(text: &str) -> (f64, bool) {
+    if text.is_empty() {
+        return (0.0, true);
+    }
+
+    // Sample from multiple positions: 10%, 25%, 50%, 75%
+    let positions = [text.len() / 10, text.len() / 4, text.len() / 2, text.len() * 3 / 4];
+    let mut scores: Vec<f64> = Vec::new();
+
+    for &start in &positions {
+        let end = (start + 3000).min(text.len());
+        let sample = &text[start..end];
+        scores.push(score_sample(sample));
+    }
+
+    // Use the minimum score — if any section is garbled, flag it
+    let min_score = scores.iter().cloned().fold(f64::INFINITY, f64::min);
+    let avg_score = scores.iter().sum::<f64>() / scores.len() as f64;
+    // Weighted: 60% min + 40% avg (garbled sections should dominate)
+    let quality = min_score * 0.6 + avg_score * 0.4;
+    let is_garbled = quality < 0.5;
+    (quality, is_garbled)
+}
+
+/// Score a text sample for readability (0.0 = garbled, 1.0 = perfect)
+fn score_sample(sample: &str) -> f64 {
+    let ascii_chars: Vec<char> = sample.chars().filter(|c| c.is_ascii_alphabetic()).collect();
+    if ascii_chars.len() < 20 {
+        // Too few ASCII chars to judge — might be all-CJK, consider OK
+        return 0.8;
+    }
+
+    // Test 1: Common English word detection
+    let common_words = [
+        "the", "and", "for", "that", "this", "with", "from", "which", "are", "was",
+        "not", "but", "have", "has", "can", "will", "all", "each", "you", "about",
+        "one", "two", "what", "when", "how", "its", "into", "been", "than", "may",
+    ];
+    let lower_sample = sample.to_lowercase();
+    let word_hits: usize = common_words.iter()
+        .filter(|w| lower_sample.contains(**w))
+        .count();
+    let word_score = (word_hits as f64 / 10.0).min(1.0);
+
+    // Test 2: Uppercase ratio (garbled text tends to have abnormally high uppercase)
+    let upper_count = ascii_chars.iter().filter(|c| c.is_ascii_uppercase()).count();
+    let upper_ratio = upper_count as f64 / ascii_chars.len() as f64;
+    // Normal English: ~5-15% uppercase. Garbled: often >40%
+    let case_score = if upper_ratio > 0.4 { 0.2 } else if upper_ratio > 0.3 { 0.5 } else { 1.0 };
+
+    // Test 3: Consecutive consonant detection (garbled text has weird consonant clusters)
+    let consonants = "bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ";
+    let mut max_consec = 0usize;
+    let mut cur_consec = 0usize;
+    for ch in sample.chars() {
+        if consonants.contains(ch) {
+            cur_consec += 1;
+            max_consec = max_consec.max(cur_consec);
+        } else {
+            cur_consec = 0;
+        }
+    }
+    let consec_score = if max_consec > 8 { 0.2 } else if max_consec > 6 { 0.5 } else { 1.0 };
+
+    word_score * 0.5 + case_score * 0.3 + consec_score * 0.2
 }
 
 // ─── Tauri Commands ──────────────────────────────────────────────
@@ -434,4 +568,302 @@ pub async fn ai_vision_enhance_page(
         messages,
     )
     .await
+}
+
+// ─── Apple Vision OCR (macOS only, free, local) ──────────────────
+
+/// Path to the compiled Apple Vision OCR binary (cached after first compile).
+fn get_apple_ocr_binary() -> Result<PathBuf, String> {
+    let cache_dir = dirs::cache_dir()
+        .ok_or("Cannot determine cache directory")?
+        .join("SocraticNovel");
+    std::fs::create_dir_all(&cache_dir)
+        .map_err(|e| format!("Failed to create cache dir: {}", e))?;
+
+    let binary_path = cache_dir.join("apple_ocr");
+
+    // Find the Swift source relative to the executable or in known locations
+    let swift_source = find_apple_ocr_source()?;
+
+    // Recompile if binary doesn't exist or source is newer
+    let needs_compile = if binary_path.exists() {
+        let bin_modified = std::fs::metadata(&binary_path)
+            .and_then(|m| m.modified())
+            .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+        let src_modified = std::fs::metadata(&swift_source)
+            .and_then(|m| m.modified())
+            .unwrap_or(std::time::SystemTime::now());
+        src_modified > bin_modified
+    } else {
+        true
+    };
+
+    if needs_compile {
+        let output = std::process::Command::new("swiftc")
+            .args(["-O", "-o"])
+            .arg(&binary_path)
+            .arg(&swift_source)
+            .output()
+            .map_err(|e| format!("swiftc not available: {}", e))?;
+
+        if !output.status.success() {
+            return Err(format!(
+                "Failed to compile apple_ocr: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
+        }
+    }
+
+    Ok(binary_path)
+}
+
+/// Locate the apple_ocr.swift source file.
+fn find_apple_ocr_source() -> Result<PathBuf, String> {
+    // Check relative to the executable (works in dev and bundled)
+    if let Ok(exe) = std::env::current_exe() {
+        // Dev: <project>/src-tauri/target/debug/socratic-novel → <project>/scripts/
+        let mut dir = exe.clone();
+        for _ in 0..4 {
+            dir = dir.parent().unwrap_or(Path::new("/")).to_path_buf();
+            let candidate = dir.join("scripts").join("apple_ocr.swift");
+            if candidate.exists() {
+                return Ok(candidate);
+            }
+        }
+        // Bundled macOS app: .app/Contents/MacOS/socratic-novel → .app/Contents/Resources/
+        if let Some(parent) = exe.parent() {
+            let candidate = parent
+                .parent()
+                .unwrap_or(parent)
+                .join("Resources")
+                .join("apple_ocr.swift");
+            if candidate.exists() {
+                return Ok(candidate);
+            }
+        }
+    }
+
+    Err("apple_ocr.swift not found. Ensure scripts/apple_ocr.swift exists.".to_string())
+}
+
+/// Render a PDF page to a temp JPEG file for Apple Vision OCR.
+fn render_page_to_temp_jpeg(pdf_path: &str, page_number: usize, dpi: u32) -> Result<PathBuf, String> {
+    // First try pdftoppm (faster, no library dependency)
+    if let Some(pdftoppm) = find_pdftoppm() {
+        let tmp_prefix = format!("/tmp/socratic_ocr_{}", page_number);
+        let output = std::process::Command::new(&pdftoppm)
+            .args([
+                "-f", &page_number.to_string(),
+                "-l", &page_number.to_string(),
+                "-r", &dpi.to_string(),
+                "-jpeg",
+                "-singlefile",
+                pdf_path,
+                &tmp_prefix,
+            ])
+            .output()
+            .map_err(|e| format!("pdftoppm failed: {}", e))?;
+
+        if output.status.success() {
+            let jpg_path = PathBuf::from(format!("{}.jpg", tmp_prefix));
+            if jpg_path.exists() {
+                return Ok(jpg_path);
+            }
+        }
+    }
+
+    // Fallback: render via PDFium to base64, decode, save to temp file
+    let b64 = render_page_to_base64(pdf_path, page_number, dpi)?;
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(&b64)
+        .map_err(|e| format!("base64 decode error: {}", e))?;
+    let tmp_path = PathBuf::from(format!("/tmp/socratic_ocr_{}.jpg", page_number));
+    std::fs::write(&tmp_path, &bytes)
+        .map_err(|e| format!("Failed to write temp image: {}", e))?;
+    Ok(tmp_path)
+}
+
+/// OCR a single PDF page using Apple Vision (macOS only).
+#[tauri::command]
+pub fn apple_vision_ocr_page(pdf_path: String, page_number: usize) -> Result<String, String> {
+    #[cfg(not(target_os = "macos"))]
+    return Err("Apple Vision OCR is only available on macOS".to_string());
+
+    #[cfg(target_os = "macos")]
+    {
+        let binary = get_apple_ocr_binary()?;
+        let img_path = render_page_to_temp_jpeg(&pdf_path, page_number, 300)?;
+
+        let output = std::process::Command::new(&binary)
+            .arg(img_path.to_str().unwrap_or_default())
+            .arg("--lang")
+            .arg("zh-Hans,en-US")
+            .output()
+            .map_err(|e| format!("apple_ocr failed: {}", e))?;
+
+        // Clean up temp file
+        let _ = std::fs::remove_file(&img_path);
+
+        if !output.status.success() {
+            return Err(format!(
+                "Apple Vision OCR failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
+        }
+
+        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    }
+}
+
+/// OCR all pages of a garbled PDF using Apple Vision.
+/// Emits "ocr-progress" events with {current, total, filename} for each page.
+/// Returns a PdfExtractResult with Vision-extracted text.
+#[tauri::command]
+pub fn apple_vision_ocr_full(app: AppHandle, pdf_path: String) -> Result<PdfExtractResult, String> {
+    #[cfg(not(target_os = "macos"))]
+    return Err("Apple Vision OCR is only available on macOS".to_string());
+
+    #[cfg(target_os = "macos")]
+    {
+        use tauri::Emitter;
+
+        let filepath = PathBuf::from(&pdf_path);
+        if !filepath.exists() {
+            return Err(format!("File not found: {}", pdf_path));
+        }
+
+        let filename = filepath
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+
+        // First, get page count from pdftotext extraction
+        let base_result = extract_from_path(&pdf_path)?;
+        let total_pages = base_result.total_pages;
+
+        let binary = get_apple_ocr_binary()?;
+        let mut pages = Vec::new();
+        let mut full_text = String::new();
+
+        for page_num in 1..=total_pages {
+            // Emit progress
+            let _ = app.emit("ocr-progress", serde_json::json!({
+                "current": page_num,
+                "total": total_pages,
+                "filename": &filename,
+            }));
+
+            let img_path = render_page_to_temp_jpeg(&pdf_path, page_num, 300)?;
+
+            let output = std::process::Command::new(&binary)
+                .arg(img_path.to_str().unwrap_or_default())
+                .arg("--lang")
+                .arg("zh-Hans,en-US")
+                .output()
+                .map_err(|e| format!("apple_ocr page {} failed: {}", page_num, e))?;
+
+            let _ = std::fs::remove_file(&img_path);
+
+            let text = if output.status.success() {
+                String::from_utf8_lossy(&output.stdout).trim().to_string()
+            } else {
+                format!("[OCR failed for page {}]", page_num)
+            };
+
+            if !full_text.is_empty() {
+                full_text.push_str("\n\n---\n\n");
+            }
+            full_text.push_str(&text);
+
+            pages.push(PdfPage {
+                page_number: page_num,
+                text,
+            });
+        }
+
+        Ok(PdfExtractResult {
+            filename,
+            total_pages,
+            pages,
+            full_text,
+            quality_score: 1.0,
+            is_garbled: false,
+        })
+    }
+}
+
+/// Check if Apple Vision OCR is available (macOS only, needs swiftc).
+#[tauri::command]
+pub fn check_apple_vision_available() -> bool {
+    #[cfg(not(target_os = "macos"))]
+    return false;
+
+    #[cfg(target_os = "macos")]
+    {
+        // Check if swiftc is available
+        std::process::Command::new("swiftc")
+            .arg("--version")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Instant;
+
+    #[test]
+    fn test_pdf_speed() {
+        let path = "/Users/wujunjie/Desktop/AP/AP-力学/TD 2025版 AP 物理C力学  刷题册.pdf";
+        if !PathBuf::from(path).exists() {
+            println!("Skip: test file not found");
+            return;
+        }
+        let start = Instant::now();
+        let result = extract_from_path(path).expect("extraction failed");
+        let elapsed = start.elapsed();
+        println!("PDF: {} pages, {} chars, quality={:.2}, garbled={}, took {:?}",
+            result.total_pages, result.full_text.len(), result.quality_score, result.is_garbled, elapsed);
+        // 刷题册 uses anti-copy font encoding
+        assert!(result.is_garbled, "刷题册 should be detected as garbled");
+    }
+
+    #[test]
+    fn test_pdf_pdftotext_vs_fallback() {
+        let path = "/Users/wujunjie/Desktop/AP/AP-力学/TD 2025版 AP 物理C力学  讲义.pdf";
+        if !PathBuf::from(path).exists() {
+            println!("Skip: test file not found");
+            return;
+        }
+
+        let start = Instant::now();
+        let result = extract_with_pdftotext(path, "讲义.pdf");
+        let elapsed = start.elapsed();
+        match &result {
+            Ok(r) => println!("pdftotext: {} pages, {} chars, quality={:.2}, garbled={}, {:?}",
+                r.total_pages, r.full_text.len(), r.quality_score, r.is_garbled, elapsed),
+            Err(e) => println!("pdftotext failed: {}", e),
+        }
+        assert!(result.is_ok(), "pdftotext should work");
+        // 讲义 also uses anti-copy font encoding
+        assert!(result.unwrap().is_garbled, "讲义 should be detected as garbled");
+    }
+
+    #[test]
+    fn test_pdf_good_quality() {
+        let path = "/Users/wujunjie/Desktop/AP/AP-力学/TD 2025版 AP 物理C力学  练习册.pdf";
+        if !PathBuf::from(path).exists() {
+            println!("Skip: test file not found");
+            return;
+        }
+        let result = extract_from_path(path).expect("extraction failed");
+        println!("练习册: {} pages, quality={:.2}, garbled={}", result.total_pages, result.quality_score, result.is_garbled);
+        // 练习册 has normal font encoding
+        assert!(!result.is_garbled, "练习册 should NOT be detected as garbled");
+    }
 }

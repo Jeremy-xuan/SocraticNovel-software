@@ -115,9 +115,10 @@ export interface AppSettings {
   language: 'zh' | 'en' | 'auto';
   currentWorkspaceId: string | null;
   currentWorkspacePath: string | null;
-  aiProvider: 'anthropic' | 'openai' | 'google' | 'deepseek' | 'custom';
+  aiProvider: 'anthropic' | 'openai' | 'google' | 'deepseek' | 'github' | 'custom';
   aiModel: string | null;
   apiKeyConfigured: boolean;
+  githubClientId?: string;
 }
 
 // Tool definitions for AI
@@ -168,6 +169,8 @@ export interface PdfExtractResult {
   total_pages: number;
   pages: PdfPage[];
   fullText: string;
+  qualityScore: number;   // 0.0-1.0, below 0.5 suggests garbled text
+  isGarbled: boolean;     // true if anti-copy font encoding detected
 }
 
 // ─── Curriculum Outline ──────────────────────────────────────────
@@ -240,6 +243,13 @@ export interface CourseStructure {
   completedChapters: string;     // 已完成的章节（描述）
   learningPeriod: string;        // 学习周期
   topicOverview: string;         // 主题概览
+  uploadedMaterials: UploadedMaterial[];  // 已上传的课程材料
+}
+
+export interface UploadedMaterial {
+  originalName: string;          // 原始文件名
+  savedPath: string;             // 保存到 workspace 的路径
+  pageCount: number;             // 页数
 }
 
 export interface WorldSetting {

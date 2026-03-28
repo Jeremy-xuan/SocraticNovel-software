@@ -29,6 +29,10 @@ impl OpenAiClient {
                     .to_string(),
                 "gemini-2.5-flash".to_string(),
             ),
+            "github" => (
+                "https://models.inference.ai.azure.com/chat/completions".to_string(),
+                "gpt-4o".to_string(),
+            ),
             _ => (
                 "https://api.openai.com/v1/chat/completions".to_string(),
                 "gpt-4o".to_string(),

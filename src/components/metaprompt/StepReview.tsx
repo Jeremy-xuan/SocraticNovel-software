@@ -24,6 +24,24 @@ export default function StepReview({ data }: Props) {
         <Row label={t('stepReview.textbookFormat')} value={subject.textbookFormat} />
         <Row label={t('stepReview.workbook')} value={subject.hasWorkbook ? t('stepReview.workbookYes') : t('stepReview.workbookNo')} />
         <Row label={t('stepReview.totalChapters')} value={t('stepReview.chaptersUnit', { count: course.totalChapters })} />
+        {course.uploadedMaterials.length > 0 && (
+          <div className="flex gap-2 text-aux">
+            <span className="min-w-[5rem] shrink-0 text-text-placeholder">{t('stepReview.uploadedMaterials')}</span>
+            <div className="space-y-1">
+              {course.uploadedMaterials.map((mat, i) => (
+                <div key={i} className="text-text-main dark:text-text-main-dark">
+                  📄 {mat.originalName} ({t('stepReview.chaptersUnit', { count: mat.pageCount }).replace(/章/, '页')})
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {course.uploadedMaterials.length === 0 && (
+          <div className="flex gap-2 text-aux">
+            <span className="min-w-[5rem] shrink-0 text-text-placeholder">{t('stepReview.uploadedMaterials')}</span>
+            <span className="text-amber-500 dark:text-amber-400">⚠️ {t('stepReview.noMaterialsUploaded')}</span>
+          </div>
+        )}
         {course.completedChapters && <Row label={t('stepReview.completed')} value={course.completedChapters} />}
         {course.learningPeriod && <Row label={t('stepReview.learningPeriod')} value={course.learningPeriod} />}
         {course.topicOverview && <Row label={t('stepReview.topic')} value={course.topicOverview} />}

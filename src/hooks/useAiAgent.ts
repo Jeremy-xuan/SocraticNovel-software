@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '../stores/appStore';
 import i18n from '../i18n';
 import { startAiSession, sendChatMessage, sendTeachingMessage, sendPracticeMessage, sendMetaPromptMessage, setPracticePrompt, setMetaPromptPrompt, runPrepPhase, runPostLesson, setTeachingPrompt, onAgentEvent, onCanvasEvent, onGroupChatEvent, getMetaPromptContent } from '../lib/ai';
-import { getApiKey, readFile } from '../lib/tauri';
+import { getApiKey, readFile, getGithubToken } from '../lib/tauri';
 import type { ChatMessage, CanvasItem } from '../types';
 
 // Shared workspace path — read from store (set by LandingPage via initBuiltinWorkspace)
@@ -10,6 +10,17 @@ function getWorkspacePath(): string {
   const path = useAppStore.getState().settings.currentWorkspacePath;
   if (!path) throw new Error('Workspace path not initialized');
   return path;
+}
+
+async function getProviderApiKey(provider: string): Promise<string> {
+  if (provider === 'github') {
+    const token = await getGithubToken();
+    if (!token) throw new Error('GitHub not authenticated. Please login in Settings.');
+    return token;
+  }
+  const key = await getApiKey(provider);
+  if (!key) throw new Error(`No API key configured for ${provider}`);
+  return key;
 }
 
 export function useAiAgent() {
@@ -164,7 +175,7 @@ export function useAiAgent() {
   /// Run prep phase: reads workspace files and generates a lesson brief
   const runPrep = useCallback(async (workspacePath: string): Promise<string | null> => {
     const settings = useAppStore.getState().settings;
-    const apiKey = await getApiKey(settings.aiProvider);
+    const apiKey = await getProviderApiKey(settings.aiProvider);
     if (!apiKey) return null;
 
     try {
@@ -199,7 +210,7 @@ export function useAiAgent() {
   /// Send a message using the multi-agent teaching turn
   const sendTeaching = useCallback(async (text: string) => {
     const settings = useAppStore.getState().settings;
-    const apiKey = await getApiKey(settings.aiProvider);
+    const apiKey = await getProviderApiKey(settings.aiProvider);
     if (!apiKey) {
       addMessage({
         id: crypto.randomUUID(),
@@ -241,7 +252,7 @@ export function useAiAgent() {
   /// Legacy send (backward compatible, no prep phase)
   const sendMessage = useCallback(async (text: string) => {
     const settings = useAppStore.getState().settings;
-    const apiKey = await getApiKey(settings.aiProvider);
+    const apiKey = await getProviderApiKey(settings.aiProvider);
     if (!apiKey) {
       addMessage({
         id: crypto.randomUUID(),
@@ -283,7 +294,7 @@ export function useAiAgent() {
   /// Run post-lesson phase
   const runPostLesson_ = useCallback(async () => {
     const settings = useAppStore.getState().settings;
-    const apiKey = await getApiKey(settings.aiProvider);
+    const apiKey = await getProviderApiKey(settings.aiProvider);
     if (!apiKey) return;
 
     const workspacePath = getWorkspacePath();
@@ -338,7 +349,7 @@ export function useAiAgent() {
   /// Send a practice message (student question → AI Socratic guidance)
   const sendPractice = useCallback(async (text: string) => {
     const settings = useAppStore.getState().settings;
-    const apiKey = await getApiKey(settings.aiProvider);
+    const apiKey = await getProviderApiKey(settings.aiProvider);
     if (!apiKey) {
       addMessage({
         id: crypto.randomUUID(),
@@ -395,7 +406,7 @@ export function useAiAgent() {
   /// Send a message during Meta Prompt guided workspace creation
   const sendMetaPrompt = useCallback(async (text: string) => {
     const settings = useAppStore.getState().settings;
-    const apiKey = await getApiKey(settings.aiProvider);
+    const apiKey = await getProviderApiKey(settings.aiProvider);
     if (!apiKey) {
       addMessage({
         id: crypto.randomUUID(),

@@ -39,6 +39,15 @@
     "apiKeyPlaceholderNew": "输入 {{provider}} API Key...",
     "apiKeyPlaceholderReplace": "输入新 Key 覆盖...",
     "apiKeyStorage": "密钥将安全存储在 macOS Keychain 中",
+    "githubAuth": "认证",
+    "githubLogin": "使用 GitHub 登录",
+    "githubLoggingIn": "等待浏览器授权...",
+    "githubLogout": "退出登录",
+    "githubConnected": "已连接 GitHub",
+    "githubWaitingBrowser": "已在浏览器中打开 GitHub 授权页，请完成登录后返回...",
+    "githubClientIdRequired": "请先填写 GitHub OAuth Client ID",
+    "githubClientIdPlaceholder": "输入你的 GitHub OAuth App Client ID",
+    "githubClientIdHint": "前往 github.com/settings/developers 创建 OAuth App，Callback URL 填 http://localhost",
     "theme": "主题配色",
     "themeLight": "☀️ 浅色",
     "themeDark": "🌙 深色",
@@ -339,7 +348,11 @@
     "backToHome": "← 返回首页",
     "prevStep": "上一步",
     "startGenerate": "🚀 开始生成",
-    "stepOf": "{{current}} / {{total}}"
+    "stepOf": "{{current}} / {{total}}",
+    "noMaterialWarningTitle": "未上传任何课程材料",
+    "noMaterialWarningDesc": "你还没有上传课程大纲或教材 PDF，也没有填写主题概览。没有教学内容，AI 将无法进行有效教学。建议先上传材料。",
+    "goUploadMaterial": "返回上传材料",
+    "continueAnyway": "仍然继续"
   },
   "stepSubject": {
     "title": "📋 基础信息",
@@ -371,7 +384,19 @@
     "charCount2": "2 位",
     "charCount2Desc": "两种教学风格交替（推荐）",
     "charCount3": "3 位",
-    "charCount3Desc": "三种视角轮值，叙事最丰富"
+    "charCount3Desc": "三种视角轮值，叙事最丰富",
+    "uploadMaterials": "上传课程材料",
+    "uploadMaterialsDesc": "上传课程 PDF（教材、大纲、讲义等），系统会自动提取文本内容用于教学。",
+    "selectPdfFiles": "选择 PDF 文件",
+    "uploadingPdf": "正在导入...",
+    "pageCount": "{{count}} 页",
+    "noWorkspace": "请先选择 Workspace",
+    "garbledWarningTitle": "检测到防拷贝 PDF",
+    "garbledWarningDesc": "以下文件使用了防拷贝字体编码，纯文本提取的内容可能是乱码：",
+    "garbledWarningHint": "💡 建议前往「导入 PDF」页面使用 Vision OCR 模式重新导入这些文件，AI 会通过读取图片来正确识别内容。",
+    "garbledWarningHintVision": "💡 点击文件旁的按钮使用 Apple Vision 免费识别，或前往「导入 PDF」页面使用 AI Vision 获得更高质量（含 LaTeX 公式）的识别结果。",
+    "useAppleVision": "Vision 识别",
+    "ocrProcessing": "识别中…"
   },
   "stepCharacters": {
     "title": "🎭 角色创建",
@@ -513,7 +538,9 @@
     "groupChatEnabled": "启用「{{name}}」",
     "groupChatUnnamed": "未命名",
     "groupChatDisabled": "不启用",
-    "keyEvents": "关键事件"
+    "keyEvents": "关键事件",
+    "uploadedMaterials": "课程材料",
+    "noMaterialsUploaded": "未上传任何课程材料"
   },
   "chatInput": {
     "placeholderDisabled": "等待 AI 回复...",

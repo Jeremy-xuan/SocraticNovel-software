@@ -17,7 +17,7 @@ const STEPS = [
 
 const DEFAULT_QUESTIONNAIRE: MetaPromptQuestionnaire = {
   subject: { subjectName: '', textbook: '', textbookFormat: 'pdf', hasWorkbook: false },
-  course: { totalChapters: 0, completedChapters: '', learningPeriod: '', topicOverview: '' },
+  course: { totalChapters: 0, completedChapters: '', learningPeriod: '', topicOverview: '', uploadedMaterials: [] },
   characterCount: 2,
   characters: [],
   world: {
@@ -51,6 +51,7 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
   const { t } = useTranslation();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<MetaPromptQuestionnaire>(DEFAULT_QUESTIONNAIRE);
+  const [showNoMaterialWarning, setShowNoMaterialWarning] = useState(false);
 
   const updateData = useCallback((partial: Partial<MetaPromptQuestionnaire>) => {
     setData(prev => ({ ...prev, ...partial }));
@@ -69,8 +70,18 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
   };
 
   const handleNext = () => {
+    if (step === 4 && data.course.uploadedMaterials.length === 0 && !data.course.topicOverview.trim()) {
+      setShowNoMaterialWarning(true);
+      return;
+    }
+    setShowNoMaterialWarning(false);
     if (step < 5) setStep(step + 1);
     else onComplete(data);
+  };
+
+  const handleConfirmNoMaterial = () => {
+    setShowNoMaterialWarning(false);
+    setStep(5);
   };
 
   const handlePrev = () => {
@@ -144,6 +155,35 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
           </button>
         </div>
       </div>
+
+      {/* No-material warning modal */}
+      {showNoMaterialWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="mx-4 max-w-md rounded-card border border-border-light bg-surface-light p-6 shadow-xl dark:border-border-dark dark:bg-surface-dark">
+            <div className="mb-3 text-2xl">⚠️</div>
+            <h3 className="mb-2 text-subtitle font-medium text-text-main dark:text-text-main-dark">
+              {t('wizard.noMaterialWarningTitle')}
+            </h3>
+            <p className="mb-5 text-aux text-text-sub dark:text-text-placeholder">
+              {t('wizard.noMaterialWarningDesc')}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowNoMaterialWarning(false); setStep(1); }}
+                className="flex-1 rounded-btn bg-primary px-4 py-2.5 text-aux font-medium text-white hover:bg-[#BF6A4E]"
+              >
+                {t('wizard.goUploadMaterial')}
+              </button>
+              <button
+                onClick={handleConfirmNoMaterial}
+                className="rounded-btn border border-border-light px-4 py-2.5 text-aux text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-main-dark dark:hover:bg-slate-700"
+              >
+                {t('wizard.continueAnyway')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

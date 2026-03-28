@@ -39,6 +39,15 @@
     "apiKeyPlaceholderNew": "Enter {{provider}} API Key...",
     "apiKeyPlaceholderReplace": "Enter new Key to replace...",
     "apiKeyStorage": "Keys are securely stored in macOS Keychain",
+    "githubAuth": "Authentication",
+    "githubLogin": "Login with GitHub",
+    "githubLoggingIn": "Waiting for browser authorization...",
+    "githubLogout": "Logout",
+    "githubConnected": "Connected to GitHub",
+    "githubWaitingBrowser": "GitHub authorization page opened in browser. Please complete login and return here...",
+    "githubClientIdRequired": "Please enter a GitHub OAuth Client ID first",
+    "githubClientIdPlaceholder": "Enter your GitHub OAuth App Client ID",
+    "githubClientIdHint": "Go to github.com/settings/developers to create an OAuth App. Set Callback URL to http://localhost",
     "theme": "Theme",
     "themeLight": "☀️ Light",
     "themeDark": "🌙 Dark",
@@ -339,7 +348,11 @@
     "backToHome": "← Back to Home",
     "prevStep": "Previous",
     "startGenerate": "🚀 Start Generating",
-    "stepOf": "{{current}} / {{total}}"
+    "stepOf": "{{current}} / {{total}}",
+    "noMaterialWarningTitle": "No Course Materials Uploaded",
+    "noMaterialWarningDesc": "You haven't uploaded any course outlines or textbook PDFs, and haven't filled in the topic overview. Without teaching content, AI cannot teach effectively. We recommend uploading materials first.",
+    "goUploadMaterial": "Go Upload Materials",
+    "continueAnyway": "Continue Anyway"
   },
   "stepSubject": {
     "title": "📋 Basic Information",
@@ -371,7 +384,19 @@
     "charCount2": "2",
     "charCount2Desc": "Two teaching styles alternating (recommended)",
     "charCount3": "3",
-    "charCount3Desc": "Three perspectives rotating, richest narrative"
+    "charCount3Desc": "Three perspectives rotating, richest narrative",
+    "uploadMaterials": "Upload Course Materials",
+    "uploadMaterialsDesc": "Upload course PDFs (textbooks, syllabi, handouts). The system will auto-extract text for teaching.",
+    "selectPdfFiles": "Select PDF files",
+    "uploadingPdf": "Importing...",
+    "pageCount": "{{count}} pages",
+    "noWorkspace": "Please select a Workspace first",
+    "garbledWarningTitle": "Anti-copy PDF detected",
+    "garbledWarningDesc": "The following files use anti-copy font encoding. Text extraction may produce garbled content:",
+    "garbledWarningHint": "💡 Go to \"Import PDF\" page and use Vision OCR mode to re-import these files. AI will read the rendered images to correctly extract content.",
+    "garbledWarningHintVision": "💡 Click the button next to each file to use free Apple Vision OCR, or go to \"Import PDF\" page for higher quality AI Vision results (with LaTeX formulas).",
+    "useAppleVision": "Vision OCR",
+    "ocrProcessing": "Processing…"
   },
   "stepCharacters": {
     "title": "🎭 Character Creation",
@@ -513,7 +538,9 @@
     "groupChatEnabled": "Enabled \"{{name}}\"",
     "groupChatUnnamed": "Unnamed",
     "groupChatDisabled": "Disabled",
-    "keyEvents": "Key Events"
+    "keyEvents": "Key Events",
+    "uploadedMaterials": "Course Materials",
+    "noMaterialsUploaded": "No course materials uploaded"
   },
   "chatInput": {
     "placeholderDisabled": "Waiting for AI response...",

@@ -608,7 +608,7 @@ pub async fn run_agent_turn(
                     None, // Legacy path: no output limiter
                 ).await?
             }
-            "openai" | "deepseek" | "google" => {
+            "openai" | "deepseek" | "google" | "github" => {
                 let client = OpenAiClient::with_model(api_key.to_string(), provider, model);
                 process_openai_streaming(
                     app, &client, &system_prompt, messages.clone(), &tool_defs,
@@ -757,7 +757,7 @@ async fn run_phase_loop(
                     output_limiter.as_mut(),
                 ).await?
             }
-            "openai" | "deepseek" | "google" => {
+            "openai" | "deepseek" | "google" | "github" => {
                 let client = OpenAiClient::with_model(api_key.to_string(), provider, model);
                 process_openai_streaming(
                     app, &client, system_prompt, messages.clone(), &active_tools,

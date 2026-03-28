@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
-import { setApiKey, hasApiKey } from '../lib/tauri';
+import { setApiKey, hasApiKey, startGithubOauth, checkGithubAuth, logoutGithub } from '../lib/tauri';
 import i18n from '../i18n';
 
 const PROVIDER_MODELS: Record<string, Array<{ id: string; label: string; default?: boolean }>> = {
@@ -27,6 +27,13 @@ const PROVIDER_MODELS: Record<string, Array<{ id: string; label: string; default
     { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', default: false },
     { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
   ],
+  github: [
+    { id: 'gpt-4o', label: 'GPT-4o', default: true },
+    { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
+    { id: 'o3-mini', label: 'o3-mini' },
+    { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+    { id: 'Mistral-Large-2', label: 'Mistral Large 2' },
+  ],
 };
 
 const MODEL_LABEL_SUFFIX: Record<string, string> = {
@@ -46,13 +53,24 @@ export default function SettingsPage() {
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [saved, setSaved] = useState(false);
   const [keyExists, setKeyExists] = useState(false);
+  const [githubAuthed, setGithubAuthed] = useState(false);
+  const [githubLoading, setGithubLoading] = useState(false);
+  const [githubError, setGithubError] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if key exists for current provider
-    hasApiKey(settings.aiProvider).then((exists) => {
-      setKeyExists(exists);
-      updateSettings({ apiKeyConfigured: exists });
-    });
+    if (settings.aiProvider === 'github') {
+      checkGithubAuth().then((authed) => {
+        setGithubAuthed(authed);
+        setKeyExists(authed);
+        updateSettings({ apiKeyConfigured: authed });
+      });
+    } else {
+      hasApiKey(settings.aiProvider).then((exists) => {
+        setKeyExists(exists);
+        updateSettings({ apiKeyConfigured: exists });
+      });
+    }
   }, [settings.aiProvider]);
 
   const handleSaveKey = async () => {
@@ -66,6 +84,35 @@ export default function SettingsPage() {
       setApiKeyInput('');
     } catch (err) {
       console.error('Failed to save API key:', err);
+    }
+  };
+
+  const handleGithubLogin = async () => {
+    const clientId = settings.githubClientId?.trim();
+    if (!clientId) {
+      setGithubError(t('settings.githubClientIdRequired'));
+      return;
+    }
+    setGithubLoading(true);
+    setGithubError(null);
+    try {
+      await startGithubOauth(clientId);
+      setGithubAuthed(true);
+      updateSettings({ apiKeyConfigured: true });
+    } catch (err: unknown) {
+      setGithubError(String(err));
+    } finally {
+      setGithubLoading(false);
+    }
+  };
+
+  const handleGithubLogout = async () => {
+    try {
+      await logoutGithub();
+      setGithubAuthed(false);
+      updateSettings({ apiKeyConfigured: false });
+    } catch (err) {
+      console.error('Failed to logout GitHub:', err);
     }
   };
 
@@ -93,7 +140,7 @@ export default function SettingsPage() {
             {t('settings.providerDesc')}
           </p>
           <div className="grid grid-cols-2 gap-3">
-            {(['anthropic', 'openai', 'google', 'deepseek'] as const).map((provider) => (
+            {(['anthropic', 'openai', 'google', 'deepseek', 'github'] as const).map((provider) => (
               <button
                 key={provider}
                 onClick={() => updateSettings({ aiProvider: provider, aiModel: null })}
@@ -106,6 +153,7 @@ export default function SettingsPage() {
                 {provider === 'openai' && '🟢 OpenAI'}
                 {provider === 'google' && '🔵 Google (Gemini)'}
                 {provider === 'deepseek' && '🔷 DeepSeek'}
+                {provider === 'github' && '🐙 GitHub Models'}
               </button>
             ))}
           </div>
@@ -140,34 +188,93 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* API Key */}
+        {/* API Key / GitHub OAuth */}
         <section className="mb-8">
-          <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
-            API Key
-          </h2>
-          {keyExists && (
-            <p className="mb-3 text-aux text-green-600 dark:text-green-400">
-              {t('settings.apiKeySaved', { provider: settings.aiProvider })}
-            </p>
+          {settings.aiProvider === 'github' ? (
+            <>
+              <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
+                GitHub {t('settings.githubAuth')}
+              </h2>
+
+              {/* Client ID input */}
+              <div className="mb-4">
+                <label className="mb-1 block text-tag tracking-[0.04em] text-text-placeholder">
+                  GitHub OAuth Client ID
+                </label>
+                <input
+                  type="text"
+                  value={settings.githubClientId ?? ''}
+                  onChange={(e) => updateSettings({ githubClientId: e.target.value })}
+                  placeholder={t('settings.githubClientIdPlaceholder')}
+                  className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2 text-aux text-text-main placeholder-text-placeholder focus:border-blue-500 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-main-dark"
+                />
+                <p className="mt-1 text-tag tracking-[0.04em] text-text-placeholder">
+                  {t('settings.githubClientIdHint')}
+                </p>
+              </div>
+
+              {githubAuthed ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-aux text-green-600 dark:text-green-400">
+                    ✅ {t('settings.githubConnected')}
+                  </span>
+                  <button
+                    onClick={handleGithubLogout}
+                    className="rounded-btn border border-red-300 px-3 py-1.5 text-tag text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                  >
+                    {t('settings.githubLogout')}
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <button
+                    onClick={handleGithubLogin}
+                    disabled={githubLoading}
+                    className="flex items-center gap-2 rounded-btn bg-[#24292f] px-5 py-2.5 text-aux font-medium text-white hover:bg-[#32383f] disabled:opacity-60 dark:bg-[#f0f6fc] dark:text-[#24292f] dark:hover:bg-[#d0d7de]"
+                  >
+                    🐙 {githubLoading ? t('settings.githubLoggingIn') : t('settings.githubLogin')}
+                  </button>
+                  {githubLoading && (
+                    <p className="mt-2 text-tag text-text-placeholder">
+                      {t('settings.githubWaitingBrowser')}
+                    </p>
+                  )}
+                  {githubError && (
+                    <p className="mt-2 text-tag text-red-500 dark:text-red-400">{githubError}</p>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
+                API Key
+              </h2>
+              {keyExists && (
+                <p className="mb-3 text-aux text-green-600 dark:text-green-400">
+                  {t('settings.apiKeySaved', { provider: settings.aiProvider })}
+                </p>
+              )}
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  placeholder={keyExists ? t('settings.apiKeyPlaceholderReplace') : t('settings.apiKeyPlaceholderNew', { provider: settings.aiProvider })}
+                  className="flex-1 rounded-btn border border-border-light bg-surface-light px-4 py-2 text-aux text-text-main placeholder-text-placeholder focus:bg-surface-light focus:border-blue-500 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-main-dark"
+                />
+                <button
+                  onClick={handleSaveKey}
+                  className="rounded-btn bg-primary px-4 py-2 text-aux font-medium text-white hover:bg-[#BF6A4E] h-[38px]"
+                >
+                  {saved ? t('common.saved') : t('common.save')}
+                </button>
+              </div>
+              <p className="mt-2 text-tag tracking-[0.04em] text-text-placeholder">
+                {t('settings.apiKeyStorage')}
+              </p>
+            </>
           )}
-          <div className="flex gap-2">
-            <input
-              type="password"
-              value={apiKeyInput}
-              onChange={(e) => setApiKeyInput(e.target.value)}
-              placeholder={keyExists ? t('settings.apiKeyPlaceholderReplace') : t('settings.apiKeyPlaceholderNew', { provider: settings.aiProvider })}
-              className="flex-1 rounded-btn border border-border-light bg-surface-light px-4 py-2 text-aux text-text-main placeholder-text-placeholder focus:bg-surface-light focus:border-blue-500 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-main-dark"
-            />
-            <button
-              onClick={handleSaveKey}
-              className="rounded-btn bg-primary px-4 py-2 text-aux font-medium text-white hover:bg-[#BF6A4E] h-[38px]"
-            >
-              {saved ? t('common.saved') : t('common.save')}
-            </button>
-          </div>
-          <p className="mt-2 text-tag tracking-[0.04em] text-text-placeholder">
-            {t('settings.apiKeyStorage')}
-          </p>
         </section>
 
         {/* Theme */}

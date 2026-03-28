@@ -1,5 +1,16 @@
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { MetaPromptQuestionnaire } from '../../types';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import type { MetaPromptQuestionnaire, UploadedMaterial } from '../../types';
+import { extractPdfText, importPdfToWorkspace, appleVisionOcrFull, checkAppleVisionAvailable } from '../../lib/tauri';
+import { useAppStore } from '../../stores/appStore';
+import { open } from '@tauri-apps/plugin-dialog';
+
+interface OcrProgress {
+  current: number;
+  total: number;
+  filename: string;
+}
 
 interface Props {
   data: MetaPromptQuestionnaire;
@@ -9,6 +20,23 @@ interface Props {
 export default function StepSubject({ data, onChange }: Props) {
   const { subject, course, characterCount } = data;
   const { t } = useTranslation();
+  const wsPath = useAppStore((s) => s.settings.currentWorkspacePath);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [garbledFiles, setGarbledFiles] = useState<string[]>([]);
+  const [visionAvailable, setVisionAvailable] = useState(false);
+  const [ocrProcessing, setOcrProcessing] = useState<string | null>(null);
+  const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null);
+  const unlistenRef = useRef<UnlistenFn | null>(null);
+
+  useEffect(() => {
+    checkAppleVisionAvailable().then(setVisionAvailable).catch(() => {});
+    // Listen for OCR progress events
+    listen<OcrProgress>('ocr-progress', (e) => {
+      setOcrProgress(e.payload);
+    }).then(fn => { unlistenRef.current = fn; });
+    return () => { unlistenRef.current?.(); };
+  }, []);
 
   const formatOptions = [
     { value: 'pdf', label: t('stepSubject.formatPdf') },
@@ -28,6 +56,72 @@ export default function StepSubject({ data, onChange }: Props) {
 
   const setCourse = (partial: Partial<typeof course>) =>
     onChange({ course: { ...course, ...partial } });
+
+  const handleUploadPdf = async () => {
+    if (!wsPath) {
+      setUploadError(t('stepSubject.noWorkspace'));
+      return;
+    }
+    try {
+      const selected = await open({
+        multiple: true,
+        filters: [{ name: 'PDF', extensions: ['pdf'] }],
+      });
+      if (!selected) return;
+
+      const files = Array.isArray(selected) ? selected : [selected];
+      setUploading(true);
+      setUploadError(null);
+
+      const newMaterials: UploadedMaterial[] = [];
+      const newGarbled: string[] = [];
+      for (const filePath of files) {
+        const extracted = await extractPdfText(filePath);
+        const targetName = extracted.filename.replace(/\.pdf$/i, '');
+        const savedPath = await importPdfToWorkspace(filePath, wsPath, targetName);
+        newMaterials.push({
+          originalName: extracted.filename,
+          savedPath,
+          pageCount: extracted.total_pages,
+        });
+        if (extracted.isGarbled) {
+          newGarbled.push(extracted.filename);
+        }
+      }
+      setCourse({ uploadedMaterials: [...course.uploadedMaterials, ...newMaterials] });
+      if (newGarbled.length > 0) {
+        setGarbledFiles(prev => [...prev, ...newGarbled]);
+      }
+    } catch (err) {
+      setUploadError(String(err));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveMaterial = (index: number) => {
+    const updated = course.uploadedMaterials.filter((_, i) => i !== index);
+    setCourse({ uploadedMaterials: updated });
+  };
+
+  const handleAppleVisionOcr = async (filename: string) => {
+    const material = course.uploadedMaterials.find(m => m.originalName === filename);
+    if (!material || !wsPath) return;
+    try {
+      setOcrProcessing(filename);
+      setOcrProgress(null);
+      const result = await appleVisionOcrFull(material.savedPath);
+      const targetName = filename.replace(/\.pdf$/i, '');
+      const { writeFile } = await import('../../lib/tauri');
+      await writeFile(wsPath, `materials/${targetName}.md`, result.fullText);
+      setGarbledFiles(prev => prev.filter(f => f !== filename));
+    } catch (err) {
+      setUploadError(`Vision OCR failed: ${String(err)}`);
+    } finally {
+      setOcrProcessing(null);
+      setOcrProgress(null);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -147,6 +241,100 @@ export default function StepSubject({ data, onChange }: Props) {
             className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
           />
         </div>
+      </section>
+
+      {/* Upload materials */}
+      <section className="space-y-4">
+        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepSubject.uploadMaterials')}</h3>
+        <p className="text-tag tracking-[0.04em] text-text-placeholder">{t('stepSubject.uploadMaterialsDesc')}</p>
+
+        {course.uploadedMaterials.length > 0 && (
+          <div className="space-y-2">
+            {course.uploadedMaterials.map((mat, i) => (
+              <div key={i} className="flex items-center justify-between rounded-btn border border-border-light bg-bg-light px-4 py-2.5 dark:border-slate-600 dark:bg-slate-700">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">📄</span>
+                  <span className="text-aux text-text-main dark:text-text-main-dark">{mat.originalName}</span>
+                  <span className="text-tag tracking-[0.04em] text-text-placeholder">
+                    {t('stepSubject.pageCount', { count: mat.pageCount })}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleRemoveMaterial(i)}
+                  className="text-tag text-red-400 hover:text-red-500"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button
+          onClick={handleUploadPdf}
+          disabled={uploading}
+          className="flex items-center gap-2 rounded-btn border-2 border-dashed border-border-light px-5 py-3 text-aux text-text-sub transition-colors hover:border-blue-400 hover:bg-blue-50/50 disabled:opacity-50 dark:border-slate-600 dark:text-text-placeholder dark:hover:border-blue-500 dark:hover:bg-blue-900/10"
+        >
+          {uploading ? (
+            <>⏳ {t('stepSubject.uploadingPdf')}</>
+          ) : (
+            <>📎 {t('stepSubject.selectPdfFiles')}</>
+          )}
+        </button>
+
+        {uploadError && (
+          <p className="text-tag text-red-500 dark:text-red-400">{uploadError}</p>
+        )}
+
+        {garbledFiles.length > 0 && (
+          <div className="rounded-btn border border-amber-300 bg-amber-50 p-4 dark:border-amber-600 dark:bg-amber-900/20">
+            <div className="mb-2 flex items-center gap-2 text-aux font-medium text-amber-700 dark:text-amber-300">
+              ⚠️ {t('stepSubject.garbledWarningTitle')}
+            </div>
+            <p className="mb-2 text-tag tracking-[0.04em] text-amber-600 dark:text-amber-400">
+              {t('stepSubject.garbledWarningDesc')}
+            </p>
+            <ul className="mb-2 space-y-1 text-tag text-amber-600 dark:text-amber-400">
+              {garbledFiles.map((name, i) => (
+                <li key={i} className="flex items-center justify-between">
+                  <span className="truncate">📄 {name}</span>
+                  {visionAvailable && (
+                    <button
+                      onClick={() => handleAppleVisionOcr(name)}
+                      disabled={ocrProcessing !== null}
+                      className="ml-2 shrink-0 rounded bg-amber-600 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                    >
+                      {ocrProcessing === name
+                        ? (ocrProgress
+                            ? `${ocrProgress.current}/${ocrProgress.total}`
+                            : t('stepSubject.ocrProcessing'))
+                        : t('stepSubject.useAppleVision')}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {ocrProcessing && ocrProgress && (
+              <div className="mb-2">
+                <div className="mb-1 flex justify-between text-[11px] text-amber-600 dark:text-amber-400">
+                  <span>{t('stepSubject.ocrProcessing')} {ocrProgress.filename}</span>
+                  <span>{ocrProgress.current}/{ocrProgress.total} ({Math.round(ocrProgress.current / ocrProgress.total * 100)}%)</span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-amber-200 dark:bg-amber-800">
+                  <div
+                    className="h-full rounded-full bg-amber-500 transition-all duration-300"
+                    style={{ width: `${(ocrProgress.current / ocrProgress.total) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
+            <p className="text-tag tracking-[0.04em] text-amber-600 dark:text-amber-400">
+              {visionAvailable
+                ? t('stepSubject.garbledWarningHintVision')
+                : t('stepSubject.garbledWarningHint')}
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Character count */}
