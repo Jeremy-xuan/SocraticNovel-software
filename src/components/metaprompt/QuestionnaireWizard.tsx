@@ -39,7 +39,9 @@ const DEFAULT_QUESTIONNAIRE: MetaPromptQuestionnaire = {
     groupChatName: '',
     groupChatStyle: '纯文字 + 偶尔 emoji',
     keyEvents: '',
+    storyReference: '',
   },
+  storyMode: 'standard',
 };
 
 interface Props {
@@ -63,7 +65,9 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
       case 2: return data.characters.length === data.characterCount
               && data.characters.every(c => !!c.name && !!c.teachingStyle);
       case 3: return !!data.world.locationStyle;
-      case 4: return data.story.emotionalPhases.length > 0;
+      case 4: return data.storyMode === 'standard'
+              ? true
+              : !!data.story.storyReference.trim();
       case 5: return true;
       default: return false;
     }

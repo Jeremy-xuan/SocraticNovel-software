@@ -72,9 +72,7 @@ export function serializeQuestionnaire(q: MetaPromptQuestionnaire): string {
   lines.push('');
   lines.push(`- **场景类型**: ${formatLocationStyle(q.world.locationStyle)}`);
   lines.push(`- **具体场景描述**: （由 AI 根据角色和场景类型生成）`);
-  if (q.world.characterRelations) {
-    lines.push(`- **角色关系**: ${q.world.characterRelations}`);
-  }
+  lines.push(`- **角色关系**: （由 AI 根据角色性格和背景自动设计）`);
   if (q.world.hasSupernatural) {
     lines.push(`- **超自然设定**: ${q.world.supernaturalElement}`);
   } else {
@@ -83,16 +81,25 @@ export function serializeQuestionnaire(q: MetaPromptQuestionnaire): string {
   lines.push('');
 
   // ─── Story ──────────────────────────────
-  lines.push('## 4. 故事设计');
+  lines.push('## 4. 故事与教学设计');
   lines.push('');
-  lines.push('### 情感阶段');
+
+  lines.push(`### 模式: ${q.storyMode === 'novel' ? '小说模式 (Beta)' : '标准教学模式'}`);
   lines.push('');
-  lines.push('| 阶段 | 覆盖范围 | 基调 |');
-  lines.push('|------|---------|------|');
-  q.story.emotionalPhases.forEach(phase => {
-    lines.push(`| ${phase.name} | ${phase.coveragePercent} | ${phase.tone} |`);
-  });
-  lines.push('');
+
+  if (q.storyMode === 'novel') {
+    if (q.story.storyReference) {
+      lines.push('### 参考作品 / 体验描述');
+      lines.push('');
+      lines.push(q.story.storyReference);
+      lines.push('');
+      lines.push('> AI 请根据以上参考，结合已有角色设计（暗线等），从头设计故事线、情感阶段和关键事件。遵循现有模板规则。');
+      lines.push('');
+    }
+  } else {
+    lines.push('> 标准模式：无固定故事线。AI 按教学进度自然推进，专注学科知识传递。角色暗线仍按模板规则隐含推进。');
+    lines.push('');
+  }
 
   if (q.characterCount > 1) {
     lines.push(`### 教师轮值: ${q.story.rotationStyle === 'round-robin' ? '等距轮换' : '专题分组'}`);
@@ -109,7 +116,7 @@ export function serializeQuestionnaire(q: MetaPromptQuestionnaire): string {
   }
   lines.push('');
 
-  if (q.story.keyEvents) {
+  if (q.storyMode === 'novel' && q.story.keyEvents) {
     lines.push('### 关键事件');
     lines.push('');
     lines.push(q.story.keyEvents);

@@ -59,23 +59,6 @@ export default function StepWorld({ data, onChange }: Props) {
         </p>
       </section>
 
-      {/* Character relations */}
-      {data.characterCount > 1 && (
-        <section className="space-y-4">
-          <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepWorld.characterRelations')}</h3>
-          <p className="text-tag tracking-[0.04em] text-text-sub">
-            {t('stepWorld.characterRelationsHint')}
-          </p>
-          <textarea
-            value={world.characterRelations}
-            onChange={e => setWorld({ characterRelations: e.target.value })}
-            placeholder={t('stepWorld.characterRelationsPlaceholder')}
-            rows={3}
-            className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
-          />
-        </section>
-      )}
-
       {/* Supernatural element */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">

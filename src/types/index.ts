@@ -254,11 +254,11 @@ export interface UploadedMaterial {
 }
 
 export interface WorldSetting {
-  location: string;              // 地点描述
+  location: string;              // 地点描述（AI 生成）
   locationStyle: 'enclosed' | 'semi-open' | 'everyday' | 'custom';
-  arrivalReason: string;         // 学习者到来的原因
+  arrivalReason: string;         // 学习者到来的原因（AI 生成）
   arrivalType: 'arranged' | 'self-sought' | 'accidental';
-  characterRelations: string;    // 角色之间的关系
+  characterRelations: string;    // 角色之间的关系（AI 生成）
   supernaturalElement: string;   // 超自然设定（可选）
   hasSupernatural: boolean;
 }
@@ -271,6 +271,8 @@ export interface EmotionalPhase {
   tone: string;                  // 基调
 }
 
+export type StoryMode = 'standard' | 'novel';
+
 export interface StoryDesign {
   emotionalTemplate: EmotionalPhaseTemplate;
   emotionalPhases: EmotionalPhase[];
@@ -280,6 +282,7 @@ export interface StoryDesign {
   groupChatName: string;
   groupChatStyle: string;
   keyEvents: string;             // 关键事件描述（自由文本）
+  storyReference: string;        // 小说模式：参考作品描述
 }
 
 export interface MetaPromptQuestionnaire {
@@ -289,6 +292,7 @@ export interface MetaPromptQuestionnaire {
   characters: CharacterDesign[];
   world: WorldSetting;
   story: StoryDesign;
+  storyMode: StoryMode;
 }
 
 // ─── Session History ─────────────────────────────────────────────

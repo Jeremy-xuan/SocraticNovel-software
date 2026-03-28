@@ -1,40 +1,19 @@
 import { useTranslation } from 'react-i18next';
-import type { MetaPromptQuestionnaire, EmotionalPhase } from '../../types';
+import type { MetaPromptQuestionnaire, StoryMode } from '../../types';
 
 interface Props {
   data: MetaPromptQuestionnaire;
   onChange: (partial: Partial<MetaPromptQuestionnaire>) => void;
 }
 
-const DEFAULT_FOUR_STAGES: EmotionalPhase[] = [
-  { name: '初期 — 距离', coveragePercent: '前25%', tone: '各占各的空间，教学是交易。节奏慢，日常占比高' },
-  { name: '中期 — 裂隙', coveragePercent: '25-60%', tone: '距离在缩短但没人承认。过往碎片渗出' },
-  { name: '后期 — 重力', coveragePercent: '60-85%', tone: '在意藏不住。教学的耐心本身就是情感' },
-  { name: '备考期 — 沉淀', coveragePercent: '最后15%', tone: '离别的影子。所有积累沉淀' },
-];
-
 export default function StepStory({ data, onChange }: Props) {
-  const { story } = data;
+  const { story, storyMode } = data;
   const { t } = useTranslation();
 
   const setStory = (partial: Partial<typeof story>) =>
     onChange({ story: { ...story, ...partial } });
 
-  const updatePhase = (idx: number, partial: Partial<EmotionalPhase>) => {
-    const phases = [...story.emotionalPhases];
-    phases[idx] = { ...phases[idx], ...partial };
-    setStory({ emotionalPhases: phases });
-  };
-
-  const addPhase = () => {
-    setStory({
-      emotionalPhases: [...story.emotionalPhases, { name: '', coveragePercent: '', tone: '' }],
-    });
-  };
-
-  const removePhase = (idx: number) => {
-    setStory({ emotionalPhases: story.emotionalPhases.filter((_, i) => i !== idx) });
-  };
+  const setMode = (mode: StoryMode) => onChange({ storyMode: mode });
 
   return (
     <div className="space-y-8">
@@ -43,87 +22,56 @@ export default function StepStory({ data, onChange }: Props) {
         <p className="text-aux text-text-sub">{t('stepStory.desc')}</p>
       </div>
 
-      {/* Emotional phases */}
+      {/* Mode selector */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepStory.emotionalPhases')}</h3>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setStory({ emotionalTemplate: 'four-stage', emotionalPhases: DEFAULT_FOUR_STAGES })}
-              className={`rounded-full border px-3 py-1 text-tag tracking-[0.04em] font-medium ${
-                story.emotionalTemplate === 'four-stage'
-                  ? 'border-blue-300 bg-blue-50 text-primary dark:border-blue-600 dark:bg-blue-900/30'
-                  : 'border-border-light text-text-sub dark:border-slate-600'
-              }`}
-            >
-              {t('stepStory.fourStageTemplate')}
-            </button>
-            <button
-              onClick={() => setStory({ emotionalTemplate: 'custom' })}
-              className={`rounded-full border px-3 py-1 text-tag tracking-[0.04em] font-medium ${
-                story.emotionalTemplate === 'custom'
-                  ? 'border-blue-300 bg-blue-50 text-primary dark:border-blue-600 dark:bg-blue-900/30'
-                  : 'border-border-light text-text-sub dark:border-slate-600'
-              }`}
-            >
-              {t('stepStory.customTemplate')}
-            </button>
-          </div>
-        </div>
-        <div className="space-y-3">
-          {story.emotionalPhases.map((phase, idx) => (
-            <div
-              key={idx}
-              className="flex items-start gap-3 rounded-btn border border-border-light bg-surface-light p-4 dark:border-slate-600 dark:bg-slate-700"
-            >
-              <span className="mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-bg-light text-tag tracking-[0.04em] font-medium text-text-sub dark:bg-slate-600 dark:text-text-main-dark">
-                {idx + 1}
-              </span>
-              <div className="flex-1 space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    value={phase.name}
-                    onChange={e => updatePhase(idx, { name: e.target.value })}
-                    placeholder={t('stepStory.phaseNamePlaceholder')}
-                    className="rounded border border-border-light px-3 py-1.5 text-aux dark:border-slate-500 dark:bg-slate-600 dark:text-text-main-dark"
-                  />
-                  <input
-                    type="text"
-                    value={phase.coveragePercent}
-                    onChange={e => updatePhase(idx, { coveragePercent: e.target.value })}
-                    placeholder={t('stepStory.coveragePlaceholder')}
-                    className="rounded border border-border-light px-3 py-1.5 text-aux dark:border-slate-500 dark:bg-slate-600 dark:text-text-main-dark"
-                  />
-                </div>
-                <input
-                  type="text"
-                  value={phase.tone}
-                  onChange={e => updatePhase(idx, { tone: e.target.value })}
-                  placeholder={t('stepStory.tonePlaceholder')}
-                  className="w-full rounded border border-border-light px-3 py-1.5 text-aux dark:border-slate-500 dark:bg-slate-600 dark:text-text-main-dark"
-                />
-              </div>
-              {story.emotionalTemplate === 'custom' && (
-                <button
-                  onClick={() => removePhase(idx)}
-                  className="mt-1 text-aux text-red-400 hover:text-danger"
-                >
-                  ✕
-                </button>
-              )}
+        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepStory.modeLabel')}</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setMode('standard')}
+            className={`rounded-card border p-4 text-left transition-colors ${
+              storyMode === 'standard'
+                ? 'border-blue-300 bg-blue-50 dark:border-blue-600 dark:bg-blue-900/20'
+                : 'border-border-light dark:border-slate-600'
+            }`}
+          >
+            <div className="mb-1 flex items-center gap-2">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342" /></svg>
+              <span className="font-medium text-text-main dark:text-text-main-dark">{t('stepStory.modeStandard')}</span>
             </div>
-          ))}
-          {story.emotionalTemplate === 'custom' && (
-            <button
-              onClick={addPhase}
-              className="w-full rounded-btn border border-dashed border-border-light py-2 text-aux text-text-placeholder hover:border-slate-400 hover:text-text-sub dark:border-slate-600"
-            >
-              {t('stepStory.addPhase')}
-            </button>
-          )}
+            <div className="text-tag tracking-[0.04em] text-text-sub">{t('stepStory.modeStandardDesc')}</div>
+          </button>
+          <button
+            onClick={() => setMode('novel')}
+            className={`rounded-card border p-4 text-left transition-colors ${
+              storyMode === 'novel'
+                ? 'border-blue-300 bg-blue-50 dark:border-blue-600 dark:bg-blue-900/20'
+                : 'border-border-light dark:border-slate-600'
+            }`}
+          >
+            <div className="mb-1 flex items-center gap-2">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>
+              <span className="font-medium text-text-main dark:text-text-main-dark">{t('stepStory.modeNovel')}</span>
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium tracking-wider text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Beta</span>
+            </div>
+            <div className="text-tag tracking-[0.04em] text-text-sub">{t('stepStory.modeNovelDesc')}</div>
+          </button>
         </div>
       </section>
+
+      {/* Novel mode: story reference */}
+      {storyMode === 'novel' && (
+        <section className="space-y-4">
+          <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepStory.storyReference')}</h3>
+          <p className="text-tag tracking-[0.04em] text-text-sub">{t('stepStory.storyReferenceHint')}</p>
+          <textarea
+            value={story.storyReference}
+            onChange={e => setStory({ storyReference: e.target.value })}
+            placeholder={t('stepStory.storyReferencePlaceholder')}
+            rows={4}
+            className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
+          />
+        </section>
+      )}
 
       {/* Rotation style */}
       {data.characterCount > 1 && (
@@ -204,20 +152,22 @@ export default function StepStory({ data, onChange }: Props) {
         )}
       </section>
 
-      {/* Key events */}
-      <section className="space-y-4">
-        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepStory.keyEvents')}</h3>
-        <p className="text-tag tracking-[0.04em] text-text-sub">
-          {t('stepStory.keyEventsHint')}
-        </p>
-        <textarea
-          value={story.keyEvents}
-          onChange={e => setStory({ keyEvents: e.target.value })}
-          placeholder={t('stepStory.keyEventsPlaceholder')}
-          rows={4}
-          className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
-        />
-      </section>
+      {/* Key events — novel mode only */}
+      {storyMode === 'novel' && (
+        <section className="space-y-4">
+          <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepStory.keyEvents')}</h3>
+          <p className="text-tag tracking-[0.04em] text-text-sub">
+            {t('stepStory.keyEventsHint')}
+          </p>
+          <textarea
+            value={story.keyEvents}
+            onChange={e => setStory({ keyEvents: e.target.value })}
+            placeholder={t('stepStory.keyEventsPlaceholder')}
+            rows={4}
+            className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
+          />
+        </section>
+      )}
     </div>
   );
 }

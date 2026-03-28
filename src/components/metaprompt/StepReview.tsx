@@ -85,23 +85,15 @@ export default function StepReview({ data }: Props) {
 
       {/* Story */}
       <Section title={t('stepReview.storySection')}>
-        <div className="mb-3">
-          <span className="text-tag tracking-[0.04em] font-medium text-text-sub">{t('stepReview.emotionalPhases')}</span>
-          <div className="mt-1 space-y-1">
-            {story.emotionalPhases.map((phase, i) => (
-              <div key={i} className="flex items-center gap-2 text-aux text-text-sub dark:text-text-main-dark">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-tag tracking-[0.04em] dark:bg-slate-600">{i + 1}</span>
-                <span className="font-medium">{phase.name}</span>
-                <span className="text-text-placeholder">({phase.coveragePercent})</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <Row label={t('stepReview.storyMode')} value={data.storyMode === 'novel' ? t('stepReview.storyModeNovel') : t('stepReview.storyModeStandard')} />
+        {data.storyMode === 'novel' && story.storyReference && (
+          <Row label={t('stepReview.storyReference')} value={story.storyReference} />
+        )}
         {data.characterCount > 1 && (
           <Row label={t('stepReview.rotationStyle')} value={story.rotationStyle === 'round-robin' ? t('stepReview.rotationRoundRobin') : t('stepReview.rotationThematic')} />
         )}
         <Row label={t('stepReview.groupChat')} value={story.enableGroupChat ? t('stepReview.groupChatEnabled', { name: story.groupChatName || t('stepReview.groupChatUnnamed') }) : t('stepReview.groupChatDisabled')} />
-        {story.keyEvents && <Row label={t('stepReview.keyEvents')} value={story.keyEvents} />}
+        {data.storyMode === 'novel' && story.keyEvents && <Row label={t('stepReview.keyEvents')} value={story.keyEvents} />}
       </Section>
     </div>
   );
