@@ -643,7 +643,8 @@
     "aiConvertNote": "AI enhanced conversion ({{mode}}), {{pages}} pages total",
     "modeVisionApi": "Vision API",
     "modeTextOptimize": "Text Optimize",
-    "pageHeader": "Page {{page}}"
+    "pageHeader": "Page {{page}}",
+    "modelLabel": "Model"
   },
   "history": {
     "title": "Session History",

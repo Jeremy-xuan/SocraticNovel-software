@@ -643,7 +643,8 @@
     "aiConvertNote": "AI 增强转换（{{mode}}），共 {{pages}} 页",
     "modeVisionApi": "Vision API",
     "modeTextOptimize": "文本优化",
-    "pageHeader": "第 {{page}} 页"
+    "pageHeader": "第 {{page}} 页",
+    "modelLabel": "使用模型"
   },
   "history": {
     "title": "课堂历史",

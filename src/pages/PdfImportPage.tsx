@@ -11,6 +11,7 @@ import {
   aiVisionEnhancePage,
   getApiKey,
 } from '../lib/tauri';
+import { PROVIDER_MODELS } from '../lib/providerModels';
 import { open } from '@tauri-apps/plugin-dialog';
 import type { PdfExtractResult } from '../types';
 
@@ -33,11 +34,13 @@ export default function PdfImportPage() {
 
   // AI enhancement
   const [enhanceMode, setEnhanceMode] = useState<EnhanceMode>('none');
+  const [enhanceModel, setEnhanceModel] = useState(settings.aiModel || '');
   const [rendererAvailable, setRendererAvailable] = useState(false);
   const [rendererName, setRendererName] = useState('none');
   const [enhancedPages, setEnhancedPages] = useState<Map<number, string>>(new Map());
   const [enhanceProgress, setEnhanceProgress] = useState({ current: 0, total: 0 });
   const [pagePreviewImage, setPagePreviewImage] = useState<string | null>(null);
+  const availableModels = PROVIDER_MODELS[settings.aiProvider] ?? [];
 
   useEffect(() => {
     checkPdfRenderer().then((info) => {
@@ -99,7 +102,7 @@ export default function PdfImportPage() {
       return;
     }
 
-    const model = settings.aiModel || '';
+    const model = enhanceModel || settings.aiModel || '';
     setPhase('enhancing');
     setEnhanceProgress({ current: 0, total: result.pages.length });
     const newEnhanced = new Map<number, string>();
@@ -316,11 +319,25 @@ export default function PdfImportPage() {
                 )}
               </div>
               {enhanceMode !== 'none' && (
-                <p className="mt-2 text-[11px] leading-relaxed text-text-placeholder dark:text-text-placeholder">
-                  {enhanceMode === 'text'
-                    ? t('pdfImport.textOptimizeDesc')
-                    : t('pdfImport.visionOcrDesc')}
-                </p>
+                <div className="mt-2 flex items-center gap-3">
+                  <p className="flex-1 text-[11px] leading-relaxed text-text-placeholder dark:text-text-placeholder">
+                    {enhanceMode === 'text'
+                      ? t('pdfImport.textOptimizeDesc')
+                      : t('pdfImport.visionOcrDesc')}
+                  </p>
+                  <label className="flex shrink-0 items-center gap-1.5">
+                    <span className="text-[11px] text-text-placeholder">{t('pdfImport.modelLabel')}</span>
+                    <select
+                      value={enhanceModel}
+                      onChange={(e) => setEnhanceModel(e.target.value)}
+                      className="rounded-btn border border-border-light bg-bg-light px-2 py-1 text-[11px] text-text-main dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
+                    >
+                      {availableModels.map((m) => (
+                        <option key={m.id} value={m.id}>{m.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
               )}
             </div>
 
