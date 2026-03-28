@@ -68,6 +68,11 @@ export default function PdfImportPage() {
       setTargetName(extracted.filename.replace(/\.pdf$/i, ''));
       setPreviewPage(0);
       setPhase('preview');
+
+      // Auto-detect garbled text and suggest Vision OCR
+      if (extracted.isGarbled && rendererAvailable) {
+        setEnhanceMode('vision');
+      }
     } catch (err) {
       setError(String(err));
       setPhase('select');
@@ -250,6 +255,24 @@ export default function PdfImportPage() {
                 <span className="text-tag tracking-[0.04em] text-text-placeholder">.md</span>
               </div>
             </div>
+
+            {/* Garbled text warning */}
+            {result.isGarbled && (
+              <div className="mb-3 flex items-start gap-3 rounded-card border border-amber-300 bg-amber-50 p-3 dark:border-amber-600 dark:bg-amber-900/20">
+                <span className="mt-0.5 text-base">⚠️</span>
+                <div className="flex-1">
+                  <p className="text-aux font-medium text-amber-700 dark:text-amber-300">
+                    {t('pdfImport.garbledDetected')}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-amber-600 dark:text-amber-400">
+                    {t('pdfImport.garbledSuggestion')}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded bg-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-800 dark:text-amber-200">
+                  {t('pdfImport.qualityScore', { score: Math.round(result.qualityScore * 100) })}
+                </span>
+              </div>
+            )}
 
             {/* AI Enhancement controls */}
             <div className="mb-3 rounded-card bg-surface-light p-3 shadow-card dark:bg-surface-dark">
