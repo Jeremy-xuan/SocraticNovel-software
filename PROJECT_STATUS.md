@@ -1,7 +1,7 @@
 # SocraticNovel — 项目状态文档
 
 > 最后更新：2025-07-28
-> 当前版本：Phase 4.2 进行中（v0.4.1 — GitHub OAuth + PDF 质量检测 + Apple Vision OCR）
+> 当前版本：Phase 4.3 进行中（v0.4.2 — 对话式世界观构建 + OAuth App + AI Vision）
 
 ## 项目概述
 
@@ -14,7 +14,7 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 ### 技术栈
 - **桌面框架**：Tauri 2.0（Rust 后端 + WebView 前端）
 - **前端**：React 19 + TypeScript + Tailwind CSS 4 + Zustand
-- **AI**：多提供商支持（Claude / DeepSeek / OpenAI / Google）
+- **AI**：多提供商支持（Claude / DeepSeek / OpenAI / Google / GitHub Models）
 - **渲染**：react-markdown + remark-math + rehype-katex（数学公式）+ SVG（白板）
 - **存储**：跨平台 Keyring（macOS Keychain / Windows Credential Manager / Linux Secret Service）+ localStorage（设置 + 会话）+ 文件系统（workspace + 后端会话）
 
@@ -41,11 +41,11 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 | **OpenAI Client** | `ai/openai.rs` | OpenAI 兼容客户端（流式 + 非流式，支持 DeepSeek/OpenAI/Google） |
 | **Tools** | `ai/tools.rs` | 工具定义 + 执行器（10 个工具，含 respond_to_student + read_teaching_material） |
 | **Types** | `ai/types.rs` | 共享类型（Message, ContentBlock, StreamEvent 等） |
-| **AI Commands** | `commands/ai_commands.rs` | Tauri 命令 + 会话持久化（save/restore/clear） |
+| **AI Commands** | `commands/ai_commands.rs` | Tauri 命令 + 会话持久化（save/restore/clear）+ `simple_chat` 无状态非流式调用 |
 | **FS Commands** | `commands/fs_commands.rs` | 沙箱化文件操作 + workspace 初始化 |
 | **Settings** | `commands/settings_commands.rs` | macOS Keychain 存取 API Key |
 | **Review Engine** | `commands/review_commands.rs` | SM-2 间隔复习引擎（卡片管理、调度、JSON 持久化） |
-| **PDF Import** | `commands/pdf_commands.rs` | PDF 文本提取 + PDFium 页面渲染 + AI 增强 |
+| **PDF Import** | `commands/pdf_commands.rs` | PDF 文本提取 + PDFium 页面渲染 + AI Vision OCR（替代 Apple Vision） |
 | **CLI Practice** | `examples/cli_practice.rs` | 交互式命令行练习模式（无 GUI 测试用） |
 | **Dev Test** | `examples/dev_test.rs` | 后端单元测试（无 GUI 测试用） |
 | **E2E Test** | `tests/e2e_flow.rs` | 端到端集成测试（15 步完整用户流程） |
@@ -58,7 +58,7 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 | **Landing** | `pages/LandingPage.tsx` | 主页：workspace 状态、开始上课、API Key 检查 |
 | **Lesson** | `pages/LessonPage.tsx` | 三栏布局：对话 + 白板/群聊 + 会话恢复 |
 | **Settings** | `pages/SettingsPage.tsx` | API Key 管理、提供商切换 |
-| **Setup Wizard** | `pages/SetupWizardPage.tsx` | 5 步首次启动向导 |
+| **Setup Wizard** | `pages/SetupWizardPage.tsx` | 5 步首次启动向导（macOS overlay title bar + 32px drag region） |
 | **Chat UI** | `components/chat/` | 消息气泡（Markdown + KaTeX）+ 输入框 |
 | **Canvas** | `components/canvas/CanvasPanel.tsx` | SVG 白板渲染 |
 | **AI Hook** | `hooks/useAiAgent.ts` | 事件监听 + 会话保存 |
@@ -68,11 +68,11 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 | **Practice** | `pages/PracticePage.tsx` | 练习/刷题模式页面 |
 | **Notes** | `pages/NotesPage.tsx` | AI 笔记生成 + Anki 导出 + PDF 导出 |
 | **Review** | `pages/ReviewPage.tsx` | SM-2 间隔复习卡片翻转 UI + 键盘快捷键 |
-| **PDF Import** | `pages/PdfImportPage.tsx` | PDF 导入：文件选择 → 预览 → AI 增强 → 保存 |
+| **PDF Import** | `pages/PdfImportPage.tsx` | PDF 导入：文件选择 → 预览 → AI Vision OCR → 保存（pill 模型选择器） |
 | **Chapter Outline** | `components/layout/ChapterOutline.tsx` | LessonPage 左侧课程大纲树 |
 | **Curriculum Parser** | `lib/curriculumParser.ts` | 解析 curriculum.md / progress.md 为结构化数据 |
 | **Agent Log** | `components/debug/AgentLogPanel.tsx` | Agent 活动日志查看器 |
-| **Meta Prompt 问卷** | `components/metaprompt/` | 5 步问卷向导（基础→角色→世界观→故事→确认） |
+| **Meta Prompt 问卷** | `components/metaprompt/` | 5 步问卷向导（学科→角色→故事→AI 对话式世界观构建→确认），StepWorldChat AI 引导 4 决策 |
 | **角色预设库** | `data/characterPresets.ts` | 20 个动漫角色预设（折木/五条/利威尔/杀老师等） |
 | **问卷序列化** | `lib/questionnaireSerializer.ts` | 问卷数据 → Markdown 格式给 AI |
 
@@ -386,9 +386,11 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
     - CanvasPanel 新增 `readOnly` 模式隐藏标注工具
     - i18n: 17 个新翻译键（中/英）
 
-69. **✅ GitHub Models OAuth 集成 (T4)** — PKCE + 本地 HTTP 回调实现 GitHub 登录
-    - Rust: `oauth_commands.rs`（start_github_oauth / check / get_token / logout）
-    - `openai.rs` + `runtime.rs` 新增 "github" 提供商分支
+69. **✅ GitHub Models OAuth 集成 (T4)** — OAuth App Device Flow 实现 GitHub 登录
+    - 从 GitHub App (PKCE) 迁移到 **OAuth App Device Flow**（Client ID: `Ov23liVSIwTUn6fuIwlS`）
+    - GitHub App tokens (`ghu_`) 不支持 Models API；OAuth App tokens (`gho_`) 无需 scope
+    - Rust: `oauth_commands.rs`（device_flow start / poll / get_token / logout）
+    - Token 存储键 `"github_token"`，`get_api_key` fallback `{provider}_token`
     - 前端: SettingsPage GitHub 按钮 + OAuth 登录/登出 UI + 模型列表
     - API: `models.inference.ai.azure.com`（OpenAI 兼容，复用 `OpenAiClient`）
 
@@ -404,12 +406,54 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
     - StepReview: 已上传材料汇总；Step 4→5 无材料确认弹窗
     - pdftotext (poppler) 优先，pdf-extract 纯 Rust fallback
 
-72. **✅ Apple Vision OCR (T4)** — macOS 本地免费 OCR 处理防拷贝 PDF
-    - Swift CLI 工具 `scripts/apple_ocr.swift`（按需编译缓存）
-    - Vision.framework VNRecognizeTextRequest（zh-Hans + en-US）
-    - 逐页渲染 300 DPI JPEG → OCR → 进度事件流
-    - 前端进度条（`ocr-progress` 事件，amber 色主题）
-    - ~0.6s/页，免费本地运行
+72. **✅ Apple Vision OCR (T4)** — ⚠️ 已移除（数学公式识别差：ε₀→"80"，π→"m"）
+    - 已被 AI Vision API（GPT-4o-mini Vision）替代，见 #73
+
+73. **✅ AI Vision PDF OCR (T4)** — 替代 Apple Vision，用 AI 视觉 API 处理防拷贝 PDF
+    - 移除 ~250 行 Apple Vision 后端 + `scripts/apple_ocr.swift`
+    - 新流程：pdftotext → 质量检测 → 若乱码：AI Vision 逐页 OCR
+    - 自动检测 garbled PDF，前端警告横幅
+    - Pill-style 模型选择器选择 Vision 模型
+
+74. **✅ Model Selector UI 重设计 (T4)** — Workspace 切换器风格下拉 + 品牌 SVG 图标
+    - 共享 `PROVIDER_MODELS`（`src/lib/providerModels.ts`）
+    - 更新全部 5 个提供商模型列表（Anthropic/OpenAI/DeepSeek/Google/GitHub）
+
+75. **✅ Emoji → SVG 图标替换 (T4)** — 全应用 Heroicons SVG 替代 emoji
+    - ~80+ i18n 键移除 emoji
+    - 所有组件统一使用 SVG 图标
+
+76. **✅ 深色模式修复 (T4)** — Tailwind CSS v4 class-based dark variant
+    - `@custom-variant dark (&:where(.dark, .dark *));` 添加到 App.css
+    - v4 默认 `prefers-color-scheme` 媒体查询，需显式 class-based variant
+
+77. **✅ macOS Overlay Title Bar (T4)** — 原生 macOS 标题栏融合
+    - `titleBarStyle: "Overlay"`（PascalCase，Tauri 2 要求）
+    - Traffic light 位置：`{ x: 16, y: 12 }`
+    - App.tsx 32px 透明拖动区域
+    - `core:window:allow-start-dragging` 权限
+    - 全部 13 个页面根容器添加 `pt-8` padding
+
+78. **✅ 教学系统向导 UX 重构 (T4)** — 拆分教学模式 + 简化世界观构建
+    - 标准模式（无固定剧情线）vs 小说模式（Beta，用户提供故事参考）
+    - 小说模式子选项："引用现有作品" / "自由描述体验"
+    - 故事背景选择：到达方式（4 卡片）+ 教学动机（4 卡片）
+    - 移除：情感阶段编辑器、角色关系/地点/到达原因 textarea
+    - AI 自动生成：地点细节、角色关系
+    - PDF 上传延迟复制模式（存储 sourcePath，workspace 创建后复制）
+
+79. **✅ 对话式世界观构建 (T4)** — AI Chat 替代卡片式 StepWorld（**重大功能**）
+    - 新组件 `StepWorldChat`：AI 对话界面引导世界观构建
+    - 新后端命令 `simple_chat`：无状态非流式 Tauri 命令
+    - AI 引导 4 个决策：地点类型 → 到达方式 → 动机 → 超自然元素
+    - 快速回复按钮：AI 回复中解析 `[选项:xxx]` 标记
+    - AI 输出结构化 JSON → 自动填充 WorldSetting
+    - 无 API Key 时 fallback 到卡片 UI
+    - **步骤顺序变更**：学科 → 角色 → 故事 → WorldChat(AI) → 确认
+
+80. **✅ GPT-5.x 兼容性修复 (T4)** — `max_tokens` → `max_completion_tokens`
+    - GPT-5.x / o1 / o3 模型自动检测（按 model prefix）
+    - `openai.rs` `build_request_body` 中条件切换参数名
 
 ## 未完成 / 需要改进
 
@@ -435,7 +479,7 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 
 ### 延后项（Phase 4+）
 
-11. **✅ GitHub OAuth 登录** — 已通过 PKCE + 本地 HTTP 回调实现（Phase 4 #69）；Anthropic/OpenAI/Google OAuth 暂不实现（API 限制）
+11. **✅ GitHub OAuth 登录** — 已通过 OAuth App Device Flow 实现（Phase 4 #69）；Anthropic/OpenAI/Google OAuth 暂不实现（API 限制）
 12. **DMG 代码签名 + 公证** — 需 Apple Developer Program ($99/年)；当前未签名 DMG 可通过右键→打开绕过 Gatekeeper
 13. **社区 Workspace 分享** — 需设计后端服务（在线仓库/浏览/搜索/下载），与当前纯本地架构不同
 14. **Tauri 自动更新** — 需 Tauri updater 插件 + 签名密钥，建议在代码签名后实现
@@ -451,6 +495,7 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 ├── src-tauri/src/commands/history_commands.rs  # 课堂历史 save/list/load/delete
 ├── src-tauri/libs/                  # PDFium 共享库（运行时需要）
 ├── scripts/                         # 工具脚本（download-pdfium.sh）
+├── src-tauri/src/commands/oauth_commands.rs  # GitHub OAuth App Device Flow
 ├── public/protocols/                # 内置辅导协议（幽鬼α + AnimaTutor）
 ├── .github/workflows/               # CI/CD（macOS Universal DMG + Windows EXE）
 ├── workspaces/ap-physics-em/        # AI 读写的 workspace
@@ -539,9 +584,16 @@ cd src-tauri && cargo test --test e2e_flow -- --nocapture
 22. **动态教学节奏** — 教学速度从 `learner_profile.md` 的"学习水平"字段驱动：Prep Agent 读取 → lesson_brief 携带 → `build_teaching_prompt()` 检测关键词 → 动态生成 rounds-per-idea 指令。三档：初学(3-5轮)、中等(2-3轮)、进阶(1-2轮)。
 23. **read_teaching_material 最小权限** — Teaching Phase 的文件访问通过独立工具 `read_teaching_material` 实现，仅允许 `materials/` 目录只读。这比开放 `read_file` 更安全：AI 可查课本但无法读教案（teacher/），确保教学由 lesson_brief 驱动而非"偷看答案"。
 24. **课堂历史存储策略** — 每次下课时保存完整快照（messages + canvasItems + groupChatMessages + annotations）为单个 JSON 文件到 `session_history/` 目录。ID 使用 ISO 时间戳（冒号/点替换为连字符）确保文件名安全且自然排序。列表 API 仅解析摘要字段（不加载完整 messages），保证即使积累 100+ 课堂记录仍然快速。
-25. **GitHub Models OAuth (PKCE)** — 不使用 Device Flow（需轮询），而是 Authorization Code Flow + PKCE + 本地 HTTP 回调。生成 PKCE code_verifier → SHA-256 → base64url，启动临时 localhost 服务器捕获回调。GitHub Models API 完全 OpenAI 兼容（`models.inference.ai.azure.com`），复用 `OpenAiClient` 仅新增 base URL 分支，零额外客户端代码。
+25. **GitHub Models OAuth (Device Flow)** — 从 PKCE 迁移到 OAuth App Device Flow。原因：GitHub App tokens (`ghu_`) 不支持 Models API，OAuth App tokens (`gho_`) 无需 scope 即可访问。Device Flow 用户体验更佳（桌面应用无需启动本地 HTTP 服务器）。Client ID: `Ov23liVSIwTUn6fuIwlS`。Token 存储键 `"github_token"`，`get_api_key` 函数 fallback 查找 `{provider}_token`。
 26. **Dev 模式凭证文件存储** — macOS Keychain 每次 `cargo build` 因 ad-hoc 签名变化弹密码确认。解决方案：`credential_store.rs` 通过 `#[cfg(debug_assertions)]` 编译期切换——debug 用 `~/Library/Application Support/SocraticNovel/dev_credentials.json`，release 用 OS Keyring。统一 API（`set_password`/`get_password`/`delete_password`），调用方无感知。
 27. **PDF 质量多采样检测** — 单采样点会遗漏混合内容 PDF（如刷题册前半英文正常、后半乱码）。改为 4 点采样（10%/25%/50%/75%），最终分数 = min×0.6 + avg×0.4（最小值主导），阈值 0.5。三个启发式：常见英文词匹配(50%)、大写占比(30%)、超长辅音簇(20%)。准确识别出 TestDaily 的 -29 ASCII 偏移防拷贝编码。
-28. **Apple Vision OCR 按需编译** — Swift CLI 工具 `scripts/apple_ocr.swift` 不预编译，而是首次使用时 `swiftc -O` 编译并缓存到 `~/Library/Caches/SocraticNovel/apple_ocr`。源文件修改时间比二进制新则自动重编译。免去构建工具链集成，支持开发阶段快速迭代脚本逻辑。编译后 ~0.6s/页，解释执行 ~2.5s/页。
-29. **PDF 材料问卷上传** — 问卷向导 Step 1（学科设置）集成 PDF 上传，而非单独导入页。上传即提取+质量检测+导入 workspace，garbled 文件实时警告并提供 Apple Vision 一键修复。Step 5（确认）显示已上传材料汇总。如果用户未上传材料且未填写主题大纲，Step 4→5 时弹出确认弹窗（防止遗漏）。
-30. **OCR 进度事件流** — `apple_vision_ocr_full` 通过 Tauri `app.emit("ocr-progress", {current, total, filename})` 逐页推送进度。前端 `listen<OcrProgress>` 实时渲染进度条（amber 色与警告框统一）。按钮上显示 `15/100` 即时数字，避免用户以为卡死。此模式复用了项目已有的 `agent-event` 事件推送范式。
+28. **~~Apple Vision OCR 按需编译~~ (已移除)** — Apple Vision 数学公式识别准确率极差（ε₀→"80"，π→"m"），已完全移除。替代方案：AI Vision API（GPT-4o-mini Vision 等），可正确识别 LaTeX 数学公式。移除 ~250 行后端代码 + `scripts/apple_ocr.swift`。
+29. **PDF 材料问卷上传** — 问卷向导 Step 1（学科设置）集成 PDF 上传，而非单独导入页。上传即提取+质量检测+导入 workspace，garbled 文件实时警告并提供 AI Vision 一键修复。Step 5（确认）显示已上传材料汇总。如果用户未上传材料且未填写主题大纲，Step 4→5 时弹出确认弹窗（防止遗漏）。
+30. **~~OCR 进度事件流~~ (已随 Apple Vision 移除)** — 原 `apple_vision_ocr_full` 事件流已移除，AI Vision OCR 使用标准请求/响应模式。
+31. **对话式世界观构建** — 用 AI Chat（`StepWorldChat`）替代卡片式 `StepWorld`。新增 `simple_chat` 无状态非流式 Tauri 命令（不创建会话、不走 tool-use 循环）。AI 引导用户做 4 个决策（地点/到达/动机/超自然），通过 `[选项:xxx]` 标记生成快速回复按钮。AI 最终输出结构化 JSON 自动填充 WorldSetting。无 API Key 时 fallback 到传统卡片 UI，保证离线可用。步骤顺序从「学科→角色→世界观→故事→确认」改为「学科→角色→故事→WorldChat(AI)→确认」。
+32. **GPT-5.x 兼容性** — GPT-5.x / o1 / o3 系列模型不支持 `max_tokens` 参数，改用 `max_completion_tokens`。在 `openai.rs` `build_request_body` 中按 model prefix 自动检测并切换参数名。
+33. **Emoji → SVG 图标** — 全应用 emoji 替换为 Heroicons SVG。原因：emoji 在不同平台/浏览器渲染不一致，SVG 保证视觉一致性和可控的深色模式适配。~80+ i18n 键中的 emoji 被移除。
+34. **macOS Overlay Title Bar** — Tauri 2 中 `titleBarStyle` 必须用 PascalCase（`"Overlay"` 而非 `"overlay"`）。Traffic light 位置 `{ x: 16, y: 12 }`。App.tsx 顶部添加 32px 透明拖动区域（`-webkit-app-region: drag`），需 `core:window:allow-start-dragging` 权限。全部 13 个页面根容器添加 `pt-8` 避免内容被标题栏遮挡。
+35. **Tailwind CSS v4 深色模式** — v4 默认使用 `prefers-color-scheme` 媒体查询，不再支持 class-based `dark:` variant。需在 App.css 添加 `@custom-variant dark (&:where(.dark, .dark *));` 才能让 `ThemeProvider` 的 `.dark` class 生效。
+36. **教学模式拆分** — 将问卷向导拆为标准模式（无固定剧情线）和小说模式（Beta，用户提供故事参考）。小说模式下提供「引用现有作品」和「自由描述体验」两个子选项。简化世界观构建：移除情感阶段编辑器/角色关系/地点/到达原因 textarea，改为 AI 自动生成。
+37. **Model Selector 共享数据源** — 所有模型列表统一在 `src/lib/providerModels.ts`（`PROVIDER_MODELS`），Settings 页和 PDF 导入页的模型选择器共享同一数据源，避免维护多份模型列表。
