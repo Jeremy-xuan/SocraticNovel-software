@@ -66,12 +66,12 @@
     "workspaceLoading": "Loading...",
     "modelLabels": {
       "claudeHaikuFast": "Claude Haiku 4.5 (Fast/Budget)",
-      "gpt4oMiniFast": "GPT-4o mini (Fast/Budget)",
-      "o3MiniReasoning": "o3-mini (Reasoning)",
-      "o1Reasoning": "o1 (Reasoning, Slow)",
-      "deepseekR1": "DeepSeek-R1 (Reasoning)",
-      "deepseekV3": "DeepSeek-V3 (Chat)",
-      "geminiFast": "Gemini 2.0 Flash (Fast)"
+      "gpt54MiniFast": "GPT-5.4 mini (Fast/Budget)",
+      "gpt4oFast": "GPT-4o (Fast/Budget)",
+      "deepseekR1": "DeepSeek V3.2 (Thinking)",
+      "deepseekV3": "DeepSeek V3.2 (Chat)",
+      "gemini3Flash": "Gemini 3 Flash (Fast)",
+      "gemini31FlashLite": "Gemini 3.1 Flash-Lite (Fast/Budget)"
     }
   },
   "landing": {

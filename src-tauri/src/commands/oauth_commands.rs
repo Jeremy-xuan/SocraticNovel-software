@@ -8,6 +8,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
 const GITHUB_TOKEN_KEY: &str = "github_token";
+const GITHUB_CLIENT_ID: &str = "Iv23liEvzYZQZuplLGWI";
 const GITHUB_AUTHORIZE_URL: &str = "https://github.com/login/oauth/authorize";
 const GITHUB_TOKEN_URL: &str = "https://github.com/login/oauth/access_token";
 
@@ -48,7 +49,9 @@ fn generate_code_challenge(verifier: &str) -> String {
 /// Start GitHub OAuth flow: open browser and wait for callback on a local HTTP server.
 /// Returns the access token on success.
 #[tauri::command]
-pub async fn start_github_oauth(app: AppHandle, client_id: String) -> Result<String, String> {
+pub async fn start_github_oauth(app: AppHandle) -> Result<String, String> {
+    let client_id = GITHUB_CLIENT_ID;
+
     // Generate PKCE pair
     let code_verifier = generate_code_verifier();
     let code_challenge = generate_code_challenge(&code_verifier);
@@ -72,7 +75,7 @@ pub async fn start_github_oauth(app: AppHandle, client_id: String) -> Result<Str
     let auth_url = format!(
         "{}?client_id={}&redirect_uri={}&scope={}&state={}&code_challenge={}&code_challenge_method=S256",
         GITHUB_AUTHORIZE_URL,
-        urlencod(&client_id),
+        urlencod(client_id),
         urlencod(&redirect_uri),
         urlencod("read:user"),
         urlencod(&state),
@@ -88,7 +91,7 @@ pub async fn start_github_oauth(app: AppHandle, client_id: String) -> Result<Str
     let auth_code = wait_for_callback(listener, &state).await?;
 
     // Exchange code for token
-    let token = exchange_code_for_token(&client_id, &auth_code, &redirect_uri, &code_verifier).await?;
+    let token = exchange_code_for_token(client_id, &auth_code, &redirect_uri, &code_verifier).await?;
 
     // Store token in credential store
     credential_store::set_password(GITHUB_TOKEN_KEY, &token)?;
@@ -236,6 +239,7 @@ async fn exchange_code_for_token(
             ("code", code),
             ("redirect_uri", redirect_uri),
             ("code_verifier", code_verifier),
+            ("grant_type", "authorization_code"),
         ])
         .send()
         .await

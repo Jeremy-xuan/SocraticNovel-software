@@ -7,43 +7,56 @@ import i18n from '../i18n';
 
 const PROVIDER_MODELS: Record<string, Array<{ id: string; label: string; default?: boolean }>> = {
   anthropic: [
-    { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4 (2025-05-14)', default: true },
-    { id: 'claude-opus-4-5', label: 'Claude Opus 4.5' },
-    { id: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5' },
-    { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5', default: false },
+    { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', default: true },
+    { id: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
+    { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
+    { id: 'claude-sonnet-4-5-20241022', label: 'Claude Sonnet 4.5' },
+    { id: 'claude-opus-4-5-20250414', label: 'Claude Opus 4.5' },
+    { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
   ],
   openai: [
-    { id: 'gpt-4o', label: 'GPT-4o', default: true },
-    { id: 'gpt-4o-mini', label: 'GPT-4o mini', default: false },
-    { id: 'o3-mini', label: 'o3-mini', default: false },
-    { id: 'o1', label: 'o1', default: false },
+    { id: 'gpt-5.4', label: 'GPT-5.4', default: true },
+    { id: 'gpt-5.4-mini', label: 'GPT-5.4 mini' },
+    { id: 'gpt-5.2', label: 'GPT-5.2' },
+    { id: 'gpt-5.2-codex', label: 'GPT-5.2 Codex' },
+    { id: 'gpt-5.1', label: 'GPT-5.1' },
+    { id: 'gpt-5.1-codex', label: 'GPT-5.1 Codex' },
+    { id: 'gpt-4o', label: 'GPT-4o' },
   ],
   deepseek: [
-    { id: 'deepseek-reasoner', label: 'DeepSeek-R1', default: true },
-    { id: 'deepseek-chat', label: 'DeepSeek-V3', default: false },
+    { id: 'deepseek-chat', label: 'DeepSeek V3.2', default: true },
+    { id: 'deepseek-reasoner', label: 'DeepSeek V3.2 Thinking' },
   ],
   google: [
-    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', default: true },
-    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', default: false },
-    { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
+    { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro', default: true },
+    { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash' },
+    { id: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash-Lite' },
   ],
   github: [
-    { id: 'gpt-4o', label: 'GPT-4o', default: true },
-    { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
-    { id: 'o3-mini', label: 'o3-mini' },
-    { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-    { id: 'Mistral-Large-2', label: 'Mistral Large 2' },
+    { id: 'claude-sonnet-4.6', label: 'Claude Sonnet 4.6 (1×)', default: true },
+    { id: 'claude-opus-4.6', label: 'Claude Opus 4.6 (2×)' },
+    { id: 'claude-sonnet-4.5', label: 'Claude Sonnet 4.5 (1×)' },
+    { id: 'claude-haiku-4.5', label: 'Claude Haiku 4.5 (0.33×)' },
+    { id: 'gpt-5.4', label: 'GPT-5.4 (1×)' },
+    { id: 'gpt-5.4-mini', label: 'GPT-5.4 mini (0.33×)' },
+    { id: 'gpt-5.2', label: 'GPT-5.2 (1×)' },
+    { id: 'gpt-5.1', label: 'GPT-5.1 (1×)' },
+    { id: 'gpt-5-mini', label: 'GPT-5 mini (included)' },
+    { id: 'gpt-4.1', label: 'GPT-4.1 (included)' },
+    { id: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro (1×)' },
+    { id: 'gemini-3-flash', label: 'Gemini 3 Flash (0.33×)' },
+    { id: 'grok-code-fast-1', label: 'Grok Code Fast 1 (0.33×)' },
   ],
 };
 
 const MODEL_LABEL_SUFFIX: Record<string, string> = {
-  'claude-haiku-4-5': 'settings.modelLabels.claudeHaikuFast',
-  'gpt-4o-mini': 'settings.modelLabels.gpt4oMiniFast',
-  'o3-mini': 'settings.modelLabels.o3MiniReasoning',
-  'o1': 'settings.modelLabels.o1Reasoning',
+  'claude-haiku-4-5-20251001': 'settings.modelLabels.claudeHaikuFast',
+  'gpt-5.4-mini': 'settings.modelLabels.gpt54MiniFast',
+  'gpt-4o': 'settings.modelLabels.gpt4oFast',
   'deepseek-reasoner': 'settings.modelLabels.deepseekR1',
   'deepseek-chat': 'settings.modelLabels.deepseekV3',
-  'gemini-2.0-flash': 'settings.modelLabels.geminiFast',
+  'gemini-3-flash-preview': 'settings.modelLabels.gemini3Flash',
+  'gemini-3.1-flash-lite-preview': 'settings.modelLabels.gemini31FlashLite',
 };
 
 export default function SettingsPage() {
@@ -88,15 +101,10 @@ export default function SettingsPage() {
   };
 
   const handleGithubLogin = async () => {
-    const clientId = settings.githubClientId?.trim();
-    if (!clientId) {
-      setGithubError(t('settings.githubClientIdRequired'));
-      return;
-    }
     setGithubLoading(true);
     setGithubError(null);
     try {
-      await startGithubOauth(clientId);
+      await startGithubOauth();
       setGithubAuthed(true);
       updateSettings({ apiKeyConfigured: true });
     } catch (err: unknown) {
@@ -153,7 +161,15 @@ export default function SettingsPage() {
                 {provider === 'openai' && '🟢 OpenAI'}
                 {provider === 'google' && '🔵 Google (Gemini)'}
                 {provider === 'deepseek' && '🔷 DeepSeek'}
-                {provider === 'github' && '🐙 GitHub Models'}
+                {provider === 'github' && (
+                  <span className="inline-flex items-center gap-1">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="inline-block">
+                      <path d="M7.998 15.035c-4.562 0-7.873-2.914-7.998-3.749V9.338c.085-.628.677-1.686 1.588-2.065.013-.07.024-.143.036-.218.029-.183.06-.384.126-.612-.201-.508-.254-1.084-.254-1.656 0-.87.128-1.769.693-2.484.579-.733 1.494-1.124 2.724-1.261 1.206-.134 2.262.034 2.944.765.05.053.096.108.139.165.044-.057.094-.112.143-.165.682-.731 1.738-.899 2.944-.765 1.23.137 2.145.528 2.724 1.261.566.715.693 1.614.693 2.484 0 .572-.053 1.148-.254 1.656.066.228.098.429.126.612.012.076.024.148.037.218.924.385 1.522 1.471 1.591 2.095v1.872c0 .766-3.351 3.795-8.002 3.795Zm0-1.485c2.28 0 4.584-1.11 5.002-1.433V7.862l-.023-.116c-.49.21-1.075.291-1.727.291-1.146 0-2.059-.327-2.71-.991A3.222 3.222 0 0 1 8 6.303a3.24 3.24 0 0 1-.544.743c-.65.664-1.563.991-2.71.991-.652 0-1.236-.081-1.727-.291l-.023.116v4.255c.419.323 2.722 1.433 5.002 1.433ZM6.762 2.83c-.193-.206-.637-.413-1.682-.297-1.019.113-1.479.404-1.713.7-.247.312-.369.789-.369 1.554 0 .793.129 1.171.308 1.371.162.181.519.379 1.442.379.853 0 1.339-.235 1.638-.54.315-.322.527-.827.617-1.553.117-.935-.037-1.395-.241-1.614Zm4.155-.297c-1.044-.116-1.488.091-1.681.297-.204.219-.359.679-.242 1.614.091.726.303 1.231.618 1.553.299.305.784.54 1.638.54.922 0 1.28-.198 1.442-.379.179-.2.308-.578.308-1.371 0-.765-.123-1.242-.37-1.554-.233-.296-.693-.587-1.713-.7Z" />
+                      <path d="M6.25 9.037a.75.75 0 0 1 .75.75v1.501a.75.75 0 0 1-1.5 0V9.787a.75.75 0 0 1 .75-.75Zm4.25.75v1.501a.75.75 0 0 1-1.5 0V9.787a.75.75 0 0 1 1.5 0Z" />
+                    </svg>
+                    GitHub Copilot
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -195,23 +211,6 @@ export default function SettingsPage() {
               <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
                 GitHub {t('settings.githubAuth')}
               </h2>
-
-              {/* Client ID input */}
-              <div className="mb-4">
-                <label className="mb-1 block text-tag tracking-[0.04em] text-text-placeholder">
-                  GitHub OAuth Client ID
-                </label>
-                <input
-                  type="text"
-                  value={settings.githubClientId ?? ''}
-                  onChange={(e) => updateSettings({ githubClientId: e.target.value })}
-                  placeholder={t('settings.githubClientIdPlaceholder')}
-                  className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2 text-aux text-text-main placeholder-text-placeholder focus:border-blue-500 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-main-dark"
-                />
-                <p className="mt-1 text-tag tracking-[0.04em] text-text-placeholder">
-                  {t('settings.githubClientIdHint')}
-                </p>
-              </div>
 
               {githubAuthed ? (
                 <div className="flex items-center gap-3">

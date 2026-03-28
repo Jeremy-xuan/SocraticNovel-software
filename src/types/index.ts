@@ -118,7 +118,6 @@ export interface AppSettings {
   aiProvider: 'anthropic' | 'openai' | 'google' | 'deepseek' | 'github' | 'custom';
   aiModel: string | null;
   apiKeyConfigured: boolean;
-  githubClientId?: string;
 }
 
 // Tool definitions for AI

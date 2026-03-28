@@ -66,12 +66,12 @@
     "workspaceLoading": "加载中...",
     "modelLabels": {
       "claudeHaikuFast": "Claude Haiku 4.5（快速/省钱）",
-      "gpt4oMiniFast": "GPT-4o mini（快速/省钱）",
-      "o3MiniReasoning": "o3-mini（推理）",
-      "o1Reasoning": "o1（推理，慢）",
-      "deepseekR1": "DeepSeek-R1（推理）",
-      "deepseekV3": "DeepSeek-V3（对话）",
-      "geminiFast": "Gemini 2.0 Flash（快速）"
+      "gpt54MiniFast": "GPT-5.4 mini（快速/省钱）",
+      "gpt4oFast": "GPT-4o（快速/省钱）",
+      "deepseekR1": "DeepSeek V3.2（思考）",
+      "deepseekV3": "DeepSeek V3.2（对话）",
+      "gemini3Flash": "Gemini 3 Flash（快速）",
+      "gemini31FlashLite": "Gemini 3.1 Flash-Lite（快速/省钱）"
     }
   },
   "landing": {

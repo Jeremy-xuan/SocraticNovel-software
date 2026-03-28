@@ -202,8 +202,8 @@ export async function deleteSessionHistory(
 
 // ─── GitHub OAuth ────────────────────────────────────────────────
 
-export async function startGithubOauth(clientId: string): Promise<string> {
-  return invoke('start_github_oauth', { clientId });
+export async function startGithubOauth(): Promise<string> {
+  return invoke('start_github_oauth');
 }
 
 export async function checkGithubAuth(): Promise<boolean> {
