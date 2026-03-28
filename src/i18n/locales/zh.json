@@ -63,13 +63,20 @@
     "workspaceLoading": "加载中...",
     "modelLabels": {
       "claudeHaikuFast": "Claude Haiku 4.5（快速/省钱）",
-      "gpt54MiniFast": "GPT-5.4 mini（快速/省钱）",
       "gpt4oFast": "GPT-4o（快速/省钱）",
       "deepseekR1": "DeepSeek V3.2（思考）",
       "deepseekV3": "DeepSeek V3.2（对话）",
       "gemini3Flash": "Gemini 3 Flash（快速）",
       "gemini31FlashLite": "Gemini 3.1 Flash-Lite（快速/省钱）"
-    }
+    },
+    "githubDeviceCodePrompt": "请在浏览器中输入以下验证码：",
+    "githubDeviceCodeHint": "已自动打开浏览器，如未跳转请前往",
+    "copilotPremiumTitle": "模型后面的倍数是什么？",
+    "copilotPremiumShow": "倍数含义？",
+    "copilotPremiumHide": "收起说明",
+    "copilotPremiumDesc": "使用 GitHub Copilot 的模型时，每次请求会消耗一定额度。倍数越高消耗越多（如 3× = 消耗 3 次额度）。Free 版每月 50 次，Pro 版 300 次，Pro+ 版 1500 次。标记 0× 的模型完全免费，不限量使用，适合长期学习。",
+    "expandModels": "展开全部 {{count}} 个模型 ▾",
+    "collapseModels": "收起 ▴"
   },
   "landing": {
     "deleteConfirm": "确定要删除工作区 '{{name}}' 吗？此操作不可撤销。",

@@ -79,7 +79,8 @@ pub fn run() {
             history_commands::load_session_history,
             history_commands::delete_session_history,
             // GitHub OAuth
-            oauth_commands::start_github_oauth,
+            oauth_commands::start_github_device_flow,
+            oauth_commands::poll_github_device_flow,
             oauth_commands::check_github_auth,
             oauth_commands::get_github_token,
             oauth_commands::logout_github,

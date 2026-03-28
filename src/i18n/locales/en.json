@@ -63,13 +63,20 @@
     "workspaceLoading": "Loading...",
     "modelLabels": {
       "claudeHaikuFast": "Claude Haiku 4.5 (Fast/Budget)",
-      "gpt54MiniFast": "GPT-5.4 mini (Fast/Budget)",
       "gpt4oFast": "GPT-4o (Fast/Budget)",
       "deepseekR1": "DeepSeek V3.2 (Thinking)",
       "deepseekV3": "DeepSeek V3.2 (Chat)",
       "gemini3Flash": "Gemini 3 Flash (Fast)",
       "gemini31FlashLite": "Gemini 3.1 Flash-Lite (Fast/Budget)"
-    }
+    },
+    "githubDeviceCodePrompt": "Enter this code in your browser:",
+    "githubDeviceCodeHint": "Browser opened automatically. If not, go to",
+    "copilotPremiumTitle": "What do the multipliers mean?",
+    "copilotPremiumShow": "What does ×N mean?",
+    "copilotPremiumHide": "Hide",
+    "copilotPremiumDesc": "Each Copilot model request costs a certain amount. Higher multipliers cost more (e.g. 3× = 3 requests). Free: 50/mo, Pro: 300/mo, Pro+: 1500/mo. Models marked 0× are completely free and unlimited — great for learning.",
+    "expandModels": "Show all {{count}} models ▾",
+    "collapseModels": "Collapse ▴"
   },
   "landing": {
     "deleteConfirm": "Are you sure you want to delete workspace '{{name}}'? This action cannot be undone.",

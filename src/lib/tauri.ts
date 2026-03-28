@@ -200,10 +200,22 @@ export async function deleteSessionHistory(
   return invoke('delete_session_history', { workspacePath, sessionId });
 }
 
-// ─── GitHub OAuth ────────────────────────────────────────────────
+// ─── GitHub OAuth (Device Flow) ──────────────────────────────────
 
-export async function startGithubOauth(): Promise<string> {
-  return invoke('start_github_oauth');
+export interface DeviceFlowResponse {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  expires_in: number;
+  interval: number;
+}
+
+export async function startGithubDeviceFlow(): Promise<DeviceFlowResponse> {
+  return invoke('start_github_device_flow');
+}
+
+export async function pollGithubDeviceFlow(deviceCode: string, interval: number): Promise<string> {
+  return invoke('poll_github_device_flow', { deviceCode, interval });
 }
 
 export async function checkGithubAuth(): Promise<boolean> {
