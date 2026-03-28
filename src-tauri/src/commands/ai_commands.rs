@@ -1,3 +1,5 @@
+use crate::ai::claude::ClaudeClient;
+use crate::ai::openai::OpenAiClient;
 use crate::ai::runtime;
 use crate::ai::types::*;
 use crate::commands::review_commands::{NewCard, add_review_cards_internal};
@@ -817,4 +819,64 @@ fn generate_conversation_summary(messages: &[Message]) -> String {
         }
     }
     summary
+}
+
+// ─── Stateless simple chat (for world-building, etc.) ───────────────
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SimpleChatMessage {
+    pub role: String,
+    pub text: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SimpleChatPayload {
+    pub system_prompt: String,
+    pub messages: Vec<SimpleChatMessage>,
+    pub provider: String,
+    pub model: String,
+    pub api_key: String,
+}
+
+/// Stateless non-streaming chat — no session, no tools, no history management.
+#[tauri::command]
+pub async fn simple_chat(payload: SimpleChatPayload) -> Result<String, String> {
+    let messages: Vec<Message> = payload
+        .messages
+        .into_iter()
+        .map(|m| Message {
+            role: m.role,
+            content: vec![ContentBlock::Text { text: m.text }],
+        })
+        .collect();
+
+    let (content_blocks, _stop) = match payload.provider.as_str() {
+        "anthropic" => {
+            let client = ClaudeClient::with_model(payload.api_key, &payload.model);
+            client
+                .send_message(&payload.system_prompt, messages, None)
+                .await?
+        }
+        "openai" | "deepseek" | "google" | "github" => {
+            let client =
+                OpenAiClient::with_model(payload.api_key, &payload.provider, &payload.model);
+            client
+                .send_message(&payload.system_prompt, messages, None)
+                .await?
+        }
+        _ => return Err(format!("Unsupported provider: {}", payload.provider)),
+    };
+
+    let text = content_blocks
+        .iter()
+        .filter_map(|b| match b {
+            ContentBlock::Text { text } => Some(text.as_str()),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+        .join("");
+
+    Ok(text)
 }

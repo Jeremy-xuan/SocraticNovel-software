@@ -693,5 +693,22 @@
     "groupChatTab": "Group Chat",
     "noCanvas": "No canvas content in this session",
     "noGroupChat": "No group chat in this session"
+  },
+  "stepWorldChat": {
+    "title": "World Building",
+    "desc": "Design the story world with AI assistance",
+    "noApiKey": "AI service required for conversational world building",
+    "noApiKeyHint": "Please configure an API key in Settings (GitHub Copilot recommended, free tier works)",
+    "inputPlaceholder": "Type your ideas, or click a suggestion above...",
+    "confirmTitle": "AI-suggested world settings",
+    "locationLabel": "Setting: ",
+    "arrivalLabel": "Arrival: ",
+    "motivLabel": "Motivation: ",
+    "supernaturalLabel": "Supernatural: ",
+    "none": "None",
+    "confirm": "Confirm",
+    "restart": "Start over",
+    "confirmed": "World settings confirmed. Proceed to the next step.",
+    "restartLink": "Want to redesign? Click to restart"
   }
 }

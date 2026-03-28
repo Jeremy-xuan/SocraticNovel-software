@@ -215,3 +215,20 @@ export async function getGithubToken(): Promise<string | null> {
 export async function logoutGithub(): Promise<void> {
   return invoke('logout_github');
 }
+
+// ─── Stateless Chat ─────────────────────────────────────────────────
+
+export interface SimpleChatMessage {
+  role: 'user' | 'assistant';
+  text: string;
+}
+
+export async function simpleChat(
+  systemPrompt: string,
+  messages: SimpleChatMessage[],
+  provider: string,
+  model: string,
+  apiKey: string,
+): Promise<string> {
+  return invoke('simple_chat', { systemPrompt, messages, provider, model, apiKey });
+}

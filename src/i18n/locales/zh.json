@@ -693,5 +693,22 @@
     "groupChatTab": "群聊",
     "noCanvas": "本次课堂没有白板内容",
     "noGroupChat": "本次课堂没有群聊记录"
+  },
+  "stepWorldChat": {
+    "title": "世界观构建",
+    "desc": "和 AI 一起设计故事发生的世界",
+    "noApiKey": "需要 AI 服务才能使用对话式世界观构建",
+    "noApiKeyHint": "请在设置中配置 API Key（推荐 GitHub Copilot，免费即可使用）",
+    "inputPlaceholder": "输入你的想法，或点击上面的建议选项...",
+    "confirmTitle": "AI 建议的世界观设定",
+    "locationLabel": "场景：",
+    "arrivalLabel": "到来：",
+    "motivLabel": "动机：",
+    "supernaturalLabel": "超自然：",
+    "none": "无",
+    "confirm": "确认使用",
+    "restart": "重新聊",
+    "confirmed": "世界观设定已确认，可以进入下一步",
+    "restartLink": "想重新设计？点此重来"
   }
 }

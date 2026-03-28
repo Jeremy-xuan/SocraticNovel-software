@@ -52,6 +52,8 @@ pub fn run() {
             // AI: Note generation
             ai_commands::generate_lesson_notes,
             ai_commands::generate_anki_cards,
+            // AI: Stateless chat (world-building, etc.)
+            ai_commands::simple_chat,
             // Settings
             settings_commands::set_api_key,
             settings_commands::get_api_key,

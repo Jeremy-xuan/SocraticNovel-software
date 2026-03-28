@@ -3,15 +3,15 @@ import { useTranslation } from 'react-i18next';
 import type { MetaPromptQuestionnaire } from '../../types';
 import StepSubject from './StepSubject';
 import StepCharacters from './StepCharacters';
-import StepWorld from './StepWorld';
+import StepWorldChat from './StepWorldChat';
 import StepStory from './StepStory';
 import StepReview from './StepReview';
 
 const STEPS = [
   { id: 1, labelKey: 'wizard.stepBasicInfo', icon: <svg className="inline-block h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" /></svg> },
   { id: 2, labelKey: 'wizard.stepCharacters', icon: <svg className="inline-block h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" /></svg> },
-  { id: 3, labelKey: 'wizard.stepWorld', icon: <svg className="inline-block h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" /></svg> },
-  { id: 4, labelKey: 'wizard.stepStory', icon: <svg className="inline-block h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg> },
+  { id: 3, labelKey: 'wizard.stepStory', icon: <svg className="inline-block h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg> },
+  { id: 4, labelKey: 'wizard.stepWorld', icon: <svg className="inline-block h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" /></svg> },
   { id: 5, labelKey: 'wizard.stepReview', icon: <svg className="inline-block h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
 ];
 
@@ -66,19 +66,19 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
       case 1: return !!data.subject.subjectName && data.course.totalChapters > 0;
       case 2: return data.characters.length === data.characterCount
               && data.characters.every(c => !!c.name && !!c.teachingStyle);
-      case 3: return !!data.world.locationStyle;
-      case 4: return data.storyMode === 'standard'
+      case 3: return data.storyMode === 'standard'
               ? true
               : data.story.novelReferenceType === 'existing-work'
                 ? !!data.story.existingWorkName.trim()
                 : !!data.story.storyReference.trim();
+      case 4: return !!data.world.locationStyle;
       case 5: return true;
       default: return false;
     }
   };
 
   const handleNext = () => {
-    if (step === 4 && data.course.uploadedMaterials.length === 0 && !data.course.topicOverview.trim()) {
+    if (step === 3 && data.course.uploadedMaterials.length === 0 && !data.course.topicOverview.trim()) {
       setShowNoMaterialWarning(true);
       return;
     }
@@ -89,7 +89,7 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
 
   const handleConfirmNoMaterial = () => {
     setShowNoMaterialWarning(false);
-    setStep(5);
+    setStep(4);
   };
 
   const handlePrev = () => {
@@ -137,8 +137,8 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
           <div className="mx-auto max-w-2xl">
             {step === 1 && <StepSubject data={data} onChange={updateData} />}
             {step === 2 && <StepCharacters data={data} onChange={updateData} />}
-            {step === 3 && <StepWorld data={data} onChange={updateData} />}
-            {step === 4 && <StepStory data={data} onChange={updateData} />}
+            {step === 3 && <StepStory data={data} onChange={updateData} />}
+            {step === 4 && <StepWorldChat data={data} onChange={updateData} />}
             {step === 5 && <StepReview data={data} />}
           </div>
         </div>
