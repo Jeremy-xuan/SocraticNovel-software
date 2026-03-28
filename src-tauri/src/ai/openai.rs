@@ -179,7 +179,15 @@ impl OpenAiClient {
         });
 
         if self.model != "deepseek-reasoner" {
-            request_body["max_tokens"] = serde_json::json!(4096);
+            // Newer OpenAI models (o1/o3/gpt-5.x) require max_completion_tokens
+            let needs_new_param = self.model.starts_with("o1")
+                || self.model.starts_with("o3")
+                || self.model.starts_with("gpt-5");
+            if needs_new_param {
+                request_body["max_completion_tokens"] = serde_json::json!(4096);
+            } else {
+                request_body["max_tokens"] = serde_json::json!(4096);
+            }
         }
 
         if let Some(ref tools_val) = oai_tools {
