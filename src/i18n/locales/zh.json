@@ -401,7 +401,7 @@
     "aiVisionNoProvider": "以下文件的文本质量较差，当前 AI 提供商不支持 Vision。请在设置中切换到 GitHub Copilot、OpenAI、Google 或 Anthropic。",
     "aiVisionConfirm": "AI 识别",
     "aiVisionProcessing": "AI 识别中… ({{current}}/{{total}})",
-    "aiVisionNoApiKey": "未找到当前提供商的 API 密钥，请先在设置中配置。"
+    "aiVisionNoApiKey": "当前提供商尚未完成配置。请前往「设置」页面：如果使用 GitHub Copilot，请点击「登录 GitHub」完成授权；如果使用其他提供商，请填写 API 密钥。"
   },
   "stepCharacters": {
     "title": "🎭 角色创建",
@@ -633,6 +633,9 @@
     "continueImport": "继续导入",
     "returnHome": "返回主页",
     "configApiKey": "请先在设置中配置 API Key",
+    "noApiKeyGuide": "需要 AI 服务才能使用此功能。请前往「设置」页面，选择一个 AI 提供商（推荐 GitHub Copilot，可免费登录使用），并确保已配置好 API 密钥或完成登录。",
+    "textOptimizeDesc": "让 AI 阅读提取出的文字，帮你修正排版、整理格式、生成更易读的 Markdown。适合文字为主的文档，速度较快。",
+    "visionOcrDesc": "让 AI 直接「看」PDF 页面的图片来识别内容，不依赖文字提取。适合扫描件、数学公式多的教材，识别质量更高但速度较慢。",
     "aiFailed": "AI 增强失败: {{error}}",
     "aiConvertNote": "AI 增强转换（{{mode}}），共 {{pages}} 页",
     "modeVisionApi": "Vision API",

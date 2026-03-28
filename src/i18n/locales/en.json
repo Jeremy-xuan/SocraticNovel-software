@@ -401,7 +401,7 @@
     "aiVisionNoProvider": "The following files have poor text quality. Your current AI provider doesn't support Vision. Please switch to GitHub Copilot, OpenAI, Google, or Anthropic in Settings.",
     "aiVisionConfirm": "AI OCR",
     "aiVisionProcessing": "AI processing… ({{current}}/{{total}})",
-    "aiVisionNoApiKey": "No API key found for the current provider. Please configure it in Settings first."
+    "aiVisionNoApiKey": "Your current provider is not configured yet. Go to Settings: if using GitHub Copilot, click \"Sign in to GitHub\" to authorize; for other providers, enter your API key."
   },
   "stepCharacters": {
     "title": "🎭 Character Creation",
@@ -633,6 +633,9 @@
     "continueImport": "Continue Import",
     "returnHome": "Back to Home",
     "configApiKey": "Please configure your API Key in Settings first",
+    "noApiKeyGuide": "An AI service is required. Go to Settings, select an AI provider (GitHub Copilot is recommended — free to sign in), and make sure your API key is configured or you're logged in.",
+    "textOptimizeDesc": "AI reads the extracted text and helps fix formatting, clean up layout, and produce readable Markdown. Best for text-heavy documents. Faster processing.",
+    "visionOcrDesc": "AI directly \"sees\" the PDF page as an image to recognize content, bypassing text extraction entirely. Best for scanned PDFs or textbooks with math formulas. Higher quality but slower.",
     "aiFailed": "AI enhancement failed: {{error}}",
     "aiConvertNote": "AI enhanced conversion ({{mode}}), {{pages}} pages total",
     "modeVisionApi": "Vision API",

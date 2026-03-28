@@ -90,7 +90,7 @@ export default function PdfImportPage() {
 
     const apiKey = await getApiKey(settings.aiProvider);
     if (!apiKey) {
-      setError(t('pdfImport.configApiKey'));
+      setError(t('pdfImport.noApiKeyGuide', { provider: settings.aiProvider }));
       return;
     }
 
@@ -252,43 +252,52 @@ export default function PdfImportPage() {
             </div>
 
             {/* AI Enhancement controls */}
-            <div className="mb-3 flex items-center gap-2 rounded-card bg-surface-light p-3 shadow-card dark:bg-surface-dark">
-              <span className="text-tag tracking-[0.04em] font-medium text-text-sub">{t('pdfImport.aiEnhance')}</span>
-              <button
-                onClick={() => setEnhanceMode('none')}
-                className={`rounded-btn px-3 py-1 text-tag tracking-[0.04em] ${enhanceMode === 'none' ? 'bg-slate-600 text-white' : 'bg-bg-light text-text-sub dark:bg-slate-700 dark:text-text-main-dark'}`}
-              >
-                {t('pdfImport.noEnhance')}
-              </button>
-              <button
-                onClick={() => setEnhanceMode('text')}
-                className={`rounded-btn px-3 py-1 text-tag tracking-[0.04em] ${enhanceMode === 'text' ? 'bg-primary text-white' : 'bg-bg-light text-text-sub dark:bg-slate-700 dark:text-text-main-dark'}`}
-              >
-                {t('pdfImport.textOptimize')}
-              </button>
-              <button
-                onClick={() => setEnhanceMode('vision')}
-                disabled={!rendererAvailable}
-                className={`rounded-btn px-3 py-1 text-tag tracking-[0.04em] ${enhanceMode === 'vision' ? 'bg-purple-500 text-white' : 'bg-bg-light text-text-sub dark:bg-slate-700 dark:text-text-main-dark'} disabled:opacity-40`}
-                title={rendererAvailable ? t('pdfImport.visionApiTitle', { name: rendererName }) : t('pdfImport.visionUnavailable')}
-              >
-                👁️ Vision OCR
-              </button>
+            <div className="mb-3 rounded-card bg-surface-light p-3 shadow-card dark:bg-surface-dark">
+              <div className="flex items-center gap-2">
+                <span className="text-tag tracking-[0.04em] font-medium text-text-sub">{t('pdfImport.aiEnhance')}</span>
+                <button
+                  onClick={() => setEnhanceMode('none')}
+                  className={`rounded-btn px-3 py-1 text-tag tracking-[0.04em] ${enhanceMode === 'none' ? 'bg-slate-600 text-white' : 'bg-bg-light text-text-sub dark:bg-slate-700 dark:text-text-main-dark'}`}
+                >
+                  {t('pdfImport.noEnhance')}
+                </button>
+                <button
+                  onClick={() => setEnhanceMode('text')}
+                  className={`rounded-btn px-3 py-1 text-tag tracking-[0.04em] ${enhanceMode === 'text' ? 'bg-primary text-white' : 'bg-bg-light text-text-sub dark:bg-slate-700 dark:text-text-main-dark'}`}
+                >
+                  {t('pdfImport.textOptimize')}
+                </button>
+                <button
+                  onClick={() => setEnhanceMode('vision')}
+                  disabled={!rendererAvailable}
+                  className={`rounded-btn px-3 py-1 text-tag tracking-[0.04em] ${enhanceMode === 'vision' ? 'bg-purple-500 text-white' : 'bg-bg-light text-text-sub dark:bg-slate-700 dark:text-text-main-dark'} disabled:opacity-40`}
+                  title={rendererAvailable ? t('pdfImport.visionApiTitle', { name: rendererName }) : t('pdfImport.visionUnavailable')}
+                >
+                  👁️ Vision OCR
+                </button>
+                {enhanceMode !== 'none' && (
+                  <button
+                    onClick={handleAiEnhance}
+                    className="ml-3 flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-[13px] font-medium tracking-wide text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:opacity-90"
+                  >
+                    <span className="text-[14px]">✨</span> {t('pdfImport.enhanceAll', { count: result.total_pages })}
+                  </button>
+                )}
+                {rendererAvailable && (
+                  <button
+                    onClick={handlePreviewPageImage}
+                    className="ml-auto rounded-btn border border-border-light px-3 py-1 text-tag tracking-[0.04em] text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-placeholder"
+                  >
+                    {t('pdfImport.previewImages')}
+                  </button>
+                )}
+              </div>
               {enhanceMode !== 'none' && (
-                <button
-                  onClick={handleAiEnhance}
-                  className="ml-3 flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-[13px] font-medium tracking-wide text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:opacity-90"
-                >
-                  <span className="text-[14px]">✨</span> {t('pdfImport.enhanceAll', { count: result.total_pages })}
-                </button>
-              )}
-              {rendererAvailable && (
-                <button
-                  onClick={handlePreviewPageImage}
-                  className="ml-auto rounded-btn border border-border-light px-3 py-1 text-tag tracking-[0.04em] text-text-sub hover:bg-bg-light dark:border-slate-600 dark:text-text-placeholder"
-                >
-                  {t('pdfImport.previewImages')}
-                </button>
+                <p className="mt-2 text-[11px] leading-relaxed text-text-placeholder dark:text-text-placeholder">
+                  {enhanceMode === 'text'
+                    ? t('pdfImport.textOptimizeDesc')
+                    : t('pdfImport.visionOcrDesc')}
+                </p>
               )}
             </div>
 
