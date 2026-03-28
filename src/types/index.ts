@@ -256,8 +256,8 @@ export interface UploadedMaterial {
 export interface WorldSetting {
   location: string;              // 地点描述（AI 生成）
   locationStyle: 'enclosed' | 'semi-open' | 'everyday' | 'custom';
-  arrivalReason: string;         // 学习者到来的原因（AI 生成）
-  arrivalType: 'arranged' | 'self-sought' | 'accidental';
+  arrivalType: 'arranged' | 'self-sought' | 'accidental' | 'fated';
+  teachingMotivation: 'professional' | 'personal-secret' | 'assigned-mentor' | 'shared-goal';
   characterRelations: string;    // 角色之间的关系（AI 生成）
   supernaturalElement: string;   // 超自然设定（可选）
   hasSupernatural: boolean;
@@ -272,6 +272,7 @@ export interface EmotionalPhase {
 }
 
 export type StoryMode = 'standard' | 'novel';
+export type NovelReferenceType = 'existing-work' | 'free-description';
 
 export interface StoryDesign {
   emotionalTemplate: EmotionalPhaseTemplate;
@@ -283,6 +284,8 @@ export interface StoryDesign {
   groupChatStyle: string;
   keyEvents: string;             // 关键事件描述（自由文本）
   storyReference: string;        // 小说模式：参考作品描述
+  novelReferenceType: NovelReferenceType;
+  existingWorkName: string;      // 小说模式：现有作品名
 }
 
 export interface MetaPromptQuestionnaire {

@@ -72,7 +72,9 @@ export function serializeQuestionnaire(q: MetaPromptQuestionnaire): string {
   lines.push('');
   lines.push(`- **场景类型**: ${formatLocationStyle(q.world.locationStyle)}`);
   lines.push(`- **具体场景描述**: （由 AI 根据角色和场景类型生成）`);
-  lines.push(`- **角色关系**: （由 AI 根据角色性格和背景自动设计）`);
+  lines.push(`- **学习者到来方式**: ${formatArrivalType(q.world.arrivalType)}`);
+  lines.push(`- **角色教学动机**: ${formatTeachingMotivation(q.world.teachingMotivation)}`);
+  lines.push(`- **角色关系**: （由 AI 根据角色性格、教学风格和到来方式自动设计初始关系动态）`);
   if (q.world.hasSupernatural) {
     lines.push(`- **超自然设定**: ${q.world.supernaturalElement}`);
   } else {
@@ -88,12 +90,17 @@ export function serializeQuestionnaire(q: MetaPromptQuestionnaire): string {
   lines.push('');
 
   if (q.storyMode === 'novel') {
-    if (q.story.storyReference) {
-      lines.push('### 参考作品 / 体验描述');
+    if (q.story.novelReferenceType === 'existing-work' && q.story.existingWorkName) {
+      lines.push(`### 参考作品: 《${q.story.existingWorkName}》`);
+      lines.push('');
+      lines.push(`> AI 请直接使用《${q.story.existingWorkName}》的世界观设定和剧情框架，结合已有角色设计（暗线等），设计故事线、情感阶段和关键事件。遵循现有模板规则。`);
+      lines.push('');
+    } else if (q.story.storyReference) {
+      lines.push('### 体验描述');
       lines.push('');
       lines.push(q.story.storyReference);
       lines.push('');
-      lines.push('> AI 请根据以上参考，结合已有角色设计（暗线等），从头设计故事线、情感阶段和关键事件。遵循现有模板规则。');
+      lines.push('> AI 请根据以上描述，结合已有角色设计（暗线等），从头设计故事线、情感阶段和关键事件。遵循现有模板规则。');
       lines.push('');
     }
   } else {
@@ -145,4 +152,21 @@ function formatLocationStyle(s: string): string {
   }[s] || s;
 }
 
+function formatArrivalType(t: string): string {
+  return {
+    arranged: '被安排/转来的（初始距离远，信任需要建立）',
+    'self-sought': '主动找来的（有明确目的，初始好感较高）',
+    accidental: '偶然到来的（意外相遇，关系发展不可预测）',
+    fated: '命运使然（特殊契机，暗含深层联系）',
+  }[t] || t;
+}
+
+function formatTeachingMotivation(m: string): string {
+  return {
+    professional: '职业教师（教学是本职，关系从工作开始）',
+    'personal-secret': '各有隐情（每位老师有自己的秘密和教学动机）',
+    'assigned-mentor': '专属导师（被指派或自愿成为你的导师）',
+    'shared-goal': '共同目标（因某个事件或目标聚在一起）',
+  }[m] || m;
+}
 

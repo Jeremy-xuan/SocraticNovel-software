@@ -58,18 +58,56 @@ export default function StepStory({ data, onChange }: Props) {
         </div>
       </section>
 
-      {/* Novel mode: story reference */}
+      {/* Novel mode: reference type + input */}
       {storyMode === 'novel' && (
         <section className="space-y-4">
           <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepStory.storyReference')}</h3>
-          <p className="text-tag tracking-[0.04em] text-text-sub">{t('stepStory.storyReferenceHint')}</p>
-          <textarea
-            value={story.storyReference}
-            onChange={e => setStory({ storyReference: e.target.value })}
-            placeholder={t('stepStory.storyReferencePlaceholder')}
-            rows={4}
-            className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
-          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => setStory({ novelReferenceType: 'existing-work' })}
+              className={`rounded-full border px-3 py-1 text-tag tracking-[0.04em] font-medium ${
+                story.novelReferenceType === 'existing-work'
+                  ? 'border-blue-300 bg-blue-50 text-primary dark:border-blue-600 dark:bg-blue-900/30'
+                  : 'border-border-light text-text-sub dark:border-slate-600'
+              }`}
+            >
+              {t('stepStory.refExistingWork')}
+            </button>
+            <button
+              onClick={() => setStory({ novelReferenceType: 'free-description' })}
+              className={`rounded-full border px-3 py-1 text-tag tracking-[0.04em] font-medium ${
+                story.novelReferenceType === 'free-description'
+                  ? 'border-blue-300 bg-blue-50 text-primary dark:border-blue-600 dark:bg-blue-900/30'
+                  : 'border-border-light text-text-sub dark:border-slate-600'
+              }`}
+            >
+              {t('stepStory.refFreeDescription')}
+            </button>
+          </div>
+
+          {story.novelReferenceType === 'existing-work' ? (
+            <div className="space-y-2">
+              <p className="text-tag tracking-[0.04em] text-text-sub">{t('stepStory.existingWorkHint')}</p>
+              <input
+                type="text"
+                value={story.existingWorkName}
+                onChange={e => setStory({ existingWorkName: e.target.value })}
+                placeholder={t('stepStory.existingWorkPlaceholder')}
+                className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
+              />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-tag tracking-[0.04em] text-text-sub">{t('stepStory.storyReferenceHint')}</p>
+              <textarea
+                value={story.storyReference}
+                onChange={e => setStory({ storyReference: e.target.value })}
+                placeholder={t('stepStory.storyReferencePlaceholder')}
+                rows={4}
+                className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2.5 text-aux dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
+              />
+            </div>
+          )}
         </section>
       )}
 

@@ -17,7 +17,19 @@ export default function StepWorld({ data, onChange }: Props) {
     { value: 'custom' as const, label: t('stepWorld.custom'), icon: <svg className="inline-block h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" /></svg>, examples: t('stepWorld.customExamples') },
   ];
 
-  // arrivalTypes removed — AI will auto-generate based on characters + scene
+  const arrivalTypes = [
+    { value: 'arranged' as const, label: t('stepWorld.arrivalArranged'), desc: t('stepWorld.arrivalArrangedDesc') },
+    { value: 'self-sought' as const, label: t('stepWorld.arrivalSelfSought'), desc: t('stepWorld.arrivalSelfSoughtDesc') },
+    { value: 'accidental' as const, label: t('stepWorld.arrivalAccidental'), desc: t('stepWorld.arrivalAccidentalDesc') },
+    { value: 'fated' as const, label: t('stepWorld.arrivalFated'), desc: t('stepWorld.arrivalFatedDesc') },
+  ];
+
+  const motivations = [
+    { value: 'professional' as const, label: t('stepWorld.motivProfessional'), desc: t('stepWorld.motivProfessionalDesc') },
+    { value: 'personal-secret' as const, label: t('stepWorld.motivPersonalSecret'), desc: t('stepWorld.motivPersonalSecretDesc') },
+    { value: 'assigned-mentor' as const, label: t('stepWorld.motivAssignedMentor'), desc: t('stepWorld.motivAssignedMentorDesc') },
+    { value: 'shared-goal' as const, label: t('stepWorld.motivSharedGoal'), desc: t('stepWorld.motivSharedGoalDesc') },
+  ];
 
   const setWorld = (partial: Partial<typeof world>) =>
     onChange({ world: { ...world, ...partial } });
@@ -57,6 +69,50 @@ export default function StepWorld({ data, onChange }: Props) {
         <p className="text-tag tracking-[0.04em] text-text-sub">
           {t('stepWorld.locationAutoHint')}
         </p>
+      </section>
+
+      {/* Arrival type */}
+      <section className="space-y-4">
+        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepWorld.arrivalQuestion')}</h3>
+        <p className="text-tag tracking-[0.04em] text-text-sub">{t('stepWorld.arrivalHint')}</p>
+        <div className="grid grid-cols-2 gap-3">
+          {arrivalTypes.map(at => (
+            <button
+              key={at.value}
+              onClick={() => setWorld({ arrivalType: at.value })}
+              className={`rounded-card border p-3 text-left transition-colors ${
+                world.arrivalType === at.value
+                  ? 'border-blue-300 bg-blue-50 dark:border-blue-600 dark:bg-blue-900/20'
+                  : 'border-border-light dark:border-slate-600'
+              }`}
+            >
+              <div className="font-medium text-aux text-text-main dark:text-text-main-dark">{at.label}</div>
+              <div className="text-tag tracking-[0.04em] text-text-sub">{at.desc}</div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Teaching motivation */}
+      <section className="space-y-4">
+        <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepWorld.motivQuestion')}</h3>
+        <p className="text-tag tracking-[0.04em] text-text-sub">{t('stepWorld.motivHint')}</p>
+        <div className="grid grid-cols-2 gap-3">
+          {motivations.map(m => (
+            <button
+              key={m.value}
+              onClick={() => setWorld({ teachingMotivation: m.value })}
+              className={`rounded-card border p-3 text-left transition-colors ${
+                world.teachingMotivation === m.value
+                  ? 'border-blue-300 bg-blue-50 dark:border-blue-600 dark:bg-blue-900/20'
+                  : 'border-border-light dark:border-slate-600'
+              }`}
+            >
+              <div className="font-medium text-aux text-text-main dark:text-text-main-dark">{m.label}</div>
+              <div className="text-tag tracking-[0.04em] text-text-sub">{m.desc}</div>
+            </button>
+          ))}
+        </div>
       </section>
 
       {/* Supernatural element */}

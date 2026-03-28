@@ -79,14 +79,24 @@ export default function StepReview({ data }: Props) {
           enclosed: t('stepReview.locationStyleEnclosed'), 'semi-open': t('stepReview.locationStyleSemiOpen'),
           everyday: t('stepReview.locationStyleEveryday'), custom: t('stepReview.locationStyleCustom'),
         }[world.locationStyle]} />
-        {world.characterRelations && <Row label={t('stepReview.characterRelations')} value={world.characterRelations} />}
+        <Row label={t('stepReview.arrivalType')} value={{
+          arranged: t('stepReview.arrivalArranged'), 'self-sought': t('stepReview.arrivalSelfSought'),
+          accidental: t('stepReview.arrivalAccidental'), fated: t('stepReview.arrivalFated'),
+        }[world.arrivalType]} />
+        <Row label={t('stepReview.teachingMotivation')} value={{
+          professional: t('stepReview.motivProfessional'), 'personal-secret': t('stepReview.motivPersonalSecret'),
+          'assigned-mentor': t('stepReview.motivAssignedMentor'), 'shared-goal': t('stepReview.motivSharedGoal'),
+        }[world.teachingMotivation]} />
         <Row label={t('stepReview.supernatural')} value={world.hasSupernatural ? world.supernaturalElement : t('stepReview.supernaturalNone')} />
       </Section>
 
       {/* Story */}
       <Section title={t('stepReview.storySection')}>
         <Row label={t('stepReview.storyMode')} value={data.storyMode === 'novel' ? t('stepReview.storyModeNovel') : t('stepReview.storyModeStandard')} />
-        {data.storyMode === 'novel' && story.storyReference && (
+        {data.storyMode === 'novel' && story.novelReferenceType === 'existing-work' && story.existingWorkName && (
+          <Row label={t('stepReview.existingWork')} value={story.existingWorkName} />
+        )}
+        {data.storyMode === 'novel' && story.novelReferenceType === 'free-description' && story.storyReference && (
           <Row label={t('stepReview.storyReference')} value={story.storyReference} />
         )}
         {data.characterCount > 1 && (

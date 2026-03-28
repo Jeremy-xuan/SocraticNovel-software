@@ -22,7 +22,7 @@ const DEFAULT_QUESTIONNAIRE: MetaPromptQuestionnaire = {
   characters: [],
   world: {
     location: '', locationStyle: 'enclosed',
-    arrivalReason: '', arrivalType: 'self-sought',
+    arrivalType: 'self-sought', teachingMotivation: 'professional',
     characterRelations: '', supernaturalElement: '', hasSupernatural: false,
   },
   story: {
@@ -40,6 +40,8 @@ const DEFAULT_QUESTIONNAIRE: MetaPromptQuestionnaire = {
     groupChatStyle: '纯文字 + 偶尔 emoji',
     keyEvents: '',
     storyReference: '',
+    novelReferenceType: 'existing-work',
+    existingWorkName: '',
   },
   storyMode: 'standard',
 };
@@ -67,7 +69,9 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
       case 3: return !!data.world.locationStyle;
       case 4: return data.storyMode === 'standard'
               ? true
-              : !!data.story.storyReference.trim();
+              : data.story.novelReferenceType === 'existing-work'
+                ? !!data.story.existingWorkName.trim()
+                : !!data.story.storyReference.trim();
       case 5: return true;
       default: return false;
     }
