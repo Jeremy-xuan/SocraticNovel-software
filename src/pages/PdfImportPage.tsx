@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
@@ -40,7 +40,12 @@ export default function PdfImportPage() {
   const [enhancedPages, setEnhancedPages] = useState<Map<number, string>>(new Map());
   const [enhanceProgress, setEnhanceProgress] = useState({ current: 0, total: 0 });
   const [pagePreviewImage, setPagePreviewImage] = useState<string | null>(null);
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
+  const modelDropdownRef = useRef<HTMLDivElement>(null);
   const availableModels = PROVIDER_MODELS[settings.aiProvider] ?? [];
+  const currentModelLabel = availableModels.find(m => m.id === enhanceModel)?.label
+    ?? availableModels.find(m => m.default)?.label
+    ?? enhanceModel;
 
   useEffect(() => {
     checkPdfRenderer().then((info) => {
@@ -325,18 +330,32 @@ export default function PdfImportPage() {
                       ? t('pdfImport.textOptimizeDesc')
                       : t('pdfImport.visionOcrDesc')}
                   </p>
-                  <label className="flex shrink-0 items-center gap-1.5">
-                    <span className="text-[11px] text-text-placeholder">{t('pdfImport.modelLabel')}</span>
-                    <select
-                      value={enhanceModel}
-                      onChange={(e) => setEnhanceModel(e.target.value)}
-                      className="rounded-btn border border-border-light bg-bg-light px-2 py-1 text-[11px] text-text-main dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
+                  <div className="relative shrink-0" ref={modelDropdownRef}>
+                    <button
+                      onClick={() => setModelDropdownOpen(!modelDropdownOpen)}
+                      className="flex items-center gap-1.5 rounded-full border border-border-light bg-bg-light px-3 py-1 text-[11px] text-text-main transition-colors hover:border-primary/40 dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark dark:hover:border-primary/40"
                     >
-                      {availableModels.map((m) => (
-                        <option key={m.id} value={m.id}>{m.label}</option>
-                      ))}
-                    </select>
-                  </label>
+                      <span className="max-w-[140px] truncate">{currentModelLabel}</span>
+                      <svg className={`h-3 w-3 text-text-placeholder transition-transform ${modelDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                    {modelDropdownOpen && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setModelDropdownOpen(false)} />
+                        <div className="absolute right-0 top-full z-20 mt-1 max-h-52 w-56 overflow-auto rounded-card border border-border-light bg-surface-light py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800">
+                          {availableModels.map((m) => (
+                            <button
+                              key={m.id}
+                              onClick={() => { setEnhanceModel(m.id); setModelDropdownOpen(false); }}
+                              className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] transition-colors hover:bg-primary/5 dark:hover:bg-primary/10 ${m.id === enhanceModel ? 'text-primary font-medium' : 'text-text-main dark:text-text-main-dark'}`}
+                            >
+                              {m.id === enhanceModel && <span className="text-[10px]">✓</span>}
+                              <span className={m.id === enhanceModel ? '' : 'ml-4'}>{m.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
