@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MetaPromptQuestionnaire, UploadedMaterial } from '../../types';
-import { extractPdfText, importPdfToWorkspace, aiVisionEnhancePage, writeFile } from '../../lib/tauri';
+import { extractPdfText, aiVisionEnhancePage } from '../../lib/tauri';
 import { useAppStore } from '../../stores/appStore';
 import { open } from '@tauri-apps/plugin-dialog';
 
@@ -38,7 +38,6 @@ interface Props {
 export default function StepSubject({ data, onChange }: Props) {
   const { subject, course, characterCount } = data;
   const { t } = useTranslation();
-  const wsPath = useAppStore((s) => s.settings.currentWorkspacePath);
   const settings = useAppStore((s) => s.settings);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -68,10 +67,6 @@ export default function StepSubject({ data, onChange }: Props) {
     onChange({ course: { ...course, ...partial } });
 
   const handleUploadPdf = async () => {
-    if (!wsPath) {
-      setUploadError(t('stepSubject.noWorkspace'));
-      return;
-    }
     try {
       const selected = await open({
         multiple: true,
@@ -87,11 +82,10 @@ export default function StepSubject({ data, onChange }: Props) {
       const newGarbled: string[] = [];
       for (const filePath of files) {
         const extracted = await extractPdfText(filePath);
-        const targetName = extracted.filename.replace(/\.pdf$/i, '');
-        const savedPath = await importPdfToWorkspace(filePath, wsPath, targetName);
         newMaterials.push({
           originalName: extracted.filename,
-          savedPath,
+          sourcePath: filePath,
+          savedPath: '',
           pageCount: extracted.total_pages,
         });
         if (extracted.isGarbled) {
@@ -124,7 +118,7 @@ export default function StepSubject({ data, onChange }: Props) {
 
   const handleAiVisionOcr = async (filename: string) => {
     const material = course.uploadedMaterials.find(m => m.originalName === filename);
-    if (!material || !wsPath) return;
+    if (!material) return;
 
     const provider = settings.aiProvider;
     if (!VISION_PROVIDERS.has(provider)) {
@@ -147,13 +141,16 @@ export default function StepSubject({ data, onChange }: Props) {
 
       for (let page = 1; page <= totalPages; page++) {
         setOcrProgress({ current: page, total: totalPages });
-        const text = await aiVisionEnhancePage(material.savedPath, page, apiKey, provider, model);
+        const text = await aiVisionEnhancePage(material.sourcePath, page, apiKey, provider, model);
         pageTexts.push(text);
       }
 
       const fullText = pageTexts.join('\n\n---\n\n');
-      const targetName = filename.replace(/\.pdf$/i, '');
-      await writeFile(wsPath, `materials/${targetName}.md`, fullText);
+      // Store enhanced text in material — will be written to workspace after creation
+      const updated = course.uploadedMaterials.map(m =>
+        m.originalName === filename ? { ...m, enhancedText: fullText } : m
+      );
+      setCourse({ uploadedMaterials: updated });
       setGarbledFiles(prev => prev.filter(f => f !== filename));
     } catch (err) {
       setUploadError(`AI Vision OCR failed: ${String(err)}`);

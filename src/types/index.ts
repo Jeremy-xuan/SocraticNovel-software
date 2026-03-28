@@ -247,8 +247,10 @@ export interface CourseStructure {
 
 export interface UploadedMaterial {
   originalName: string;          // 原始文件名
-  savedPath: string;             // 保存到 workspace 的路径
+  savedPath: string;             // 保存到 workspace 的路径（创建后填充）
+  sourcePath: string;            // 原始文件的完整路径（用于延迟复制）
   pageCount: number;             // 页数
+  enhancedText?: string;         // AI Vision 增强后的文本（暂存）
 }
 
 export interface WorldSetting {

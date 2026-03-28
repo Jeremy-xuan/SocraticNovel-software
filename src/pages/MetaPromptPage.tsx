@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../stores/appStore';
 import { useAiAgent } from '../hooks/useAiAgent';
-import { createWorkspace, listWorkspaces } from '../lib/tauri';
+import { createWorkspace, listWorkspaces, importPdfToWorkspace, writeFile } from '../lib/tauri';
 import ChatMessageBubble from '../components/chat/ChatMessageBubble';
 import ChatInput from '../components/chat/ChatInput';
 import AgentLogPanel from '../components/debug/AgentLogPanel';
@@ -99,6 +99,18 @@ export default function MetaPromptPage() {
 
       const ws = await createWorkspace(name);
       setWorkspacePath(ws.path);
+
+      // Copy uploaded materials into the new workspace
+      const materials = questionnaire.course.uploadedMaterials;
+      for (const mat of materials) {
+        if (mat.sourcePath) {
+          const targetName = mat.originalName.replace(/\.pdf$/i, '');
+          await importPdfToWorkspace(mat.sourcePath, ws.path, targetName);
+          if (mat.enhancedText) {
+            await writeFile(ws.path, `materials/${targetName}.md`, mat.enhancedText);
+          }
+        }
+      }
 
       addMessage({
         id: crypto.randomUUID(),
