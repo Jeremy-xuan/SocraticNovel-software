@@ -230,5 +230,5 @@ export async function simpleChat(
   model: string,
   apiKey: string,
 ): Promise<string> {
-  return invoke('simple_chat', { systemPrompt, messages, provider, model, apiKey });
+  return invoke('simple_chat', { payload: { systemPrompt, messages, provider, model, apiKey } });
 }
