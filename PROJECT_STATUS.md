@@ -1,7 +1,7 @@
 # SocraticNovel — 项目状态文档
 
-> 最后更新：2026-07-21
-> 当前版本：Phase 4.1 进行中（v0.4.0 — 课程会话历史 + 教学质量优化）
+> 最后更新：2025-07-28
+> 当前版本：Phase 4.2 进行中（v0.4.1 — GitHub OAuth + PDF 质量检测 + Apple Vision OCR）
 
 ## 项目概述
 
@@ -386,6 +386,31 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
     - CanvasPanel 新增 `readOnly` 模式隐藏标注工具
     - i18n: 17 个新翻译键（中/英）
 
+69. **✅ GitHub Models OAuth 集成 (T4)** — PKCE + 本地 HTTP 回调实现 GitHub 登录
+    - Rust: `oauth_commands.rs`（start_github_oauth / check / get_token / logout）
+    - `openai.rs` + `runtime.rs` 新增 "github" 提供商分支
+    - 前端: SettingsPage GitHub 按钮 + OAuth 登录/登出 UI + 模型列表
+    - API: `models.inference.ai.azure.com`（OpenAI 兼容，复用 `OpenAiClient`）
+
+70. **✅ Dev 模式凭证文件存储 (T4)** — 修复 macOS Keychain 每次编译弹密码
+    - `credential_store.rs`：`#[cfg(debug_assertions)]` 编译期切换存储后端
+    - Debug: `~/Library/Application Support/SocraticNovel/dev_credentials.json`
+    - Release: OS Keyring（macOS Keychain / Windows Credential Manager）
+
+71. **✅ PDF 材料问卷上传 + 质量检测 (T4)** — 问卷向导 Step 1 集成 PDF 上传
+    - StepSubject: 文件选择 → 提取 → 质量检测 → 导入 workspace
+    - 多采样乱码检测（4 点采样，3 启发式，阈值 0.5）
+    - garbled 警告框 + Apple Vision 一键修复
+    - StepReview: 已上传材料汇总；Step 4→5 无材料确认弹窗
+    - pdftotext (poppler) 优先，pdf-extract 纯 Rust fallback
+
+72. **✅ Apple Vision OCR (T4)** — macOS 本地免费 OCR 处理防拷贝 PDF
+    - Swift CLI 工具 `scripts/apple_ocr.swift`（按需编译缓存）
+    - Vision.framework VNRecognizeTextRequest（zh-Hans + en-US）
+    - 逐页渲染 300 DPI JPEG → OCR → 进度事件流
+    - 前端进度条（`ocr-progress` 事件，amber 色主题）
+    - ~0.6s/页，免费本地运行
+
 ## 未完成 / 需要改进
 
 ### 优先级高
@@ -410,7 +435,7 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
 
 ### 延后项（Phase 4+）
 
-11. **OAuth 登录** — Anthropic 无公开 OAuth API，OpenAI 受限，仅 Google 成熟；ROI 低，暂不实现
+11. **✅ GitHub OAuth 登录** — 已通过 PKCE + 本地 HTTP 回调实现（Phase 4 #69）；Anthropic/OpenAI/Google OAuth 暂不实现（API 限制）
 12. **DMG 代码签名 + 公证** — 需 Apple Developer Program ($99/年)；当前未签名 DMG 可通过右键→打开绕过 Gatekeeper
 13. **社区 Workspace 分享** — 需设计后端服务（在线仓库/浏览/搜索/下载），与当前纯本地架构不同
 14. **Tauri 自动更新** — 需 Tauri updater 插件 + 签名密钥，建议在代码签名后实现
@@ -514,3 +539,9 @@ cd src-tauri && cargo test --test e2e_flow -- --nocapture
 22. **动态教学节奏** — 教学速度从 `learner_profile.md` 的"学习水平"字段驱动：Prep Agent 读取 → lesson_brief 携带 → `build_teaching_prompt()` 检测关键词 → 动态生成 rounds-per-idea 指令。三档：初学(3-5轮)、中等(2-3轮)、进阶(1-2轮)。
 23. **read_teaching_material 最小权限** — Teaching Phase 的文件访问通过独立工具 `read_teaching_material` 实现，仅允许 `materials/` 目录只读。这比开放 `read_file` 更安全：AI 可查课本但无法读教案（teacher/），确保教学由 lesson_brief 驱动而非"偷看答案"。
 24. **课堂历史存储策略** — 每次下课时保存完整快照（messages + canvasItems + groupChatMessages + annotations）为单个 JSON 文件到 `session_history/` 目录。ID 使用 ISO 时间戳（冒号/点替换为连字符）确保文件名安全且自然排序。列表 API 仅解析摘要字段（不加载完整 messages），保证即使积累 100+ 课堂记录仍然快速。
+25. **GitHub Models OAuth (PKCE)** — 不使用 Device Flow（需轮询），而是 Authorization Code Flow + PKCE + 本地 HTTP 回调。生成 PKCE code_verifier → SHA-256 → base64url，启动临时 localhost 服务器捕获回调。GitHub Models API 完全 OpenAI 兼容（`models.inference.ai.azure.com`），复用 `OpenAiClient` 仅新增 base URL 分支，零额外客户端代码。
+26. **Dev 模式凭证文件存储** — macOS Keychain 每次 `cargo build` 因 ad-hoc 签名变化弹密码确认。解决方案：`credential_store.rs` 通过 `#[cfg(debug_assertions)]` 编译期切换——debug 用 `~/Library/Application Support/SocraticNovel/dev_credentials.json`，release 用 OS Keyring。统一 API（`set_password`/`get_password`/`delete_password`），调用方无感知。
+27. **PDF 质量多采样检测** — 单采样点会遗漏混合内容 PDF（如刷题册前半英文正常、后半乱码）。改为 4 点采样（10%/25%/50%/75%），最终分数 = min×0.6 + avg×0.4（最小值主导），阈值 0.5。三个启发式：常见英文词匹配(50%)、大写占比(30%)、超长辅音簇(20%)。准确识别出 TestDaily 的 -29 ASCII 偏移防拷贝编码。
+28. **Apple Vision OCR 按需编译** — Swift CLI 工具 `scripts/apple_ocr.swift` 不预编译，而是首次使用时 `swiftc -O` 编译并缓存到 `~/Library/Caches/SocraticNovel/apple_ocr`。源文件修改时间比二进制新则自动重编译。免去构建工具链集成，支持开发阶段快速迭代脚本逻辑。编译后 ~0.6s/页，解释执行 ~2.5s/页。
+29. **PDF 材料问卷上传** — 问卷向导 Step 1（学科设置）集成 PDF 上传，而非单独导入页。上传即提取+质量检测+导入 workspace，garbled 文件实时警告并提供 Apple Vision 一键修复。Step 5（确认）显示已上传材料汇总。如果用户未上传材料且未填写主题大纲，Step 4→5 时弹出确认弹窗（防止遗漏）。
+30. **OCR 进度事件流** — `apple_vision_ocr_full` 通过 Tauri `app.emit("ocr-progress", {current, total, filename})` 逐页推送进度。前端 `listen<OcrProgress>` 实时渲染进度条（amber 色与警告框统一）。按钮上显示 `15/100` 即时数字，避免用户以为卡死。此模式复用了项目已有的 `agent-event` 事件推送范式。
