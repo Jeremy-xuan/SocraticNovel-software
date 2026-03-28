@@ -154,7 +154,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-bg-light dark:bg-bg-dark font-sans text-text-main dark:text-text-main-dark selection:bg-primary/20 overflow-hidden relative">
+    <div className="flex h-screen flex-col bg-bg-light pt-8 dark:bg-bg-dark font-sans text-text-main dark:text-text-main-dark selection:bg-primary/20 overflow-hidden relative">
 
       {/* Top Controls */}
       <div className="absolute top-8 right-8 z-20 flex items-center gap-5">

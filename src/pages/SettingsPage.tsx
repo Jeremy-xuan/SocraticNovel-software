@@ -91,7 +91,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-surface-light dark:bg-bg-dark">
+    <div className="flex h-screen flex-col bg-surface-light pt-8 dark:bg-bg-dark">
       <header className="flex h-12 shrink-0 items-center border-b border-border-light px-4 dark:border-border-dark">
         <button
           onClick={() => navigate('/')}

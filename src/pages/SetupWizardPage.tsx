@@ -58,7 +58,7 @@ export default function SetupWizardPage() {
   };
 
   return (
-    <div className="flex h-screen items-center justify-center bg-bg-light dark:bg-bg-dark">
+    <div className="flex h-screen items-center justify-center bg-bg-light pt-8 dark:bg-bg-dark">
       <div className="w-full max-w-lg rounded-block border border-border-light bg-surface-light p-8 shadow-lg dark:border-border-dark dark:bg-surface-dark">
         {/* Progress indicator */}
         <div className="mb-8 flex justify-center gap-2">

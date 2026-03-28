@@ -119,7 +119,7 @@ export default function HistoryPage() {
     const groupChatMessages: GroupChatMessage[] = reviewEntry.groupChatMessages || [];
 
     return (
-      <div className="flex h-screen flex-col bg-bg-light dark:bg-bg-dark font-sans text-text-main dark:text-text-main-dark selection:bg-primary/20">
+      <div className="flex h-screen flex-col bg-bg-light pt-8 dark:bg-bg-dark font-sans text-text-main dark:text-text-main-dark selection:bg-primary/20">
 
         {/* Header */}
         <header className="flex h-16 shrink-0 items-center justify-between px-6 lg:px-8">
@@ -233,7 +233,7 @@ export default function HistoryPage() {
   const grouped = groupByDate(summaries);
 
   return (
-    <div className="flex h-screen flex-col bg-bg-light dark:bg-bg-dark font-sans text-text-main dark:text-text-main-dark selection:bg-primary/20">
+    <div className="flex h-screen flex-col bg-bg-light pt-8 dark:bg-bg-dark font-sans text-text-main dark:text-text-main-dark selection:bg-primary/20">
 
       {/* Header */}
       <header className="flex h-16 shrink-0 items-center justify-between px-6 lg:px-8">

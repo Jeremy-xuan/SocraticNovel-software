@@ -162,8 +162,7 @@ export default function NotesPage() {
   });
 
   return (
-    <div className="flex h-screen flex-col bg-surface-light dark:bg-bg-dark">
-      {/* Header — hidden when printing */}
+    <div className="flex h-screen flex-col bg-surface-light pt-8 dark:bg-bg-dark">
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-border-light px-4 dark:border-border-dark print:hidden">
         <button
           onClick={() => navigate(-1)}

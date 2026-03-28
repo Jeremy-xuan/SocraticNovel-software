@@ -174,7 +174,7 @@ export default function MetaPromptPage() {
   // ─── Phase 1: Name input ──────────────────────────────────
   if (pagePhase === 'name') {
     return (
-      <div className="flex h-screen items-center justify-center bg-bg-light dark:bg-bg-dark">
+      <div className="flex h-screen items-center justify-center bg-bg-light pt-8 dark:bg-bg-dark">
         <div className="w-full max-w-md rounded-block border border-border-light bg-surface-light p-8 shadow-lg dark:border-border-dark dark:bg-surface-dark">
           <div className="mb-6 text-center">
             <span className="mb-3 block text-title leading-tight tracking-[0.04em]">🔨</span>
@@ -240,7 +240,7 @@ export default function MetaPromptPage() {
 
   // ─── Phase 3: AI generation chat (Phase 5/6) ─────────────
   return (
-    <div className="flex h-screen flex-col bg-surface-light dark:bg-bg-dark">
+    <div className="flex h-screen flex-col bg-surface-light pt-8 dark:bg-bg-dark">
       {/* Top bar */}
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-border-light px-4 dark:border-border-dark">
         <button

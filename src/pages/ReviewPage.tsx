@@ -136,7 +136,7 @@ export default function ReviewPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-bg-light dark:bg-bg-dark">
+    <div className="flex h-screen flex-col bg-bg-light pt-8 dark:bg-bg-dark">
       {/* Top bar */}
       <div className="flex items-center justify-between border-b border-border-light px-6 py-3 dark:border-border-dark">
         <button

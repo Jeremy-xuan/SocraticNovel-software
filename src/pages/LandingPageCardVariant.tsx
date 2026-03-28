@@ -187,7 +187,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-bg-light dark:bg-bg-dark font-sans text-text-main dark:text-text-main-dark selection:bg-primary/20 overflow-hidden relative">
+    <div className="flex h-screen flex-col bg-bg-light pt-8 dark:bg-bg-dark font-sans text-text-main dark:text-text-main-dark selection:bg-primary/20 overflow-hidden relative">
 
       {/* Top Absolute Controls */}
       <div className="absolute top-8 w-full px-8 z-20 flex justify-between items-center pointer-events-none">

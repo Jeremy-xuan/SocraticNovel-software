@@ -210,9 +210,7 @@ export default function LessonPage() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-bg-light dark:bg-bg-dark font-sans text-text-main dark:text-text-main-dark selection:bg-primary/20">
-
-      {/* Top Header */}
+    <div className="flex h-screen flex-col bg-bg-light pt-8 dark:bg-bg-dark font-sans text-text-main dark:text-text-main-dark selection:bg-primary/20">
       <header className="flex h-16 shrink-0 items-center justify-between px-6 lg:px-8">
         <button
           onClick={() => navigate('/')}

@@ -437,7 +437,7 @@ export default function PracticePage() {
   // Selection & setup phases: full-screen overlay (no sidebar / chat chrome)
   if (phase !== 'active' && phase !== 'animatutor-generating') {
     return (
-      <div className="flex h-screen flex-col bg-surface-light dark:bg-bg-dark">
+      <div className="flex h-screen flex-col bg-surface-light pt-8 dark:bg-bg-dark">
         <header className="flex h-12 shrink-0 items-center border-b border-border-light px-4 dark:border-border-dark">
           <button
             onClick={() => navigate('/')}
@@ -466,7 +466,7 @@ export default function PracticePage() {
   // Generating phase: full-screen loading spinner
   if (phase === 'animatutor-generating') {
     return (
-      <div className="flex h-screen flex-col bg-surface-light dark:bg-bg-dark">
+      <div className="flex h-screen flex-col bg-surface-light pt-8 dark:bg-bg-dark">
         <header className="flex h-12 shrink-0 items-center border-b border-border-light px-4 dark:border-border-dark">
           <span className="text-aux text-text-sub dark:text-text-placeholder">🎭 AnimaTutor</span>
         </header>
@@ -477,7 +477,7 @@ export default function PracticePage() {
 
   // Active phase: 3-column chat layout (original)
   return (
-    <div className="flex h-screen flex-col bg-surface-light dark:bg-bg-dark">
+    <div className="flex h-screen flex-col bg-surface-light pt-8 dark:bg-bg-dark">
       {/* Top bar */}
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-border-light px-4 dark:border-border-dark">
         <button

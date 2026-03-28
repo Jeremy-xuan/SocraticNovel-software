@@ -69,6 +69,12 @@ function App() {
   return (
     <BrowserRouter>
       <ThemeProvider />
+      {/* macOS overlay title bar: transparent drag region */}
+      <div
+        data-tauri-drag-region
+        className="fixed inset-x-0 top-0 z-50 h-8"
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      />
       <AppRoutes />
     </BrowserRouter>
   );

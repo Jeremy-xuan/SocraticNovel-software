@@ -151,7 +151,7 @@ export default function ProgressPage() {
   const completedChapters = chapters.filter(c => c.points.length > 0 && c.points.every(p => p.status === 'done')).length;
 
   return (
-    <div className="flex h-screen flex-col bg-bg-light dark:bg-bg-dark">
+    <div className="flex h-screen flex-col bg-bg-light pt-8 dark:bg-bg-dark">
       {/* Header */}
       <header className="flex items-center justify-between border-b border-border-light bg-surface-light px-6 py-3 dark:border-border-dark dark:bg-surface-dark">
         <div className="flex items-center gap-3">
