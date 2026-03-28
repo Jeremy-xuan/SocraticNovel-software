@@ -70,9 +70,6 @@ pub fn run() {
             pdf_commands::render_pdf_page,
             pdf_commands::ai_enhance_text,
             pdf_commands::ai_vision_enhance_page,
-            pdf_commands::apple_vision_ocr_page,
-            pdf_commands::apple_vision_ocr_full,
-            pdf_commands::check_apple_vision_available,
             // Session history
             history_commands::save_session_history,
             history_commands::list_session_history,

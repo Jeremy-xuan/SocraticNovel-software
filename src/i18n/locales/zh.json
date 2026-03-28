@@ -396,11 +396,12 @@
     "pageCount": "{{count}} 页",
     "noWorkspace": "请先选择 Workspace",
     "garbledWarningTitle": "检测到防拷贝 PDF",
-    "garbledWarningDesc": "以下文件使用了防拷贝字体编码，纯文本提取的内容可能是乱码：",
-    "garbledWarningHint": "💡 建议前往「导入 PDF」页面使用 Vision OCR 模式重新导入这些文件，AI 会通过读取图片来正确识别内容。",
-    "garbledWarningHintVision": "💡 点击文件旁的按钮使用 Apple Vision 免费识别，或前往「导入 PDF」页面使用 AI Vision 获得更高质量（含 LaTeX 公式）的识别结果。",
-    "useAppleVision": "Vision 识别",
-    "ocrProcessing": "识别中…"
+    "garbledWarningHint": "💡 建议前往「设置」配置支持 Vision 的 AI 提供商（如 GitHub Copilot、OpenAI），然后回来点击识别按钮。",
+    "aiVisionSuggestion": "以下文件的文本质量较差，建议使用 AI Vision 重新识别（通过 {{provider}} API）：",
+    "aiVisionNoProvider": "以下文件的文本质量较差，当前 AI 提供商不支持 Vision。请在设置中切换到 GitHub Copilot、OpenAI、Google 或 Anthropic。",
+    "aiVisionConfirm": "AI 识别",
+    "aiVisionProcessing": "AI 识别中… ({{current}}/{{total}})",
+    "aiVisionNoApiKey": "未找到当前提供商的 API 密钥，请先在设置中配置。"
   },
   "stepCharacters": {
     "title": "🎭 角色创建",

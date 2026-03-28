@@ -396,11 +396,12 @@
     "pageCount": "{{count}} pages",
     "noWorkspace": "Please select a Workspace first",
     "garbledWarningTitle": "Anti-copy PDF detected",
-    "garbledWarningDesc": "The following files use anti-copy font encoding. Text extraction may produce garbled content:",
-    "garbledWarningHint": "💡 Go to \"Import PDF\" page and use Vision OCR mode to re-import these files. AI will read the rendered images to correctly extract content.",
-    "garbledWarningHintVision": "💡 Click the button next to each file to use free Apple Vision OCR, or go to \"Import PDF\" page for higher quality AI Vision results (with LaTeX formulas).",
-    "useAppleVision": "Vision OCR",
-    "ocrProcessing": "Processing…"
+    "garbledWarningHint": "💡 Go to Settings and configure a Vision-capable AI provider (e.g., GitHub Copilot, OpenAI), then come back to use AI recognition.",
+    "aiVisionSuggestion": "The following files have poor text quality. We recommend using AI Vision to re-extract (via {{provider}} API):",
+    "aiVisionNoProvider": "The following files have poor text quality. Your current AI provider doesn't support Vision. Please switch to GitHub Copilot, OpenAI, Google, or Anthropic in Settings.",
+    "aiVisionConfirm": "AI OCR",
+    "aiVisionProcessing": "AI processing… ({{current}}/{{total}})",
+    "aiVisionNoApiKey": "No API key found for the current provider. Please configure it in Settings first."
   },
   "stepCharacters": {
     "title": "🎭 Character Creation",

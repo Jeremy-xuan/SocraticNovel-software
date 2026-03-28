@@ -1,16 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import type { MetaPromptQuestionnaire, UploadedMaterial } from '../../types';
-import { extractPdfText, importPdfToWorkspace, appleVisionOcrFull, checkAppleVisionAvailable } from '../../lib/tauri';
+import { extractPdfText, importPdfToWorkspace, aiVisionEnhancePage, writeFile } from '../../lib/tauri';
 import { useAppStore } from '../../stores/appStore';
 import { open } from '@tauri-apps/plugin-dialog';
 
-interface OcrProgress {
-  current: number;
-  total: number;
-  filename: string;
-}
+// Providers that support Vision API
+const VISION_PROVIDERS = new Set(['github', 'openai', 'google', 'anthropic']);
 
 interface Props {
   data: MetaPromptQuestionnaire;
@@ -21,22 +17,14 @@ export default function StepSubject({ data, onChange }: Props) {
   const { subject, course, characterCount } = data;
   const { t } = useTranslation();
   const wsPath = useAppStore((s) => s.settings.currentWorkspacePath);
+  const settings = useAppStore((s) => s.settings);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [garbledFiles, setGarbledFiles] = useState<string[]>([]);
-  const [visionAvailable, setVisionAvailable] = useState(false);
   const [ocrProcessing, setOcrProcessing] = useState<string | null>(null);
-  const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null);
-  const unlistenRef = useRef<UnlistenFn | null>(null);
+  const [ocrProgress, setOcrProgress] = useState<{ current: number; total: number } | null>(null);
 
-  useEffect(() => {
-    checkAppleVisionAvailable().then(setVisionAvailable).catch(() => {});
-    // Listen for OCR progress events
-    listen<OcrProgress>('ocr-progress', (e) => {
-      setOcrProgress(e.payload);
-    }).then(fn => { unlistenRef.current = fn; });
-    return () => { unlistenRef.current?.(); };
-  }, []);
+  const visionAvailable = VISION_PROVIDERS.has(settings.aiProvider);
 
   const formatOptions = [
     { value: 'pdf', label: t('stepSubject.formatPdf') },
@@ -104,19 +92,49 @@ export default function StepSubject({ data, onChange }: Props) {
     setCourse({ uploadedMaterials: updated });
   };
 
-  const handleAppleVisionOcr = async (filename: string) => {
+  // Best vision model per provider (cheapest with vision capability)
+  const VISION_MODEL: Record<string, string> = {
+    github: 'gpt-4.1',
+    openai: 'gpt-4o',
+    google: 'gemini-3-flash-preview',
+    anthropic: 'claude-haiku-4-5-20251001',
+  };
+
+  const handleAiVisionOcr = async (filename: string) => {
     const material = course.uploadedMaterials.find(m => m.originalName === filename);
     if (!material || !wsPath) return;
+
+    const provider = settings.aiProvider;
+    if (!VISION_PROVIDERS.has(provider)) {
+      setUploadError(t('stepSubject.aiVisionNoProvider'));
+      return;
+    }
+
     try {
       setOcrProcessing(filename);
-      setOcrProgress(null);
-      const result = await appleVisionOcrFull(material.savedPath);
+      const { getApiKey } = await import('../../lib/tauri');
+      const apiKey = await getApiKey(provider);
+      if (!apiKey) {
+        setUploadError(t('stepSubject.aiVisionNoApiKey'));
+        return;
+      }
+
+      const model = VISION_MODEL[provider] ?? 'gpt-4o';
+      const totalPages = material.pageCount;
+      const pageTexts: string[] = [];
+
+      for (let page = 1; page <= totalPages; page++) {
+        setOcrProgress({ current: page, total: totalPages });
+        const text = await aiVisionEnhancePage(material.savedPath, page, apiKey, provider, model);
+        pageTexts.push(text);
+      }
+
+      const fullText = pageTexts.join('\n\n---\n\n');
       const targetName = filename.replace(/\.pdf$/i, '');
-      const { writeFile } = await import('../../lib/tauri');
-      await writeFile(wsPath, `materials/${targetName}.md`, result.fullText);
+      await writeFile(wsPath, `materials/${targetName}.md`, fullText);
       setGarbledFiles(prev => prev.filter(f => f !== filename));
     } catch (err) {
-      setUploadError(`Vision OCR failed: ${String(err)}`);
+      setUploadError(`AI Vision OCR failed: ${String(err)}`);
     } finally {
       setOcrProcessing(null);
       setOcrProgress(null);
@@ -292,7 +310,9 @@ export default function StepSubject({ data, onChange }: Props) {
               ⚠️ {t('stepSubject.garbledWarningTitle')}
             </div>
             <p className="mb-2 text-tag tracking-[0.04em] text-amber-600 dark:text-amber-400">
-              {t('stepSubject.garbledWarningDesc')}
+              {visionAvailable
+                ? t('stepSubject.aiVisionSuggestion')
+                : t('stepSubject.aiVisionNoProvider')}
             </p>
             <ul className="mb-2 space-y-1 text-tag text-amber-600 dark:text-amber-400">
               {garbledFiles.map((name, i) => (
@@ -300,15 +320,15 @@ export default function StepSubject({ data, onChange }: Props) {
                   <span className="truncate">📄 {name}</span>
                   {visionAvailable && (
                     <button
-                      onClick={() => handleAppleVisionOcr(name)}
+                      onClick={() => handleAiVisionOcr(name)}
                       disabled={ocrProcessing !== null}
                       className="ml-2 shrink-0 rounded bg-amber-600 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-amber-700 disabled:opacity-50"
                     >
                       {ocrProcessing === name
                         ? (ocrProgress
                             ? `${ocrProgress.current}/${ocrProgress.total}`
-                            : t('stepSubject.ocrProcessing'))
-                        : t('stepSubject.useAppleVision')}
+                            : t('stepSubject.aiVisionProcessing', { current: '…', total: '…' }))
+                        : t('stepSubject.aiVisionConfirm')}
                     </button>
                   )}
                 </li>
@@ -317,8 +337,8 @@ export default function StepSubject({ data, onChange }: Props) {
             {ocrProcessing && ocrProgress && (
               <div className="mb-2">
                 <div className="mb-1 flex justify-between text-[11px] text-amber-600 dark:text-amber-400">
-                  <span>{t('stepSubject.ocrProcessing')} {ocrProgress.filename}</span>
-                  <span>{ocrProgress.current}/{ocrProgress.total} ({Math.round(ocrProgress.current / ocrProgress.total * 100)}%)</span>
+                  <span>{t('stepSubject.aiVisionProcessing', { current: ocrProgress.current, total: ocrProgress.total })}</span>
+                  <span>{Math.round(ocrProgress.current / ocrProgress.total * 100)}%</span>
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-amber-200 dark:bg-amber-800">
                   <div
@@ -328,11 +348,11 @@ export default function StepSubject({ data, onChange }: Props) {
                 </div>
               </div>
             )}
-            <p className="text-tag tracking-[0.04em] text-amber-600 dark:text-amber-400">
-              {visionAvailable
-                ? t('stepSubject.garbledWarningHintVision')
-                : t('stepSubject.garbledWarningHint')}
-            </p>
+            {!visionAvailable && (
+              <p className="text-tag tracking-[0.04em] text-amber-600 dark:text-amber-400">
+                {t('stepSubject.garbledWarningHint')}
+              </p>
+            )}
           </div>
         )}
       </section>

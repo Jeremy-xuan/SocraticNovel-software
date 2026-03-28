@@ -157,20 +157,6 @@ export async function aiVisionEnhancePage(
   return invoke('ai_vision_enhance_page', { pdfPath, pageNumber, apiKey, provider, model });
 }
 
-// ─── Apple Vision OCR (macOS, free, local) ──────────────────────
-
-export async function appleVisionOcrPage(pdfPath: string, pageNumber: number): Promise<string> {
-  return invoke('apple_vision_ocr_page', { pdfPath, pageNumber });
-}
-
-export async function appleVisionOcrFull(pdfPath: string): Promise<PdfExtractResult> {
-  return invoke('apple_vision_ocr_full', { pdfPath });
-}
-
-export async function checkAppleVisionAvailable(): Promise<boolean> {
-  return invoke('check_apple_vision_available');
-}
-
 // ─── Session History ─────────────────────────────────────────────
 
 export async function saveSessionHistory(

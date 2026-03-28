@@ -3,7 +3,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 const GITHUB_TOKEN_KEY: &str = "github_token";
-const GITHUB_CLIENT_ID: &str = "Iv23liEvzYZQZuplLGWI";
+const GITHUB_CLIENT_ID: &str = "Ov23liVSIwTUn6fuIwlS";
 const GITHUB_DEVICE_CODE_URL: &str = "https://github.com/login/device/code";
 const GITHUB_TOKEN_URL: &str = "https://github.com/login/oauth/access_token";
 
