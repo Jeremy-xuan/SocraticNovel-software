@@ -30,7 +30,7 @@ export default function StepReview({ data }: Props) {
             <div className="space-y-1">
               {course.uploadedMaterials.map((mat, i) => (
                 <div key={i} className="text-text-main dark:text-text-main-dark">
-                  📄 {mat.originalName} ({t('stepReview.chaptersUnit', { count: mat.pageCount }).replace(/章/, '页')})
+                  <svg className="inline-block h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg> {mat.originalName} ({t('stepReview.chaptersUnit', { count: mat.pageCount }).replace(/章/, '页')})
                 </div>
               ))}
             </div>
@@ -39,7 +39,7 @@ export default function StepReview({ data }: Props) {
         {course.uploadedMaterials.length === 0 && (
           <div className="flex gap-2 text-aux">
             <span className="min-w-[5rem] shrink-0 text-text-placeholder">{t('stepReview.uploadedMaterials')}</span>
-            <span className="text-amber-500 dark:text-amber-400">⚠️ {t('stepReview.noMaterialsUploaded')}</span>
+            <span className="text-amber-500 dark:text-amber-400"><svg className="inline-block h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg> {t('stepReview.noMaterialsUploaded')}</span>
           </div>
         )}
         {course.completedChapters && <Row label={t('stepReview.completed')} value={course.completedChapters} />}
@@ -67,7 +67,7 @@ export default function StepReview({ data }: Props) {
               <div><span className="text-text-placeholder">{t('stepReview.appearance')}</span>{char.appearanceKeywords}</div>
               <div><span className="text-text-placeholder">{t('stepReview.personality')}</span>{char.personalityCore.slice(0, 80)}{char.personalityCore.length > 80 ? '...' : ''}</div>
               <div><span className="text-text-placeholder">{t('stepReview.backstory')}</span>{char.backstoryAutoGenerate ? t('stepReview.backstoryAuto') : (char.backstoryHints || t('stepReview.backstoryEmpty'))}</div>
-              <div><span className="text-text-placeholder">{t('stepReview.warmthLabel')}</span>{'❄️'.repeat(Math.max(0, 5 - Math.round(char.initialWarmth / 2)))}{'🔥'.repeat(Math.round(char.initialWarmth / 2))}</div>
+              <div className="flex items-center"><span className="text-text-placeholder">{t('stepReview.warmthLabel')}</span>{Array.from({ length: Math.max(0, 5 - Math.round(char.initialWarmth / 2)) }, (_, i) => <svg key={`cold-${i}`} className="inline-block h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18m0-18l-4 4m4-4l4 4m-4 14l-4-4m4 4l4-4M3 12h18M3 12l4-4m-4 4l4 4m14-4l-4-4m4 4l-4 4" /></svg>)}{Array.from({ length: Math.round(char.initialWarmth / 2) }, (_, i) => <svg key={`warm-${i}`} className="inline-block h-4 w-4 text-orange-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>)}</div>
             </div>
           </div>
         ))}

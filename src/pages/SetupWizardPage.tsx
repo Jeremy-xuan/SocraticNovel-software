@@ -77,7 +77,7 @@ export default function SetupWizardPage() {
         {/* Step: Welcome */}
         {step === 'welcome' && (
           <div className="text-center">
-            <div className="mb-4 text-5xl">📖</div>
+            <div className="mb-4 flex justify-center"><svg className="h-12 w-12 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg></div>
             <h1 className="mb-2 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">
               {t('setup.welcomeTitle')}
             </h1>
@@ -107,10 +107,10 @@ export default function SetupWizardPage() {
             </p>
             <div className="mb-6 grid grid-cols-2 gap-3">
               {([
-                { id: 'anthropic' as const, label: '🟣 Anthropic', sub: t('setup.providerRecommended') },
-                { id: 'openai' as const, label: '🟢 OpenAI', sub: 'GPT-4o' },
-                { id: 'google' as const, label: '🔵 Google', sub: 'Gemini' },
-                { id: 'deepseek' as const, label: '🔷 DeepSeek', sub: 'DeepSeek' },
+                { id: 'anthropic' as const, label: <><span className="mr-1.5 inline-block h-3 w-3 rounded-full bg-purple-500" />Anthropic</>, sub: t('setup.providerRecommended') },
+                { id: 'openai' as const, label: <><span className="mr-1.5 inline-block h-3 w-3 rounded-full bg-green-500" />OpenAI</>, sub: 'GPT-4o' },
+                { id: 'google' as const, label: <><span className="mr-1.5 inline-block h-3 w-3 rounded-full bg-blue-500" />Google</>, sub: 'Gemini' },
+                { id: 'deepseek' as const, label: <><span className="mr-1.5 inline-block h-3 w-3 rounded-full bg-sky-500" />DeepSeek</>, sub: 'DeepSeek' },
               ]).map((p) => (
                 <button
                   key={p.id}
@@ -160,7 +160,7 @@ export default function SetupWizardPage() {
               className="mb-4 w-full rounded-btn border border-border-light bg-surface-light px-4 py-3 text-aux text-text-main placeholder-text-placeholder focus:bg-surface-light focus:border-blue-500 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-text-main-dark"
               autoFocus
             />
-            {error && <p className="mb-4 text-aux text-danger">❌ {error}</p>}
+            {error && <p className="mb-4 flex items-center gap-1.5 text-aux text-danger"><svg className="inline-block h-4 w-4 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>{error}</p>}
             <div className="flex justify-between">
               <button
                 onClick={() => setStep('provider')}
@@ -194,7 +194,7 @@ export default function SetupWizardPage() {
                 className="w-full rounded-btn border border-border-light p-4 text-left transition-all hover:border-primary dark:hover:border-primary hover:shadow-float dark:border-slate-600 hover:border-primary dark:hover:border-primary"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-title leading-tight tracking-[0.04em]">⚡</span>
+                  <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>
                   <div>
                     <div className="font-medium text-text-main dark:text-text-main-dark">
                       {t('setup.builtinTitle')}
@@ -210,7 +210,7 @@ export default function SetupWizardPage() {
                 className="w-full rounded-btn border border-border-light p-4 text-left transition-all hover:border-primary hover:shadow-float dark:border-slate-600 hover:border-primary"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-title leading-tight tracking-[0.04em]">🔨</span>
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17l-5.84-5.84a2.121 2.121 0 113-3l5.84 5.84m-1.42 1.42l5.84 5.84a2.121 2.121 0 01-3 3l-5.84-5.84" /></svg>
                   <div>
                     <div className="font-medium text-text-main dark:text-text-main-dark">
                       {t('setup.createFromScratch')}
@@ -226,7 +226,7 @@ export default function SetupWizardPage() {
                 className="w-full cursor-not-allowed rounded-btn border border-border-light p-4 text-left opacity-50 dark:border-slate-600"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-title leading-tight tracking-[0.04em]">📁</span>
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>
                   <div>
                     <div className="font-medium text-text-main dark:text-text-main-dark">
                       {t('setup.importWorkspace')}
@@ -238,7 +238,7 @@ export default function SetupWizardPage() {
                 </div>
               </button>
             </div>
-            {error && <p className="mb-4 text-aux text-danger">❌ {error}</p>}
+            {error && <p className="mb-4 flex items-center gap-1.5 text-aux text-danger"><svg className="inline-block h-4 w-4 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>{error}</p>}
             <button
               onClick={() => setStep('apikey')}
               className="text-aux text-text-placeholder hover:text-text-sub dark:hover:text-text-main-dark"
@@ -251,7 +251,7 @@ export default function SetupWizardPage() {
         {/* Step: Done */}
         {step === 'done' && (
           <div className="text-center">
-            <div className="mb-4 text-5xl">🎉</div>
+            <div className="mb-4 flex justify-center"><svg className="h-12 w-12 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" /></svg></div>
             <h2 className="mb-2 text-title leading-tight tracking-[0.04em] font-medium text-text-main dark:text-text-main-dark">
               {t('setup.setupComplete')}
             </h2>
