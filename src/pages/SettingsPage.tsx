@@ -104,7 +104,7 @@ export default function SettingsPage() {
         </span>
       </header>
 
-      <div className="mx-auto w-full max-w-2xl flex-1 overflow-y-auto p-8">
+      <div className="scrollbar-thin mx-auto w-full max-w-2xl flex-1 overflow-y-auto p-8">
         {/* AI Provider */}
         <section className="mb-8">
           <h2 className="mb-2 text-subtitle font-medium text-text-main dark:text-text-main-dark">

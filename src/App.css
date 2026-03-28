@@ -59,6 +59,34 @@
   }
 }
 
+/* Thin overlay scrollbar */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.scrollbar-thin:hover {
+  scrollbar-color: rgba(0,0,0,0.2) transparent;
+}
+:is(.dark) .scrollbar-thin:hover {
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+.scrollbar-thin:hover::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.15);
+}
+:is(.dark) .scrollbar-thin:hover::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+}
+
 /* Print styles for PDF export */
 
 /* Print styles for PDF export */
