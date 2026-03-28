@@ -129,6 +129,7 @@ export default function StepStory({ data, onChange }: Props) {
       {data.characterCount > 1 && (
         <section className="space-y-4">
           <h3 className="text-base font-medium text-text-main dark:text-text-main-dark">{t('stepStory.rotationStyle')}</h3>
+          <p className="text-tag tracking-[0.04em] text-text-sub">{t('stepStory.rotationStyleHint')}</p>
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => setStory({ rotationStyle: 'round-robin' })}

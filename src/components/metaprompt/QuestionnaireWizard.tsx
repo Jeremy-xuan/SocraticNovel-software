@@ -62,7 +62,7 @@ export default function QuestionnaireWizard({ onComplete, onBack }: Props) {
       case 1: return !!data.subject.subjectName && data.course.totalChapters > 0;
       case 2: return data.characters.length === data.characterCount
               && data.characters.every(c => !!c.name && !!c.teachingStyle);
-      case 3: return !!data.world.location;
+      case 3: return !!data.world.locationStyle;
       case 4: return data.story.emotionalPhases.length > 0;
       case 5: return true;
       default: return false;

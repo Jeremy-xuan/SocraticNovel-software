@@ -70,12 +70,8 @@ export function serializeQuestionnaire(q: MetaPromptQuestionnaire): string {
   // ─── World ──────────────────────────────
   lines.push('## 3. 世界观');
   lines.push('');
-  lines.push(`- **地点风格**: ${formatLocationStyle(q.world.locationStyle)}`);
-  lines.push(`- **地点描述**: ${q.world.location}`);
-  lines.push(`- **到来方式**: ${formatArrivalType(q.world.arrivalType)}`);
-  if (q.world.arrivalReason) {
-    lines.push(`- **到来原因**: ${q.world.arrivalReason}`);
-  }
+  lines.push(`- **场景类型**: ${formatLocationStyle(q.world.locationStyle)}`);
+  lines.push(`- **具体场景描述**: （由 AI 根据角色和场景类型生成）`);
   if (q.world.characterRelations) {
     lines.push(`- **角色关系**: ${q.world.characterRelations}`);
   }
@@ -142,10 +138,4 @@ function formatLocationStyle(s: string): string {
   }[s] || s;
 }
 
-function formatArrivalType(t: string): string {
-  return {
-    arranged: '被安排的（初始距离远）',
-    'self-sought': '自己找来的（初始距离中等）',
-    accidental: '意外的（初始距离不确定）',
-  }[t] || t;
-}
+

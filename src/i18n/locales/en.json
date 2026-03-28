@@ -440,8 +440,8 @@
   "stepWorld": {
     "title": "World Building",
     "desc": "Design the space and relationships where the story takes place",
-    "locationQuestion": "Where does the story take place?",
-    "locationHint": "Not an \"online classroom\" — a place where you can smell the air and hear sounds",
+    "locationQuestion": "Choose a story scene",
+    "locationHint": "Pick a space type for your story — AI will create the specific teaching setting from there",
     "enclosed": "Enclosed Space",
     "enclosedExamples": "Mountaintop observatory, coastal lighthouse, renovated old mansion",
     "semiOpen": "Semi-open Space",
@@ -467,7 +467,8 @@
     "specialSettings": "Special Settings (optional)",
     "enableSupernatural": "Enable supernatural elements",
     "supernaturalHint": "Belongs to at most one character. Scarcity creates weight. Supernatural elements should make the character more vulnerable, not more powerful",
-    "supernaturalPlaceholder": "Describe supernatural settings...\nReference types: Perception (can see something) / Memory / Spatial"
+    "supernaturalPlaceholder": "Describe supernatural settings...\nReference types: Perception (can see something) / Memory / Spatial",
+    "locationAutoHint": "After choosing a scene type, AI will automatically generate a detailed story setting based on your characters"
   },
   "stepStory": {
     "title": "Story Design",
@@ -479,11 +480,11 @@
     "coveragePlaceholder": "Coverage (e.g. first 25%)",
     "tonePlaceholder": "Tone description",
     "addPhase": "+ Add Phase",
-    "rotationStyle": "Teacher Rotation Style",
-    "roundRobin": "Round Robin (recommended)",
-    "roundRobinDesc": "A → B → C → A → B → C...",
+    "rotationStyle": "Teaching rotation",
+    "roundRobin": "Take turns (Recommended)",
+    "roundRobinDesc": "Teachers alternate in a fixed order, one per lesson",
     "thematic": "Thematic Grouping",
-    "thematicDesc": "Assign different teachers by unit/topic",
+    "thematicDesc": "Each teacher handles specific topics or units",
     "rotationNotes": "Rotation notes (if any special arrangements)",
     "groupChat": "Group Chat System",
     "groupChatName": "Group Chat Name",
@@ -492,7 +493,8 @@
     "groupChatStylePlaceholder": "Text only / occasional emoji / ...",
     "keyEvents": "Key Events (optional)",
     "keyEventsHint": "Only skeleton events needed (3-5 most important), AI will fill in the rest during generation",
-    "keyEventsPlaceholder": "Describe events that must happen...\ne.g. Ch.10 a character reveals their past for the first time, Ch.20 group chat name changes"
+    "keyEventsPlaceholder": "Describe events that must happen...\ne.g. Ch.10 a character reveals their past for the first time, Ch.20 group chat name changes",
+    "rotationStyleHint": "When you have multiple AI teachers, this decides how they take turns — alternating in a fixed order, or splitting by topic"
   },
   "stepReview": {
     "title": "Review Summary",

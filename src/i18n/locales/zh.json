@@ -440,8 +440,8 @@
   "stepWorld": {
     "title": "世界观构建",
     "desc": "设计故事发生的空间和关系",
-    "locationQuestion": "故事发生在哪里？",
-    "locationHint": "不是“线上教室”——是一个你能闻到气味、听到声音的地方",
+    "locationQuestion": "选择故事场景",
+    "locationHint": "选一个你想让故事发生的空间类型，AI 会据此创造具体的教学场景",
     "enclosed": "封闭空间",
     "enclosedExamples": "山顶观测站、海边灯塔、老宅改的工作室",
     "semiOpen": "半开放空间",
@@ -467,7 +467,8 @@
     "specialSettings": "特殊设定（可选）",
     "enableSupernatural": "启用超自然元素",
     "supernaturalHint": "最多只属于一个角色。稀缺性创造重量。超自然元素应该让角色更脆弱，而不是更强大",
-    "supernaturalPlaceholder": "描述超自然设定...\n参考类型：感知型（能看见某种东西）/ 记忆型 / 空间型"
+    "supernaturalPlaceholder": "描述超自然设定...\n参考类型：感知型（能看见某种东西）/ 记忆型 / 空间型",
+    "locationAutoHint": "选择场景类型后，AI 会根据你的角色设定自动生成详细的故事背景"
   },
   "stepStory": {
     "title": "故事设计",
@@ -479,11 +480,11 @@
     "coveragePlaceholder": "覆盖范围（如 前25%）",
     "tonePlaceholder": "基调描述",
     "addPhase": "+ 添加阶段",
-    "rotationStyle": "教师轮值方式",
-    "roundRobin": "等距轮换（推荐）",
-    "roundRobinDesc": "A → B → C → A → B → C...",
+    "rotationStyle": "教学轮换方式",
+    "roundRobin": "轮流教学（推荐）",
+    "roundRobinDesc": "老师们按固定顺序依次教学，每节课换一位",
     "thematic": "专题分组",
-    "thematicDesc": "按单元/主题分配给不同老师",
+    "thematicDesc": "每位老师负责特定主题或单元，按内容分配",
     "rotationNotes": "轮值备注（如有特殊安排）",
     "groupChat": "群聊系统",
     "groupChatName": "群聊名称",
@@ -492,7 +493,8 @@
     "groupChatStylePlaceholder": "纯文字 / 偶尔 emoji / ...",
     "keyEvents": "关键事件（可选）",
     "keyEventsHint": "只需要确定骨架事件（3-5 个最重要的），剩下的 AI 会在生成时补完",
-    "keyEventsPlaceholder": "描述必须发生的关键事件...\n如：Ch.10 某角色第一次展露过去的碎片、Ch.20 群聊名称改变"
+    "keyEventsPlaceholder": "描述必须发生的关键事件...\n如：Ch.10 某角色第一次展露过去的碎片、Ch.20 群聊名称改变",
+    "rotationStyleHint": "当你有多位 AI 老师时，决定他们如何轮流教学——按固定顺序交替，还是按主题分工"
   },
   "stepReview": {
     "title": "确认总览",

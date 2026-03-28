@@ -79,11 +79,6 @@ export default function StepReview({ data }: Props) {
           enclosed: t('stepReview.locationStyleEnclosed'), 'semi-open': t('stepReview.locationStyleSemiOpen'),
           everyday: t('stepReview.locationStyleEveryday'), custom: t('stepReview.locationStyleCustom'),
         }[world.locationStyle]} />
-        <Row label={t('stepReview.locationDesc')} value={world.location} />
-        <Row label={t('stepReview.arrivalType')} value={{
-          arranged: t('stepReview.arrivalArranged'), 'self-sought': t('stepReview.arrivalSelfSought'), accidental: t('stepReview.arrivalAccidental'),
-        }[world.arrivalType]} />
-        {world.arrivalReason && <Row label={t('stepReview.arrivalReason')} value={world.arrivalReason} />}
         {world.characterRelations && <Row label={t('stepReview.characterRelations')} value={world.characterRelations} />}
         <Row label={t('stepReview.supernatural')} value={world.hasSupernatural ? world.supernaturalElement : t('stepReview.supernaturalNone')} />
       </Section>
