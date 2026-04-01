@@ -568,38 +568,9 @@ async fn process_openai_streaming(
         let input: serde_json::Value =
             serde_json::from_str(&json_args).unwrap_or(serde_json::json!({}));
 
-        // Canvas/group-chat events are now emitted by Skill layer (tools.rs execute_tool)
-        // Check if Skill layer already sent the event to avoid duplicate emission
-        if name == "render_canvas" || name == "render_interactive_sandbox" {
-            if !tools::canvas_event_was_sent(app) {
-                // Fallback: Skill layer failed to emit
-                if name == "render_canvas" {
-                    let _ = app.emit("canvas-event", serde_json::json!({
-                        "title": input["title"].as_str().unwrap_or("Canvas"),
-                        "content": input["content"].as_str().unwrap_or(""),
-                        "type": input["type"].as_str().unwrap_or("svg"),
-                        "parameters": input["parameters"].clone(),
-                    }));
-                } else {
-                    let _ = app.emit("canvas-event", serde_json::json!({
-                        "title": input["title"].as_str().unwrap_or("Interactive Sandbox"),
-                        "content": input["html"].as_str().unwrap_or(""),
-                        "type": "sandbox",
-                        "sandboxState": input["initial_state"].clone(),
-                    }));
-                }
-            }
-        }
-
-        if name == "show_group_chat" {
-            if !tools::canvas_event_was_sent(app) {
-                // Fallback: Skill layer failed to emit
-                if let Some(msgs) = input["messages"].as_array() {
-                    let _ = app.emit("group-chat-event", serde_json::json!({ "messages": msgs }));
-                }
-            }
-        }
-
+        // Canvas/group-chat events are emitted by Skill layer in execute_tool (tools.rs).
+        // No fallback needed here — execute_tool is always called with a real AppHandle
+        // in run_phase_loop (line 943: execute_tool(..., Some(app))).
         content_blocks.push(ContentBlock::ToolUse { id, name, input });
     }
 
@@ -1116,7 +1087,12 @@ Direct text output is treated as silent internal thinking and will NOT be shown.
 # Tool Usage\n\
 - Use `read_file` to look up reference materials (textbook, formulas, exercises) when you need context\n\
 - Use `search_file` to find specific content across workspace files\n\
-- Use `render_canvas` for diagrams — electric field lines, circuits, charge distributions\n\
+- Use `render_canvas` when explaining ANY physical concept that benefits from a diagram: field lines,\n\
+  circuit topology, charge distributions, vectors, force diagrams, graphs, motion diagrams, etc.\n\
+  Prefer type=\"mermaid\" (Mermaid graph/flowchart syntax) for relationships and flows;\n\
+  use type=\"svg\" only for custom SVG markup. Call `render_canvas` BEFORE `respond_to_student`.\n\
+- Use `render_interactive_sandbox` ONLY for truly interactive content requiring student input\n\
+  (sliders, buttons, drag-and-drop). Do NOT use it for static diagrams — use `render_canvas`.\n\
 - Use `think` for complex problem analysis before responding\n\n";
 
     // Full protocol mode: the base prompt is a complete tutoring protocol (e.g. 幽鬼α).
@@ -1184,6 +1160,13 @@ NEVER do these:
 - ❌ Walls of text explaining theory — that's lecturing, not guiding
 - ❌ Listing steps outside the scene context
 - ❌ Dramatic revelations or big emotional speeches
+
+# Canvas Visualization
+Use `render_canvas` when a diagram clarifies the concept being taught. Call it BEFORE `respond_to_student`.
+- type="mermaid": flowcharts, graphs, relationships (use Mermaid syntax: `graph LR`, `flowchart TD`, etc.)
+- type="svg": custom precise diagrams
+- Example triggers: "draw the field lines", "show the circuit", "diagram the forces", "visualize this"
+- Even unprompted: if a diagram would reveal something words can't — use it.
 
 # Response Format
 Keep it tight:
