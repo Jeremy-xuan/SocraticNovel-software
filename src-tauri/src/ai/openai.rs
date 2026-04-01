@@ -49,6 +49,23 @@ impl OpenAiClient {
         }
     }
 
+    /// Create an OpenAiClient with a custom base URL (for custom providers).
+    /// Uses 30s global timeout + 10s connect timeout.
+    pub fn with_custom_url(api_key: String, base_url: String, model: String) -> Self {
+        use std::time::Duration;
+        let client = Client::builder()
+            .timeout(Duration::from_secs(30))
+            .connect_timeout(Duration::from_secs(10))
+            .build()
+            .expect("Failed to build HTTP client with timeouts");
+        Self {
+            client,
+            api_key,
+            model: if model.is_empty() { "gpt-4o".to_string() } else { model },
+            base_url: base_url.trim_end_matches('/').to_string(),
+        }
+    }
+
     /// Build the OpenAI-format request body from our internal types.
     fn build_request_body(
         &self,
@@ -193,6 +210,16 @@ impl OpenAiClient {
         if let Some(ref tools_val) = oai_tools {
             if !tools_val.is_empty() {
                 request_body["tools"] = serde_json::json!(tools_val);
+                // Force the model to always call at least one tool.
+                // Skip for reasoning models (deepseek-reasoner, o1, o3, R1 variants)
+                // which do not support tool_choice in the OpenAI API.
+                let skip = self.model.contains("reasoner")
+                    || self.model.starts_with("o1")
+                    || self.model.starts_with("o3")
+                    || self.model.contains("-r1");
+                if !skip {
+                    request_body["tool_choice"] = serde_json::json!("required");
+                }
             }
         }
 
