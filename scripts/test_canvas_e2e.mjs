@@ -109,21 +109,26 @@ async function runT6a(browser) {
   await page.close();
 }
 
-// ─── T6b: SandboxedHTMLCanvas integration (requires Vite on :1420) ──────────
-// Renders the actual React component via /demo-canvas route, injects a mock
-// canvas item of type "sandbox", and verifies "Loading sandbox..." disappears.
+// ─── T6b: Full pipeline — Tauri event → useAiAgent → store → CanvasPanel ────
+// Mocks Tauri's listen/invoke infrastructure, navigates to /demo-canvas, then
+// fires a real 'canvas-event' payload through the exact same code path that
+// Rust would use at runtime. Verifies:
+//   1. useAiAgent.ts onCanvasEvent callback is registered
+//   2. Canvas item lands in Zustand store
+//   3. CanvasPanel renders the item (mermaid diagram text appears in DOM)
+//   4. SandboxedHTMLCanvas sandbox (type=sandbox) loads — no "Loading sandbox..." loop
 async function runT6b(browser) {
   console.log(B('\n╔══════════════════════════════════════════════════════╗'));
-  console.log(B('║  T6b — SandboxedHTMLCanvas 组件集成测试 (Vite:1420)       ║'));
+  console.log(B('║  T6b — 全链路: Tauri事件 → useAiAgent → CanvasPanel      ║'));
   console.log(B('╚══════════════════════════════════════════════════════╝'));
 
   // Check if Vite is running
   let viteRunning = false;
   try {
-    const page = await browser.newPage();
-    const resp = await page.goto('http://localhost:1420', { timeout: 3000 }).catch(() => null);
-    viteRunning = resp !== null && resp.ok();
-    await page.close();
+    const probe = await browser.newPage();
+    const resp = await probe.goto('http://localhost:1420', { timeout: 4000 }).catch(() => null);
+    viteRunning = resp !== null && resp.status() < 500;
+    await probe.close();
   } catch {
     viteRunning = false;
   }
@@ -136,74 +141,157 @@ async function runT6b(browser) {
 
   const page = await browser.newPage();
 
-  // Mock Tauri IPC (not needed for T6b, but prevents console errors)
+  // ── Comprehensive Tauri IPC mock ──────────────────────────────────────────
+  // Implements the subset of Tauri 2.0 internals needed by @tauri-apps/api/event.
+  // Key insight: Tauri's listen() calls transformCallback(handler) to get a numeric
+  // ID, then invoke('plugin:event|listen', {event, handler: id}).
+  // When Tauri fires an event, it calls window[`_${id}_`](payload).
+  // We replicate this so we can trigger events from the test.
   await page.addInitScript(() => {
+    const _callbackRegistry = {};  // id → fn
+    const _eventListeners = {};    // eventName → [callbackId, ...]
+    let _cbCounter = 1;
+
     window.__TAURI_INTERNALS__ = {
-      transformCallback: (cb, once) => {
-        const id = Math.random();
-        window[`_cb_${id}`] = cb;
+      transformCallback(fn, _once) {
+        const id = _cbCounter++;
+        _callbackRegistry[id] = fn;
+        // Tauri expects the callback at window[`_${id}_`]
+        window[`_${id}_`] = fn;
         return id;
       },
-      invoke: async (cmd, args) => {
+      async invoke(cmd, args) {
+        if (cmd === 'plugin:event|listen') {
+          const { event, handler } = args;
+          if (!_eventListeners[event]) _eventListeners[event] = [];
+          _eventListeners[event].push(handler);
+          return handler; // return the handler id as unlisten token
+        }
+        if (cmd === 'plugin:event|unlisten') {
+          const { event, eventId } = args;
+          if (_eventListeners[event]) {
+            _eventListeners[event] = _eventListeners[event].filter(id => id !== eventId);
+          }
+          return null;
+        }
+        // Suppress other Tauri calls silently
+        if (cmd === 'get_api_key' || cmd === 'get_github_token') return null;
         if (cmd === 'list_workspaces') return [];
-        if (cmd === 'init_builtin_workspace') return { id: 'test', name: 'test', path: '/tmp' };
+        if (cmd === 'init_builtin_workspace') return { id: 'test', name: 'test', path: '/tmp/test' };
+        if (cmd === 'plugin:event|emit') return null;
         return null;
       },
     };
-    window.__TAURI__ = window.__TAURI_INTERNALS__;
-  });
 
-  await page.goto('http://localhost:1420/demo-canvas');
-  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-
-  // Inject a sandbox canvas item directly into the app store (bypasses AI call)
-  const injected = await page.evaluate(() => {
-    // Try to access the Zustand store via global hook
-    // This works if the store exposes itself (common dev pattern)
-    if (window.__APP_STORE__) {
-      window.__APP_STORE__.getState().addCanvasItem({
-        id: 'test-sandbox-1',
-        type: 'sandbox',
-        title: 'E2E Test Sandbox',
-        content: '<html><body style="background:#1a1a2e;color:#e0e0e0;padding:20px;font-family:monospace"><h3>Sandbox Ready ✅</h3><p>postMessage test passed</p></body></html>',
-        timestamp: Date.now(),
+    // Helper: trigger a Tauri event from test code
+    window.__fireTauriEvent = function(eventName, payload) {
+      const ids = _eventListeners[eventName] || [];
+      ids.forEach(id => {
+        const fn = _callbackRegistry[id];
+        if (fn) fn({ event: eventName, payload, id: 0, windowLabel: 'main' });
       });
-      return true;
-    }
-    return false;
+      return ids.length; // number of listeners fired
+    };
+
+    window.__getTauriListeners = function(eventName) {
+      return (_eventListeners[eventName] || []).length;
+    };
   });
 
-  if (!injected) {
-    console.log(Y('  ⏭️  App store not exposed globally — skipping store injection test'));
-    console.log(Y('     Add window.__APP_STORE__ = useAppStore in main.tsx to enable'));
+  await page.goto('http://localhost:1420/demo-canvas', { waitUntil: 'domcontentloaded' });
+  // Give React time to mount and register Tauri listeners
+  await page.waitForTimeout(2000);
+
+  // ── Step 1: verify canvas-event listener is registered ───────────────────
+  const listenerCount = await page.evaluate(() => window.__getTauriListeners('canvas-event'));
+  if (listenerCount > 0) {
+    ok(`canvas-event listener registered in useAiAgent (${listenerCount} listener(s))`);
+  } else {
+    fail('canvas-event listener NOT registered', 'useAiAgent.ts may not have mounted');
     await page.close();
     return;
   }
 
-  // Wait for sandbox to load (no "Loading sandbox..." text)
+  // ── Step 2: fire canvas-event (mermaid) through the Tauri mock ───────────
+  // This is the exact payload shape that Rust emit_canvas_event() sends.
+  const fired = await page.evaluate(() => {
+    const payload = {
+      type: 'mermaid',
+      title: 'Electric Field Lines (E2E Test)',
+      content: 'graph TD\nA[Positive Charge +] -->|Field Line| B[Negative Charge -]\nA -->|Field Line| C[Negative Charge -]',
+      parameters: null,
+      sandboxState: null,
+    };
+    return window.__fireTauriEvent('canvas-event', payload);
+  });
+
+  if (fired > 0) {
+    ok(`canvas-event fired to ${fired} listener(s) — full event pipeline triggered`);
+  } else {
+    fail('canvas-event fire returned 0 listeners', 'event not routed to useAiAgent');
+    await page.close();
+    return;
+  }
+
+  await page.waitForTimeout(500); // React state update
+
+  // ── Step 3: verify item landed in Zustand store ───────────────────────────
+  const storeHasItem = await page.evaluate(() => {
+    if (!window.__APP_STORE__) return false;
+    const items = window.__APP_STORE__.getState().canvasItems;
+    return items.some(i => i.title === 'Electric Field Lines (E2E Test)');
+  });
+
+  if (storeHasItem) {
+    ok('Canvas item landed in Zustand store (addCanvasItem called by useAiAgent)');
+  } else {
+    fail('Canvas item NOT in store', 'useAiAgent.onCanvasEvent may not have called addCanvasItem');
+  }
+
+  // ── Step 4: verify CanvasPanel renders the item ───────────────────────────
+  // Mermaid renderer will show either a diagram or an error, but the title should appear.
+  await page.waitForTimeout(800); // Mermaid render takes a moment
+  const titleVisible = await page.evaluate(() => {
+    return document.body.innerText.includes('Electric Field Lines');
+  });
+
+  if (titleVisible) {
+    ok('CanvasPanel renders canvas item title in DOM (full pipeline end-to-end)');
+  } else {
+    fail('Canvas item title not visible in DOM', 'CanvasPanel may not be subscribed to store');
+  }
+
+  // ── Step 5: fire sandbox canvas-event and verify it loads ─────────────────
+  await page.evaluate(() => {
+    window.__fireTauriEvent('canvas-event', {
+      type: 'sandbox',
+      title: 'Interactive Test (E2E)',
+      content: '<html><body style="background:#0d1117;color:#c9d1d9;padding:16px;font-family:monospace"><p>✅ Sandbox E2E Test</p></body></html>',
+      parameters: null,
+      sandboxState: null,
+    });
+  });
+
+  await page.waitForTimeout(500);
+
+  // Sandbox should load — no "Loading sandbox..." stuck on screen
   try {
     await page.waitForFunction(
       () => !document.body.innerText.includes('Loading sandbox'),
-      { timeout: 8000 }
+      { timeout: 6000 }
     );
-    ok('SandboxedHTMLCanvas: sandbox loads (SANDBOX_READY received via source check)');
+    ok('SandboxedHTMLCanvas: SANDBOX_READY received (source-check fix working)');
   } catch {
-    const text = await page.innerText('body');
-    if (text.includes('Loading sandbox')) {
-      fail('SandboxedHTMLCanvas still shows "Loading sandbox..."', 'origin check may still be blocking');
-    } else {
-      ok('SandboxedHTMLCanvas rendered (no "Loading sandbox..." text)');
-    }
+    fail('SandboxedHTMLCanvas stuck on "Loading sandbox..."', 'iframe origin check may still be blocking');
   }
 
-  // Check for JS execution timeout error
   const hasTimeout = await page.evaluate(() =>
     document.body.innerText.includes('JS execution timeout')
   );
-  if (hasTimeout) {
-    fail('JS execution timeout detected', 'sandbox iframe messages blocked');
+  if (!hasTimeout) {
+    ok('No JS execution timeout (iframe messages processed correctly)');
   } else {
-    ok('No JS execution timeout (sandbox messages processed correctly)');
+    fail('JS execution timeout detected', 'postMessage from iframe not received');
   }
 
   await page.close();
