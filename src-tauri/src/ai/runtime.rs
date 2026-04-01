@@ -188,6 +188,56 @@ fn parse_sse_events(buffer: &mut String) -> Vec<StreamEvent> {
     events
 }
 
+/// Resolve protocol and client type from provider + custom URL.
+/// Returns (protocol_label, client_type) where:
+/// - protocol_label: "openai-compatible" | "anthropic-compatible" (for error messages)
+/// - client_type: "openai" | "claude" (for match dispatch)
+fn resolve_protocol_and_client(
+    provider: &str,
+    custom_url: Option<&str>,
+) -> (&'static str, &'static str) {
+    match provider {
+        // Built-in providers
+        "anthropic" => ("anthropic", "claude"),
+        "openai" | "deepseek" | "google" | "github" => ("openai-compatible", "openai"),
+        // Custom providers
+        "custom-openai" | "custom" => ("openai-compatible", "openai"),
+        "custom-anthropic" => ("anthropic-compatible", "claude"),
+        // Fallback
+        _ => {
+            // Auto-detect from URL if provided
+            if let Some(url) = custom_url {
+                if url.contains("api.anthropic.com") {
+                    return ("anthropic-compatible", "claude");
+                }
+            }
+            ("openai-compatible", "openai")
+        }
+    }
+}
+
+/// Validate that a custom URL uses HTTPS (MITM attack mitigation).
+/// Returns Ok(()) if valid, Err(message) if invalid.
+fn validate_custom_url(url: &str) -> Result<(), String> {
+    validate_custom_url_pub(url)
+}
+
+/// Public alias for testing — same logic as validate_custom_url.
+pub fn validate_custom_url_pub(url: &str) -> Result<(), String> {
+    if url.starts_with("https://") {
+        return Ok(());
+    }
+    // Reject anything that's not https:// (including http://, ftp://, etc.)
+    Err(
+        if url.starts_with("http://") {
+            "HTTP URLs are not allowed. Please use HTTPS to protect your API Key.".to_string()
+        } else {
+            format!("Invalid URL format: '{}'. Must start with https://", url)
+        }
+    )
+}
+
+
 // ─── Claude Streaming Processor ───────────────────────────────────
 
 /// Process a Claude streaming response. Emits events to frontend in real-time,
@@ -283,27 +333,8 @@ async fn process_claude_streaming(
 
                         respond_streamer = None;
 
-                        if current_tool_name == "render_canvas" {
-                            let title = input["title"].as_str().unwrap_or("Canvas").to_string();
-                            let content = input["content"].as_str().unwrap_or("").to_string();
-                            let canvas_type = input["type"].as_str().unwrap_or("svg").to_string();
-                            let _ = app.emit("canvas-event", serde_json::json!({
-                                "title": title,
-                                "content": content,
-                                "type": canvas_type,
-                            }));
-                        }
-
-                        if current_tool_name == "show_group_chat" {
-                            if let Some(msgs) = input["messages"].as_array() {
-                                println!("[show_group_chat] Emitting {} messages to frontend", msgs.len());
-                                let _ = app.emit("group-chat-event", serde_json::json!({
-                                    "messages": msgs,
-                                }));
-                            } else {
-                                println!("[show_group_chat] WARNING: 'messages' is not an array. Input: {}", input);
-                            }
-                        }
+                        // Canvas/group-chat events are emitted by Skill layer (tools.rs execute_tool)
+                        // after streaming completes. Do NOT emit here to avoid duplicate events.
 
                         content_blocks.push(ContentBlock::ToolUse {
                             id: current_tool_id.clone(),
@@ -355,21 +386,32 @@ fn emit_non_streaming_events(
                         student_text.push_str(&content);
                     }
                 }
-                if name == "render_canvas" {
-                    let title = input["title"].as_str().unwrap_or("Canvas").to_string();
-                    let content = input["content"].as_str().unwrap_or("").to_string();
-                    let canvas_type = input["type"].as_str().unwrap_or("svg").to_string();
-                    let _ = app.emit("canvas-event", serde_json::json!({
-                        "title": title,
-                        "content": content,
-                        "type": canvas_type,
-                    }));
+                if name == "render_canvas" || name == "render_interactive_sandbox" {
+                    // Fallback: only emit if Skill layer didn't already send
+                    if !tools::canvas_event_was_sent(app) {
+                        if name == "render_canvas" {
+                            let _ = app.emit("canvas-event", serde_json::json!({
+                                "title": input["title"].as_str().unwrap_or("Canvas"),
+                                "content": input["content"].as_str().unwrap_or(""),
+                                "type": input["type"].as_str().unwrap_or("svg"),
+                                "parameters": input["parameters"].clone(),
+                            }));
+                        } else {
+                            let _ = app.emit("canvas-event", serde_json::json!({
+                                "title": input["title"].as_str().unwrap_or("Interactive Sandbox"),
+                                "content": input["html"].as_str().unwrap_or(""),
+                                "type": "sandbox",
+                                "sandboxState": input["initial_state"].clone(),
+                            }));
+                        }
+                    }
                 }
                 if name == "show_group_chat" {
-                    if let Some(messages) = input["messages"].as_array() {
-                        let _ = app.emit("group-chat-event", serde_json::json!({
-                            "messages": messages,
-                        }));
+                    // Fallback: only emit if Skill layer didn't already send
+                    if !tools::canvas_event_was_sent(app) {
+                        if let Some(messages) = input["messages"].as_array() {
+                            let _ = app.emit("group-chat-event", serde_json::json!({ "messages": messages }));
+                        }
                     }
                 }
                 let _ = app.emit("agent-event", AgentEvent::ToolCallStart {
@@ -526,23 +568,35 @@ async fn process_openai_streaming(
         let input: serde_json::Value =
             serde_json::from_str(&json_args).unwrap_or(serde_json::json!({}));
 
-        if name == "render_canvas" {
-            let title = input["title"].as_str().unwrap_or("Canvas").to_string();
-            let content = input["content"].as_str().unwrap_or("").to_string();
-            let canvas_type = input["type"].as_str().unwrap_or("svg").to_string();
-            let _ = app.emit("canvas-event", serde_json::json!({
-                "title": title, "content": content, "type": canvas_type,
-            }));
+        // Canvas/group-chat events are now emitted by Skill layer (tools.rs execute_tool)
+        // Check if Skill layer already sent the event to avoid duplicate emission
+        if name == "render_canvas" || name == "render_interactive_sandbox" {
+            if !tools::canvas_event_was_sent(app) {
+                // Fallback: Skill layer failed to emit
+                if name == "render_canvas" {
+                    let _ = app.emit("canvas-event", serde_json::json!({
+                        "title": input["title"].as_str().unwrap_or("Canvas"),
+                        "content": input["content"].as_str().unwrap_or(""),
+                        "type": input["type"].as_str().unwrap_or("svg"),
+                        "parameters": input["parameters"].clone(),
+                    }));
+                } else {
+                    let _ = app.emit("canvas-event", serde_json::json!({
+                        "title": input["title"].as_str().unwrap_or("Interactive Sandbox"),
+                        "content": input["html"].as_str().unwrap_or(""),
+                        "type": "sandbox",
+                        "sandboxState": input["initial_state"].clone(),
+                    }));
+                }
+            }
         }
 
         if name == "show_group_chat" {
-            if let Some(msgs) = input["messages"].as_array() {
-                println!("[show_group_chat] Emitting {} messages to frontend (OpenAI path)", msgs.len());
-                let _ = app.emit("group-chat-event", serde_json::json!({
-                    "messages": msgs,
-                }));
-            } else {
-                println!("[show_group_chat] WARNING: 'messages' is not an array. Input: {}", input);
+            if !tools::canvas_event_was_sent(app) {
+                // Fallback: Skill layer failed to emit
+                if let Some(msgs) = input["messages"].as_array() {
+                    let _ = app.emit("group-chat-event", serde_json::json!({ "messages": msgs }));
+                }
             }
         }
 
@@ -566,6 +620,7 @@ pub async fn run_agent_turn(
     workspace_path: &str,
     system_prompt: &str,
     mut messages: Vec<Message>,
+    custom_url: Option<&str>,
 ) -> Result<Vec<Message>, String> {
     let tool_defs = tools::get_tool_definitions();
 
@@ -597,6 +652,8 @@ pub async fn run_agent_turn(
     const GRACE_AFTER_RESPOND: usize = 3;
 
     for iteration in 0..MAX_TOOL_LOOPS {
+        // Reset canvas event state at the start of each iteration
+        tools::reset_canvas_event_state(app);
         println!("[Agent] Iteration {}/{}", iteration + 1, MAX_TOOL_LOOPS);
         // Step 1: Get response from AI provider
         let (content_blocks, stop_reason) = match provider {
@@ -616,10 +673,54 @@ pub async fn run_agent_turn(
                     None, // Legacy path: no output limiter
                 ).await?
             }
+            "custom-openai" | "custom" => {
+                if let Some(url) = custom_url {
+                    validate_custom_url(url)?;
+                    let client = OpenAiClient::with_custom_url(
+                        api_key.to_string(),
+                        url.to_string(),
+                        model.to_string(),
+                    );
+                    process_openai_streaming(
+                        app, &client, &system_prompt, messages.clone(), &tool_defs,
+                        &mut student_text, &mut all_raw_text,
+                        None, // Legacy path: no output limiter
+                    ).await?
+                } else {
+                    return Err("custom_url is required for custom provider".to_string());
+                }
+            }
+            "custom-anthropic" => {
+                if let Some(url) = custom_url {
+                    validate_custom_url(url)?;
+                    let client = ClaudeClient::with_custom_url(
+                        api_key.to_string(),
+                        url.to_string(),
+                        model.to_string(),
+                    );
+                    process_claude_streaming(
+                        app, &client, &system_prompt, messages.clone(), &tool_defs,
+                        &mut student_text, &mut all_raw_text,
+                        None, // Legacy path: no output limiter
+                    ).await?
+                } else {
+                    return Err("custom_url is required for custom provider".to_string());
+                }
+            }
             _ => {
                 return Err(format!("Unsupported provider: {}", provider));
             }
         };
+
+        // Tool calling detection for custom providers
+        let tools_were_requested = !tool_defs.is_empty();
+        let tool_calls_found = content_blocks.iter().any(|b| matches!(b, ContentBlock::ToolUse { .. }));
+        if tools_were_requested && !tool_calls_found {
+            // Only for custom providers — built-in providers are known to support tool calling
+            if provider.starts_with("custom-") || provider == "custom" {
+                return Err("自定义 Provider 不支持 tool calling 功能。请选择'纯文本模式'或更换支持 function calling 的模型。".to_string());
+            }
+        }
 
         // Step 2: Extract tool uses before moving content_blocks
         let tool_uses: Vec<(String, String, serde_json::Value)> = content_blocks
@@ -652,7 +753,7 @@ pub async fn run_agent_turn(
                 println!("[Agent] respond_to_student called at iteration {}", iteration + 1);
             }
 
-            let (result, is_error) = tools::execute_tool(workspace_path, tool_name, input);
+            let (result, is_error) = tools::execute_tool(workspace_path, tool_name, input, Some(app));
 
             let _ = app.emit("agent-event", AgentEvent::ToolCallResult {
                 id: tool_id.clone(),
@@ -725,6 +826,7 @@ async fn run_phase_loop(
     tool_defs: &[ToolDefinition],
     max_loops: usize,
     phase: &AgentPhase,
+    custom_url: Option<&str>,
 ) -> Result<PhaseResult, String> {
     let mut student_text = String::new();
     let mut all_raw_text = String::new();
@@ -737,6 +839,8 @@ async fn run_phase_loop(
     let mut output_limiter = if use_limiter { Some(OutputLimiter::new()) } else { None };
 
     for iteration in 0..max_loops {
+        // Reset canvas event state at the start of each iteration
+        tools::reset_canvas_event_state(app);
         let phase_label = match phase {
             AgentPhase::Legacy => "Legacy",
             AgentPhase::Prep => "Prep",
@@ -757,8 +861,26 @@ async fn run_phase_loop(
                     output_limiter.as_mut(),
                 ).await?
             }
+            "custom-anthropic" => {
+                let url = custom_url.ok_or_else(|| "custom_url is required for custom-anthropic provider".to_string())?;
+                let client = ClaudeClient::with_custom_url(api_key.to_string(), url.to_string(), model.to_string());
+                process_claude_streaming(
+                    app, &client, system_prompt, messages.clone(), &active_tools,
+                    &mut student_text, &mut all_raw_text,
+                    output_limiter.as_mut(),
+                ).await?
+            }
             "openai" | "deepseek" | "google" | "github" => {
                 let client = OpenAiClient::with_model(api_key.to_string(), provider, model);
+                process_openai_streaming(
+                    app, &client, system_prompt, messages.clone(), &active_tools,
+                    &mut student_text, &mut all_raw_text,
+                    output_limiter.as_mut(),
+                ).await?
+            }
+            "custom-openai" | "custom" => {
+                let url = custom_url.ok_or_else(|| "custom_url is required for custom provider".to_string())?;
+                let client = OpenAiClient::with_custom_url(api_key.to_string(), url.to_string(), model.to_string());
                 process_openai_streaming(
                     app, &client, system_prompt, messages.clone(), &active_tools,
                     &mut student_text, &mut all_raw_text,
@@ -818,7 +940,7 @@ async fn run_phase_loop(
                 }
             }
 
-            let (result, is_error) = tools::execute_tool(workspace_path, tool_name, input);
+            let (result, is_error) = tools::execute_tool(workspace_path, tool_name, input, Some(app));
 
             let _ = app.emit("agent-event", AgentEvent::ToolCallResult {
                 id: tool_id.clone(),
@@ -1113,6 +1235,7 @@ pub async fn run_prep_phase(
     workspace_path: &str,
     system_prompt: &str,
     initial_message: &str,
+    custom_url: Option<&str>,
 ) -> Result<(String, Vec<Message>), String> {
     let tool_defs = tools::get_prep_tools();
     let augmented_prompt = build_prep_prompt(system_prompt);
@@ -1124,7 +1247,7 @@ pub async fn run_prep_phase(
     }];
     let result = run_phase_loop(
         app, api_key, provider, model, workspace_path, &augmented_prompt,
-        messages, &tool_defs, MAX_PREP_LOOPS, &AgentPhase::Prep,
+        messages, &tool_defs, MAX_PREP_LOOPS, &AgentPhase::Prep, custom_url,
     ).await?;
     Ok((result.lesson_brief.unwrap_or_default(), result.messages))
 }
@@ -1139,12 +1262,13 @@ pub async fn run_teaching_turn(
     system_prompt: &str,
     lesson_brief: &str,
     messages: Vec<Message>,
+    custom_url: Option<&str>,
 ) -> Result<Vec<Message>, String> {
     let tool_defs = tools::get_teaching_tools();
     let augmented_prompt = build_teaching_prompt(system_prompt, lesson_brief);
     let result = run_phase_loop(
         app, api_key, provider, model, workspace_path, &augmented_prompt,
-        messages, &tool_defs, MAX_TEACHING_LOOPS, &AgentPhase::Teaching,
+        messages, &tool_defs, MAX_TEACHING_LOOPS, &AgentPhase::Teaching, custom_url,
     ).await?;
     Ok(result.messages)
 }
@@ -1158,6 +1282,7 @@ pub async fn run_post_lesson(
     workspace_path: &str,
     system_prompt: &str,
     conversation_summary: &str,
+    custom_url: Option<&str>,
 ) -> Result<Vec<Message>, String> {
     let tool_defs = tools::get_post_tools();
     let augmented_prompt = build_post_prompt(system_prompt);
@@ -1169,7 +1294,7 @@ pub async fn run_post_lesson(
     }];
     let result = run_phase_loop(
         app, api_key, provider, model, workspace_path, &augmented_prompt,
-        messages, &tool_defs, MAX_POST_LOOPS, &AgentPhase::PostLesson,
+        messages, &tool_defs, MAX_POST_LOOPS, &AgentPhase::PostLesson, custom_url,
     ).await?;
     Ok(result.messages)
 }
@@ -1183,12 +1308,13 @@ pub async fn run_practice_turn(
     workspace_path: &str,
     system_prompt: &str,
     messages: Vec<Message>,
+    custom_url: Option<&str>,
 ) -> Result<Vec<Message>, String> {
     let tool_defs = tools::get_practice_tools();
     let augmented_prompt = build_practice_prompt(system_prompt);
     let result = run_phase_loop(
         app, api_key, provider, model, workspace_path, &augmented_prompt,
-        messages, &tool_defs, MAX_PRACTICE_LOOPS, &AgentPhase::Practice,
+        messages, &tool_defs, MAX_PRACTICE_LOOPS, &AgentPhase::Practice, custom_url,
     ).await?;
     Ok(result.messages)
 }
@@ -1207,12 +1333,13 @@ pub async fn run_meta_prompt_turn(
     workspace_path: &str,
     system_prompt: &str,
     messages: Vec<Message>,
+    custom_url: Option<&str>,
 ) -> Result<Vec<Message>, String> {
     let tool_defs = tools::get_meta_prompt_tools();
     let augmented_prompt = build_meta_prompt_prompt(system_prompt);
     let result = run_phase_loop(
         app, api_key, provider, model, workspace_path, &augmented_prompt,
-        messages, &tool_defs, MAX_META_PROMPT_LOOPS, &AgentPhase::MetaPrompt,
+        messages, &tool_defs, MAX_META_PROMPT_LOOPS, &AgentPhase::MetaPrompt, custom_url,
     ).await?;
     Ok(result.messages)
 }
@@ -1275,6 +1402,7 @@ pub async fn generate_notes(
     provider: &str,
     model: &str,
     messages: &[Message],
+    custom_url: Option<&str>,
 ) -> Result<String, String> {
     // Build a condensed conversation summary for the AI
     let conversation_text = extract_conversation_text(messages);
@@ -1286,7 +1414,7 @@ pub async fn generate_notes(
         }],
     }];
 
-    call_ai_simple(api_key, provider, model, NOTES_PROMPT, user_message).await
+    call_ai_simple(api_key, provider, model, NOTES_PROMPT, user_message, custom_url).await
 }
 
 const ANKI_PROMPT: &str = r#"You are an Anki flashcard generator. Analyze the conversation below and produce flashcards for spaced repetition review.
@@ -1321,6 +1449,7 @@ pub async fn generate_anki_cards(
     provider: &str,
     model: &str,
     messages: &[Message],
+    custom_url: Option<&str>,
 ) -> Result<String, String> {
     let conversation_text = extract_conversation_text(messages);
 
@@ -1331,7 +1460,7 @@ pub async fn generate_anki_cards(
         }],
     }];
 
-    call_ai_simple(api_key, provider, model, ANKI_PROMPT, user_message).await
+    call_ai_simple(api_key, provider, model, ANKI_PROMPT, user_message, custom_url).await
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────
@@ -1367,10 +1496,33 @@ pub async fn call_ai_simple(
     model: &str,
     system_prompt: &str,
     messages: Vec<Message>,
+    custom_url: Option<&str>,
 ) -> Result<String, String> {
     match provider {
         "anthropic" => {
             let client = ClaudeClient::with_model(api_key.to_string(), model);
+            let (content_blocks, _) = client
+                .send_message(system_prompt, messages, None)
+                .await?;
+            Ok(content_blocks.iter()
+                .filter_map(|b| if let ContentBlock::Text { text } = b { Some(text.as_str()) } else { None })
+                .collect::<Vec<_>>()
+                .join("\n"))
+        }
+        "custom-anthropic" => {
+            let url = custom_url.ok_or_else(|| "custom_url is required for custom-anthropic provider".to_string())?;
+            let client = ClaudeClient::with_custom_url(api_key.to_string(), url.to_string(), model.to_string());
+            let (content_blocks, _) = client
+                .send_message(system_prompt, messages, None)
+                .await?;
+            Ok(content_blocks.iter()
+                .filter_map(|b| if let ContentBlock::Text { text } = b { Some(text.as_str()) } else { None })
+                .collect::<Vec<_>>()
+                .join("\n"))
+        }
+        "custom-openai" | "custom" => {
+            let url = custom_url.ok_or_else(|| "custom_url is required for custom provider".to_string())?;
+            let client = OpenAiClient::with_custom_url(api_key.to_string(), url.to_string(), model.to_string());
             let (content_blocks, _) = client
                 .send_message(system_prompt, messages, None)
                 .await?;
