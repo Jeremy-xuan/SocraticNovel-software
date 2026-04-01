@@ -600,7 +600,6 @@ pub async fn run_agent_turn(
         "[Desktop App Instructions]\n\
         You MUST use the `respond_to_student` tool to send ALL visible content to the student. \
         Direct text output is treated as silent internal thinking and will NOT be shown to the student. \
-        Use `think` for structured internal notes. \
         After calling respond_to_student, end your turn unless you have more tools to call.\n\n\
         [Output Rules]\n\
         - Each respond_to_student call is one \"turn\". Keep it SHORT: 1-3 sentences + one question. Then STOP.\n\
@@ -608,9 +607,10 @@ pub async fn run_agent_turn(
         - One question per turn. Wait for the student's response before continuing.\n\n\
         [Canvas Diagrams — MANDATORY]\n\
         - You HAVE the `render_canvas` tool. NEVER say you cannot draw, render, or display diagrams.\n\
-        - Whenever a diagram, chart, graph, or visual would help the student, call `render_canvas` FIRST, then `respond_to_student`.\n\
-        - Use type=\"mermaid\" for all relationship/flow/sequence diagrams (Mermaid graph syntax).\n\
-        - Use type=\"svg\" only when you need custom SVG markup.\n\
+        - CRITICAL: Do NOT embed Mermaid code (```mermaid...```) inside respond_to_student text. \
+          Mermaid code blocks in text will NOT be rendered as diagrams — they appear as raw text.\n\
+        - To show a diagram: call render_canvas with type=\"mermaid\" and the diagram code in \"content\" field. Then call respond_to_student.\n\
+        - Use type=\"mermaid\" for all graphs/flows/diagrams. Use type=\"svg\" only for custom SVG markup.\n\
         - NEVER apologize for being unable to render — just call the tool.\n\n\
         {}", system_prompt
     );
@@ -1088,9 +1088,9 @@ Direct text output is treated as silent internal thinking and will NOT be shown.
 - Use `read_file` to look up reference materials (textbook, formulas, exercises) when you need context\n\
 - Use `search_file` to find specific content across workspace files\n\
 - Use `render_canvas` when explaining ANY physical concept that benefits from a diagram.\n\
+  CRITICAL: Do NOT embed Mermaid code (```mermaid...```) in respond_to_student text — it will show as plain text, NOT as a diagram.\n\
+  To render a diagram: call render_canvas(type=\"mermaid\", content=\"...\"). THEN call respond_to_student.\n\
   NEVER say you cannot draw or render — you HAVE this tool. Just call it.\n\
-  Prefer type=\"mermaid\" (Mermaid graph/flowchart syntax) for relationships and flows;\n\
-  use type=\"svg\" only for custom SVG markup. Call `render_canvas` BEFORE `respond_to_student`.\n\
 - Use `render_interactive_sandbox` ONLY for truly interactive content requiring student input\n\
   (sliders, buttons, drag-and-drop). Do NOT use it for static diagrams — use `render_canvas`.\n\
 - Use `think` for complex problem analysis before responding\n\n";

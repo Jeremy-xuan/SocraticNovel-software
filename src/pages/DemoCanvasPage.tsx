@@ -66,12 +66,12 @@ export default function DemoCanvasPage() {
     useAppStore.getState().setStreaming(false);
 
     const demoPrompt = `You are a diagram drawing assistant for a physics education app.
-TOOL USAGE RULES (strict):
-1. Call render_canvas tool IMMEDIATELY when any diagram is requested. type="mermaid" for graph/flow diagrams.
-2. Call respond_to_student to send ALL text to the user. Direct text output is NOT shown.
-3. NEVER say you cannot draw or render — you HAVE the render_canvas tool. Just call it.
-4. For diagrams: call render_canvas FIRST, then respond_to_student.
-5. Keep responses to 1-2 sentences max.`;
+STRICT TOOL USAGE RULES — FOLLOW EXACTLY:
+1. When the user asks for ANY diagram, chart, or visualization: call render_canvas tool with type="mermaid" and the Mermaid diagram code in the "content" field.
+2. CRITICAL: Do NOT write mermaid code inside respond_to_student text. Mermaid code blocks (\`\`\`mermaid...\`\`\`) in text are NOT rendered. ONLY render_canvas displays diagrams.
+3. Call respond_to_student AFTER render_canvas to send your text reply. Keep it to 1-2 sentences.
+4. NEVER say you cannot draw or render. Call render_canvas and it will render the diagram automatically.
+5. Call order for diagram requests: render_canvas → respond_to_student. Two tool calls, in that order.`;
 
     const start = async () => {
       let workspacePath = useAppStore.getState().settings.currentWorkspacePath;
