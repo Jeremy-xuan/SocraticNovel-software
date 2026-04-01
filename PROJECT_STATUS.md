@@ -1,7 +1,20 @@
 # SocraticNovel — 项目状态文档
 
-> 最后更新：2025-07-28
-> 当前版本：Phase 4.3 进行中（v0.4.2 — 对话式世界观构建 + OAuth App + AI Vision）
+> 最后更新：2026-04-01
+> 当前版本：Phase 4.4 — **集成验收完成** ✅（CLI 测试 21/21 全部通过）
+
+## ✅ Phase 4.4 验收结果 — 全部通过
+
+> CLI 测试运行器 `src-tauri/examples/cli_test_runner.rs`，commit `eb40d3d`
+
+| # | 验收项 | 状态 | 验收方式 |
+|---|--------|------|----------|
+| T1 | **Canvas AI 渲染** — AI 调用 `render_canvas`，SVG/Mermaid 正确生成 | ✅ 3/3 | `execute_tool` 直接调用 + AI session（force_tools 限制工具集） |
+| T2 | **GitHub OAuth Device Flow** — Device Flow 启动 + credential store 读写 | ✅ 7/7 | 真实 HTTP 请求到 GitHub + 凭证存储全链路 |
+| T3 | **Custom API 接入** — URL 校验 + 配置保存 + DeepSeek 真实 API 调用 | ✅ 6/6 | `update_custom_provider` round-trip + `call_ai_simple` 返回 "PONG" |
+| T4 | **AI Skills 可靠性** — `render_canvas` / `render_interactive_sandbox` / `show_group_chat` | ✅ 5/5 | `execute_tool` 直接调用三工具 + 分离 AI session 验证各工具调用 |
+
+**总计：21/21 PASSED**
 
 ## 项目概述
 
@@ -456,6 +469,13 @@ SocraticNovel 是一个开源桌面应用，将苏格拉底式教学法与轻小
     - `openai.rs` `build_request_body` 中条件切换参数名
 
 ## 未完成 / 需要改进
+
+### ✅ Phase 4.4 验收（已完成 — commit eb40d3d）
+
+T1. **✅ Canvas AI 渲染验收** — `render_canvas` execute_tool + AI session 全部通过（3/3）
+T2. **✅ GitHub OAuth Device Flow 验收** — real HTTP + credential store round-trip（7/7）
+T3. **✅ Custom API 接入验收** — URL 校验 + 配置读写 + 真实 DeepSeek API call（6/6）
+T4. **✅ AI Skills 可靠性验收** — render_canvas / sandbox / group_chat 全链路（5/5）
 
 ### 优先级高
 
