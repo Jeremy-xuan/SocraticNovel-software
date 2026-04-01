@@ -612,12 +612,6 @@ pub async fn run_agent_turn(
         - Use type=\"mermaid\" for all relationship/flow/sequence diagrams (Mermaid graph syntax).\n\
         - Use type=\"svg\" only when you need custom SVG markup.\n\
         - NEVER apologize for being unable to render — just call the tool.\n\n\
-        [CRITICAL: Teaching Method]\n\
-        - When introducing ANY new concept, you MUST start from everyday life experience (rain, wind, cooking, magnets, phone charging).\n\
-        - Do NOT use physics terminology until the student discovers the concept through your guided questions.\n\
-        - Do NOT assume the student knows anything they haven't explicitly said in this conversation.\n\
-        - Each question must be answerable by common sense alone. If it requires physics knowledge, you've jumped too far.\n\
-        - Be EXTREMELY slow. 3-5 rounds of questions before introducing ONE new idea.\n\n\
         {}", system_prompt
     );
 
