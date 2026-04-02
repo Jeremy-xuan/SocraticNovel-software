@@ -419,6 +419,9 @@ export default function LandingPage() {
           <button onClick={() => navigate('/progress')} className="text-[12px] font-medium hover:text-text-main flex items-center gap-1 transition-colors dark:hover:text-text-main-dark">
             {t('landing.learningProfile')} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17l9.2-9.2M17 17V7H7" /></svg>
           </button>
+          <button onClick={() => navigate('/demo-canvas')} className="text-[12px] font-medium text-yellow-600 hover:text-yellow-500 transition-colors dark:text-yellow-500/70 dark:hover:text-yellow-400">
+            Canvas Demo
+          </button>
         </div>
       </div>
 

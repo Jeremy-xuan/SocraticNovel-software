@@ -157,6 +157,46 @@ export async function aiVisionEnhancePage(
   return invoke('ai_vision_enhance_page', { pdfPath, pageNumber, apiKey, provider, model });
 }
 
+// ─── Custom Provider API ────────────────────────────────────────────
+
+export async function updateCustomProvider(config: {
+  customUrl: string;
+  apiKey: string;
+  model: string;
+  protocol: 'openai-compatible' | 'anthropic-compatible';
+}): Promise<void> {
+  return invoke('update_custom_provider', {
+    config: {
+      custom_url: config.customUrl,
+      api_key: config.apiKey,
+      model: config.model,
+      protocol: config.protocol,
+    }
+  });
+}
+
+// ─── Codex OAuth ───────────────────────────────────────────────────
+
+export async function startCodexOAuth(): Promise<string> {
+  return invoke('start_codex_oauth');
+}
+
+export async function pollCodexAuth(): Promise<string> {
+  return invoke('poll_codex_auth');
+}
+
+export async function checkCodexAuth(): Promise<boolean> {
+  return invoke('check_codex_auth');
+}
+
+export async function getCodexToken(): Promise<string | null> {
+  return invoke('get_codex_token');
+}
+
+export async function logoutCodex(): Promise<void> {
+  return invoke('logout_codex');
+}
+
 // ─── Session History ─────────────────────────────────────────────
 
 export async function saveSessionHistory(

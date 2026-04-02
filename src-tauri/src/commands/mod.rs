@@ -5,4 +5,5 @@ pub mod review_commands;
 pub mod pdf_commands;
 pub mod history_commands;
 pub mod oauth_commands;
+pub mod codex_oauth_commands;
 pub mod credential_store;

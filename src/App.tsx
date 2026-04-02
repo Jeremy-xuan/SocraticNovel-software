@@ -12,6 +12,7 @@ import MetaPromptPage from './pages/MetaPromptPage';
 import ReviewPage from './pages/ReviewPage';
 import PdfImportPage from './pages/PdfImportPage';
 import HistoryPage from './pages/HistoryPage';
+import DemoCanvasPage from './pages/DemoCanvasPage';
 import { useAppStore } from './stores/appStore';
 
 function ThemeProvider() {
@@ -61,6 +62,7 @@ function AppRoutes() {
       <Route path="/spaced-review" element={<ReviewPage />} />
       <Route path="/pdf-import" element={<PdfImportPage />} />
       <Route path="/history" element={<HistoryPage />} />
+      <Route path="/demo-canvas" element={<DemoCanvasPage />} />
     </Routes>
   );
 }

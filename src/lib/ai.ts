@@ -6,6 +6,7 @@ export interface StartSessionParams {
   systemPrompt: string;
   provider: string;
   model?: string;
+  customUrl?: string;
 }
 
 export interface SendMessageParams {
@@ -25,7 +26,9 @@ export type AgentEvent =
 export interface CanvasEvent {
   title: string;
   content: string;
-  type?: 'svg' | 'mermaid';
+  type?: 'svg' | 'mermaid' | 'interactive' | 'sandbox';
+  parameters?: unknown[];
+  sandboxState?: Record<string, unknown>;
 }
 
 export interface GroupChatMessage {
@@ -150,4 +153,18 @@ export function onCanvasEvent(callback: (event: CanvasEvent) => void): Promise<U
 
 export function onGroupChatEvent(callback: (event: GroupChatEvent) => void): Promise<UnlistenFn> {
   return listen<GroupChatEvent>('group-chat-event', (e) => callback(e.payload));
+}
+
+// ─── Canvas Interaction ─────────────────────────────────────────────
+
+export interface CanvasInteractionPayload {
+  itemId: string;
+  type: 'click' | 'parameter_change';
+  regionId?: string;
+  parameterName?: string;
+  parameterValue?: number | string;
+}
+
+export async function sendCanvasInteraction(payload: CanvasInteractionPayload): Promise<void> {
+  return invoke('send_canvas_interaction', { payload });
 }

@@ -138,13 +138,17 @@ export function useAiAgent() {
       });
 
       const unlisten2 = await onCanvasEvent((event) => {
+        console.log('[CANVAS] canvas-event received:', event.type, event.title, 'content_len=' + event.content?.length);
         const item: CanvasItem = {
           id: crypto.randomUUID(),
           type: event.type || 'svg',
           content: event.content,
           title: event.title,
           timestamp: Date.now(),
+          parameters: event.parameters as CanvasItem['parameters'],
+          sandboxState: event.sandboxState,
         };
+        console.log('[CANVAS] adding canvas item to store, id=' + item.id);
         addCanvasItem(item);
       });
 
@@ -169,6 +173,7 @@ export function useAiAgent() {
       systemPrompt,
       provider: settings.aiProvider,
       model: settings.aiModel ?? undefined,
+      customUrl: settings.customProviderConfig?.customUrl,
     });
   }, []);
 
@@ -327,6 +332,7 @@ export function useAiAgent() {
       systemPrompt: '',
       provider: settings.aiProvider,
       model: settings.aiModel ?? undefined,
+      customUrl: settings.customProviderConfig?.customUrl,
     });
 
     if (customPrompt !== undefined) {
@@ -396,6 +402,7 @@ export function useAiAgent() {
       systemPrompt: '',
       provider: settings.aiProvider,
       model: settings.aiModel ?? undefined,
+      customUrl: settings.customProviderConfig?.customUrl,
     });
 
     // Load embedded META_PROMPT.md content from backend

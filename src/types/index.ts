@@ -68,11 +68,34 @@ export interface ToolCallDisplay {
 // Canvas / whiteboard
 export interface CanvasItem {
   id: string;
-  type: 'svg' | 'mermaid';
+  type: 'svg' | 'mermaid' | 'interactive' | 'sandbox';
   content: string;
   title?: string;
   timestamp: number;
+  parameters?: InteractiveParameter[];
+  sandboxState?: Record<string, unknown>;
 }
+
+// Interactive canvas parameters for student input
+export interface InteractiveParameterOption {
+  value: string;
+  label: string;
+}
+
+export interface InteractiveParameter {
+  name: string;
+  type: 'range' | 'number' | 'text' | 'select' | 'checkbox';
+  label: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  default?: number | string;
+  options?: InteractiveParameterOption[];
+  description?: string;
+}
+
+// Canvas item status for rendering state
+export type CanvasItemStatus = 'idle' | 'rendering' | 'interactive' | 'error' | 'streaming';
 
 // Canvas annotations
 export type AnnotationType = 'pen' | 'text' | 'arrow' | 'highlight';
@@ -109,6 +132,16 @@ export interface AgentLogEntry {
 }
 
 // Settings
+
+// Custom provider configuration
+export interface CustomProviderConfig {
+  customUrl: string;
+  apiKey: string;
+  model: string;
+  protocol: 'openai-compatible' | 'anthropic-compatible';
+}
+
+// Extended AppSettings with custom provider support
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   homeLayout?: 'input' | 'cards';
@@ -118,8 +151,8 @@ export interface AppSettings {
   aiProvider: 'anthropic' | 'openai' | 'google' | 'deepseek' | 'github' | 'custom';
   aiModel: string | null;
   apiKeyConfigured: boolean;
+  customProviderConfig?: CustomProviderConfig;
 }
-
 // Tool definitions for AI
 export interface ToolDefinition {
   name: string;

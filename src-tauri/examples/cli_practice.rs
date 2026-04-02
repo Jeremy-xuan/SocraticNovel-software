@@ -183,7 +183,7 @@ async fn run_practice_loop(
                 });
             } else {
                 let workspace = default_workspace();
-                let (result, is_error) = tools::execute_tool(&workspace, tool_name, input);
+                let (result, is_error) = tools::execute_tool(&workspace, tool_name, input, None);
                 println!("    → {}", truncate(&result, 100));
                 tool_results.push(ContentBlock::ToolResult {
                     tool_use_id: tool_id.clone(),
@@ -253,7 +253,7 @@ async fn print_notes(api_key: &str, provider: &str, model: &str, messages: &[Mes
         return;
     }
     println!("\n📓 生成笔记中...");
-    match runtime::generate_notes(api_key, provider, model, messages).await {
+    match runtime::generate_notes(api_key, provider, model, messages, None).await {
         Ok(notes) => {
             println!("═══════════════ 笔记 ═══════════════");
             println!("{}", notes);
@@ -270,7 +270,7 @@ async fn print_anki(api_key: &str, provider: &str, model: &str, messages: &[Mess
         return;
     }
     println!("\n🃏 生成 Anki 卡片中...");
-    match runtime::generate_anki_cards(api_key, provider, model, messages).await {
+    match runtime::generate_anki_cards(api_key, provider, model, messages, None).await {
         Ok(tsv) => {
             let count = tsv.lines().filter(|l| l.contains('\t')).count();
             println!("═══════════ Anki Cards ({}) ═══════════", count);

@@ -6,6 +6,8 @@ import { useAppStore } from '../../stores/appStore';
 import CanvasToolbar from './CanvasToolbar';
 import type { ToolType } from './CanvasToolbar';
 import AnnotationLayer from './AnnotationLayer';
+import InteractiveCanvas from './InteractiveCanvas';
+import SandboxedHTMLCanvas from './SandboxedHTMLCanvas';
 
 let mermaidInitialized = false;
 
@@ -153,6 +155,20 @@ export default function CanvasPanel({ items, readOnly }: Props) {
               )}
               {item.type === 'mermaid' && (
                 <MermaidRenderer content={item.content} id={item.id} />
+              )}
+              {item.type === 'interactive' && (
+                <InteractiveCanvas
+                  content={item.content}
+                  parameters={item.parameters ?? []}
+                  itemId={item.id}
+                  status="idle"
+                />
+              )}
+              {item.type === 'sandbox' && (
+                <SandboxedHTMLCanvas
+                  htmlContent={item.content}
+                  initialState={item.sandboxState}
+                />
               )}
               <AnnotationLayer
                 annotations={itemAnnotations}

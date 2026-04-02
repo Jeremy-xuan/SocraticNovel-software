@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
-import { setApiKey, hasApiKey, startGithubDeviceFlow, pollGithubDeviceFlow, checkGithubAuth, logoutGithub } from '../lib/tauri';
+import { setApiKey, hasApiKey, startGithubDeviceFlow, pollGithubDeviceFlow, checkGithubAuth, logoutGithub, updateCustomProvider, startCodexOAuth, pollCodexAuth, checkCodexAuth, logoutCodex } from '../lib/tauri';
 import { PROVIDER_MODELS } from '../lib/providerModels';
 import i18n from '../i18n';
 
@@ -29,6 +29,15 @@ export default function SettingsPage() {
   const [deviceVerifyUri, setDeviceVerifyUri] = useState<string | null>(null);
   const [showPremiumInfo, setShowPremiumInfo] = useState(false);
   const [modelListExpanded, setModelListExpanded] = useState(false);
+  // Custom provider state
+  const [customUrlInput, setCustomUrlInput] = useState('');
+  const [customApiKeyInput, setCustomApiKeyInput] = useState('');
+  const [customModelInput, setCustomModelInput] = useState('');
+  const [customProtocol, setCustomProtocol] = useState<'openai-compatible' | 'anthropic-compatible'>('openai-compatible');
+  // Codex OAuth state
+  const [codexAuthed, setCodexAuthed] = useState(false);
+  const [codexLoading, setCodexLoading] = useState(false);
+  const [codexError, setCodexError] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if key exists for current provider
@@ -38,12 +47,19 @@ export default function SettingsPage() {
         setKeyExists(authed);
         updateSettings({ apiKeyConfigured: authed });
       });
+    } else if (settings.aiProvider === 'custom') {
+      // Custom provider - check if config exists
+      const hasConfig = settings.customProviderConfig?.customUrl && settings.customProviderConfig?.apiKey;
+      setKeyExists(!!hasConfig);
+      updateSettings({ apiKeyConfigured: !!hasConfig });
     } else {
       hasApiKey(settings.aiProvider).then((exists) => {
         setKeyExists(exists);
         updateSettings({ apiKeyConfigured: exists });
       });
     }
+    // Check Codex auth status
+    checkCodexAuth().then(setCodexAuthed);
   }, [settings.aiProvider]);
 
   const handleSaveKey = async () => {
@@ -114,7 +130,7 @@ export default function SettingsPage() {
             {t('settings.providerDesc')}
           </p>
           <div className="grid grid-cols-2 gap-3">
-            {(['anthropic', 'openai', 'google', 'deepseek', 'github'] as const).map((provider) => (
+            {(['anthropic', 'openai', 'google', 'deepseek', 'github', 'custom'] as const).map((provider) => (
               <button
                 key={provider}
                 onClick={() => updateSettings({ aiProvider: provider, aiModel: null })}
@@ -162,6 +178,15 @@ export default function SettingsPage() {
                       <path d="M6.25 9.037a.75.75 0 0 1 .75.75v1.501a.75.75 0 0 1-1.5 0V9.787a.75.75 0 0 1 .75-.75Zm4.25.75v1.501a.75.75 0 0 1-1.5 0V9.787a.75.75 0 0 1 1.5 0Z" />
                     </svg>
                     GitHub Copilot
+                  </span>
+                )}
+                {provider === 'custom' && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
+                    </svg>
+                    Custom API
                   </span>
                 )}
               </button>
@@ -352,6 +377,146 @@ export default function SettingsPage() {
             </>
           )}
         </section>
+
+        {/* Codex OAuth */}
+        <section className="mb-8">
+          <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
+            GPT Codex OAuth
+          </h2>
+          {codexAuthed ? (
+            <div className="flex items-center gap-3">
+              <span className="text-aux text-green-600 dark:text-green-400">
+                <svg className="inline h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Connected
+              </span>
+              <button
+                onClick={async () => { await logoutCodex(); setCodexAuthed(false); }}
+                className="rounded-btn border border-red-300 px-3 py-1.5 text-tag text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <div>
+              <button
+                onClick={async () => {
+                  setCodexLoading(true);
+                  setCodexError(null);
+                  try {
+                    await startCodexOAuth();
+                    // Poll for completion
+                    await pollCodexAuth();
+                    setCodexAuthed(true);
+                  } catch (e: unknown) {
+                    setCodexError(e instanceof Error ? e.message : String(e));
+                  } finally {
+                    setCodexLoading(false);
+                  }
+                }}
+                disabled={codexLoading}
+                className="flex items-center gap-2 rounded-btn bg-[#10A37F] px-5 py-2.5 text-aux font-medium text-white hover:bg-[#0D8A6A] disabled:opacity-60"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
+                  <path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.91 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073z" />
+                </svg>
+                {codexLoading ? 'Connecting...' : 'Connect with GPT Codex'}
+              </button>
+              {codexError && (
+                <p className="mt-2 text-tag text-red-500 dark:text-red-400">{codexError}</p>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* Custom Provider Config */}
+        {settings.aiProvider === 'custom' && (
+          <section className="mb-8">
+            <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
+              Custom API Configuration
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-tag text-text-placeholder">API URL</label>
+                <input
+                  type="url"
+                  value={customUrlInput}
+                  onChange={(e) => setCustomUrlInput(e.target.value)}
+                  placeholder="https://api.example.com/v1/chat/completions"
+                  className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2 text-aux text-text-main placeholder-text-placeholder focus:border-blue-500 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-main-dark"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-tag text-text-placeholder">API Key</label>
+                <input
+                  type="password"
+                  value={customApiKeyInput}
+                  onChange={(e) => setCustomApiKeyInput(e.target.value)}
+                  placeholder="sk-..."
+                  className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2 text-aux text-text-main placeholder-text-placeholder focus:border-blue-500 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-main-dark"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-tag text-text-placeholder">Model</label>
+                <input
+                  type="text"
+                  value={customModelInput}
+                  onChange={(e) => setCustomModelInput(e.target.value)}
+                  placeholder="gpt-4o, claude-3-opus, etc."
+                  className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2 text-aux text-text-main placeholder-text-placeholder focus:border-blue-500 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-main-dark"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-tag text-text-placeholder">Protocol</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      checked={customProtocol === 'openai-compatible'}
+                      onChange={() => setCustomProtocol('openai-compatible')}
+                      className="text-blue-500"
+                    />
+                    <span className="text-aux text-text-main dark:text-text-main-dark">OpenAI Compatible</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      checked={customProtocol === 'anthropic-compatible'}
+                      onChange={() => setCustomProtocol('anthropic-compatible')}
+                      className="text-blue-500"
+                    />
+                    <span className="text-aux text-text-main dark:text-text-main-dark">Anthropic Compatible</span>
+                  </label>
+                </div>
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    await updateCustomProvider({
+                      customUrl: customUrlInput,
+                      apiKey: customApiKeyInput,
+                      model: customModelInput,
+                      protocol: customProtocol,
+                    });
+                    updateSettings({
+                      customProviderConfig: {
+                        customUrl: customUrlInput,
+                        apiKey: customApiKeyInput,
+                        model: customModelInput,
+                        protocol: customProtocol,
+                      },
+                      apiKeyConfigured: true,
+                    });
+                    setKeyExists(true);
+                  } catch (e: unknown) {
+                    console.error('Failed to save custom provider config:', e);
+                  }
+                }}
+                className="rounded-btn bg-primary px-4 py-2 text-aux font-medium text-white hover:bg-[#BF6A4E]"
+              >
+                Save Custom Config
+              </button>
+            </div>
+          </section>
+        )}
 
         {/* Theme */}
         <section className="mb-8">

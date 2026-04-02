@@ -531,6 +531,60 @@ async fn run_t4(api_key: &str) -> Vec<TestResult> {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  T5 — Canvas Natural Trigger (系统提示有效性验证)
+// ═══════════════════════════════════════════════════════════════
+
+/// Test that the real practice system prompt (no force_tools) causes the AI to
+/// call render_canvas naturally when asked for a diagram.
+async fn run_t5(api_key: &str) -> Vec<TestResult> {
+    separator("T5 — Canvas 系统提示有效性 (无 force_tools)");
+    let mut results = Vec::new();
+
+    // Use the real practice prompt built by runtime (with empty base prompt)
+    let system = socratic_novel_lib::ai::runtime::build_practice_prompt("");
+
+    println!("  [5-1] AI in real practice mode → 请求图表 → 期望 render_canvas 被调用");
+    println!("  ⚙ 运行 AI session（约 30-60s）...");
+    match run_ai_loop(
+        api_key,
+        DEEPSEEK_PROVIDER,
+        &system,
+        "请帮我画一个图，展示点电荷周围的电场线分布（用 Mermaid 图表）。",
+        None, // No force_tools — the system prompt should be enough
+    ).await {
+        Ok(messages) => {
+            let canvas_calls = find_tool_calls(&messages, "render_canvas");
+            let sandbox_calls = find_tool_calls(&messages, "render_interactive_sandbox");
+            println!("    → render_canvas: {} 次, render_interactive_sandbox: {} 次",
+                canvas_calls.len(), sandbox_calls.len());
+
+            if !canvas_calls.is_empty() {
+                let call = &canvas_calls[0];
+                let c_type = call["type"].as_str().unwrap_or("?");
+                let title = call["title"].as_str().unwrap_or("?");
+                let content_len = call["content"].as_str().map(|s| s.len()).unwrap_or(0);
+                println!("    → render_canvas: type={c_type}, title={title:?}, content_len={content_len}");
+                results.push(TestResult::pass("AI calls render_canvas (no force_tools)", 
+                    format!("type={c_type}, title={title:?}, {content_len} bytes")));
+            } else if !sandbox_calls.is_empty() {
+                println!("    → AI used render_interactive_sandbox instead of render_canvas");
+                results.push(TestResult::pass("AI calls canvas tool (sandbox)", 
+                    "render_interactive_sandbox called (not render_canvas, but canvas is visible)"));
+            } else {
+                println!("    → AI did NOT call any canvas tool — system prompt needs stronger canvas instruction");
+                results.push(TestResult::fail("AI calls canvas tool (no force_tools)",
+                    "没有 canvas 工具被调用 — 系统提示对 canvas 的要求还不够强"));
+            }
+        }
+        Err(e) => {
+            results.push(TestResult::fail("AI session for canvas natural trigger", e));
+        }
+    }
+
+    results
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  main
 // ═══════════════════════════════════════════════════════════════
 
@@ -571,6 +625,12 @@ async fn main() {
     }
     if suite == "t4" || suite == "all" {
         let r = run_t4(&api_key).await;
+        for rr in &r { print_result(rr); }
+        all_results.extend(r);
+    }
+
+    if suite == "t5" || suite == "all" {
+        let r = run_t5(&api_key).await;
         for rr in &r { print_result(rr); }
         all_results.extend(r);
     }

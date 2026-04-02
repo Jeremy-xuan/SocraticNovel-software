@@ -1,0 +1,36 @@
+/* Mermaid SVG 动画 */
+/* 注意：stroke-dasharray 由 JS 通过 inline style 设置（element.style.strokeDasharray），
+   CSS 只提供基础样式，不使用 CSS 变量 */
+g.node {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+g.edgePaths path {
+  fill: none;
+  stroke-width: 2px;
+}
+
+/* 深色模式适配 */
+@media (prefers-color-scheme: dark) {
+  g.edgePaths path {
+    stroke-width: 1.5px;
+  }
+}
+
+/* Mermaid 节点圆角 */
+.node rect {
+  rx: 8px;
+  ry: 8px;
+}
+
+/* Mermaid 节点标签字体 */
+.node text {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+}
+
+/* 节点阴影 */
+.node rect {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}

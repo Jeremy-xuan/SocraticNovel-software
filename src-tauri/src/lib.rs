@@ -8,6 +8,25 @@ use commands::review_commands;
 use commands::pdf_commands;
 use commands::history_commands;
 use commands::oauth_commands;
+use commands::codex_oauth_commands;
+
+// ─── Skill Layer State ───────────────────────────────────────────
+
+/// State marker for canvas event deduplication.
+/// When Skill layer sends canvas-event, this is set to true.
+/// When runtime.rs processes tool call result, it checks this flag.
+pub struct CanvasEventState {
+    /// True if canvas-event was already sent by Skill layer in this turn
+    pub sent: std::sync::atomic::AtomicBool,
+}
+
+impl Default for CanvasEventState {
+    fn default() -> Self {
+        Self {
+            sent: std::sync::atomic::AtomicBool::new(false),
+        }
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -16,6 +35,7 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .manage(ai_commands::ConversationState::default())
+        .manage(CanvasEventState::default())
         .invoke_handler(tauri::generate_handler![
             // File system
             fs_commands::read_file,
@@ -54,11 +74,14 @@ pub fn run() {
             ai_commands::generate_anki_cards,
             // AI: Stateless chat (world-building, etc.)
             ai_commands::simple_chat,
+            ai_commands::send_canvas_interaction,
             // Settings
             settings_commands::set_api_key,
             settings_commands::get_api_key,
             settings_commands::has_api_key,
             settings_commands::delete_api_key,
+            settings_commands::update_custom_provider,
+            settings_commands::get_custom_provider,
             // Spaced repetition review
             review_commands::get_review_queue,
             review_commands::get_review_stats,
@@ -83,6 +106,12 @@ pub fn run() {
             oauth_commands::check_github_auth,
             oauth_commands::get_github_token,
             oauth_commands::logout_github,
+            // Codex OAuth
+            codex_oauth_commands::start_codex_oauth,
+            codex_oauth_commands::poll_codex_auth,
+            codex_oauth_commands::check_codex_auth,
+            codex_oauth_commands::get_codex_token,
+            codex_oauth_commands::logout_codex,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

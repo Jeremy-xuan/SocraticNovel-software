@@ -9,6 +9,7 @@ pub struct ClaudeClient {
     client: Client,
     api_key: String,
     model: String,
+    base_url: String,
 }
 
 impl ClaudeClient {
@@ -17,6 +18,7 @@ impl ClaudeClient {
             client: Client::new(),
             api_key,
             model: DEFAULT_MODEL.to_string(),
+            base_url: CLAUDE_API_URL.to_string(),
         }
     }
 
@@ -25,6 +27,24 @@ impl ClaudeClient {
             client: Client::new(),
             api_key,
             model: if model.is_empty() { DEFAULT_MODEL.to_string() } else { model.to_string() },
+            base_url: CLAUDE_API_URL.to_string(),
+        }
+    }
+
+    /// Create a ClaudeClient with a custom base URL (for Anthropic-compatible providers).
+    /// Uses 30s global timeout + 10s connect timeout.
+    pub fn with_custom_url(api_key: String, base_url: String, model: String) -> Self {
+        use std::time::Duration;
+        let client = Client::builder()
+            .timeout(Duration::from_secs(30))
+            .connect_timeout(Duration::from_secs(10))
+            .build()
+            .expect("Failed to build HTTP client with timeouts");
+        Self {
+            client,
+            api_key,
+            model: if model.is_empty() { DEFAULT_MODEL.to_string() } else { model },
+            base_url: base_url.trim_end_matches('/').to_string(),
         }
     }
 
@@ -47,7 +67,7 @@ impl ClaudeClient {
 
         let response = self
             .client
-            .post(CLAUDE_API_URL)
+            .post(&self.base_url)
             .header("x-api-key", &self.api_key)
             .header("anthropic-version", CLAUDE_API_VERSION)
             .header("content-type", "application/json")
@@ -112,7 +132,7 @@ impl ClaudeClient {
 
         let response = self
             .client
-            .post(CLAUDE_API_URL)
+            .post(&self.base_url)
             .header("x-api-key", &self.api_key)
             .header("anthropic-version", CLAUDE_API_VERSION)
             .header("content-type", "application/json")

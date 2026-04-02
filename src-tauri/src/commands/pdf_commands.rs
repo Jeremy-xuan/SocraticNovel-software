@@ -528,6 +528,7 @@ pub async fn ai_enhance_text(
         &model,
         AI_TEXT_ENHANCE_PROMPT,
         messages,
+        None,
     )
     .await
 }
@@ -565,6 +566,7 @@ pub async fn ai_vision_enhance_page(
         &model,
         AI_VISION_ENHANCE_PROMPT,
         messages,
+        None,
     )
     .await
 }

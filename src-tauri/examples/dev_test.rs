@@ -89,7 +89,7 @@ async fn main() {
             text: "Reply with exactly: PONG".to_string(),
         }],
     }];
-    match runtime::call_ai_simple(&api_key, &provider, &model, "You are a test bot. Reply exactly as instructed.", simple_messages).await {
+    match runtime::call_ai_simple(&api_key, &provider, &model, "You are a test bot. Reply exactly as instructed.", simple_messages, None).await {
         Ok(response) => {
             println!("   Response: {}", response.trim());
             assert!(
@@ -109,7 +109,7 @@ async fn main() {
     // ─── Test 5: generate_notes (real API call) ───────────────────
     println!("📋 Test 5: generate_notes() — real API call");
     let lesson_messages = build_mock_lesson();
-    match runtime::generate_notes(&api_key, &provider, &model, &lesson_messages).await {
+    match runtime::generate_notes(&api_key, &provider, &model, &lesson_messages, None).await {
         Ok(notes) => {
             println!("   Notes length: {} chars", notes.len());
             let preview = notes.chars().take(300).collect::<String>();
@@ -125,7 +125,7 @@ async fn main() {
 
     // ─── Test 6: generate_anki_cards (real API call) ──────────────
     println!("📋 Test 6: generate_anki_cards() — real API call");
-    match runtime::generate_anki_cards(&api_key, &provider, &model, &lesson_messages).await {
+    match runtime::generate_anki_cards(&api_key, &provider, &model, &lesson_messages, None).await {
         Ok(tsv) => {
             let card_count = tsv.lines().filter(|l| l.contains('\t')).count();
             println!("   TSV length: {} chars, {} cards", tsv.len(), card_count);
