@@ -387,31 +387,25 @@ fn emit_non_streaming_events(
                     }
                 }
                 if name == "render_canvas" || name == "render_interactive_sandbox" {
-                    // Fallback: only emit if Skill layer didn't already send
-                    if !tools::canvas_event_was_sent(app) {
-                        if name == "render_canvas" {
-                            let _ = app.emit("canvas-event", serde_json::json!({
-                                "title": input["title"].as_str().unwrap_or("Canvas"),
-                                "content": input["content"].as_str().unwrap_or(""),
-                                "type": input["type"].as_str().unwrap_or("svg"),
-                                "parameters": input["parameters"].clone(),
-                            }));
-                        } else {
-                            let _ = app.emit("canvas-event", serde_json::json!({
-                                "title": input["title"].as_str().unwrap_or("Interactive Sandbox"),
-                                "content": input["html"].as_str().unwrap_or(""),
-                                "type": "sandbox",
-                                "sandboxState": input["initial_state"].clone(),
-                            }));
-                        }
+                    if name == "render_canvas" {
+                        let _ = app.emit("canvas-event", serde_json::json!({
+                            "title": input["title"].as_str().unwrap_or("Canvas"),
+                            "content": input["content"].as_str().unwrap_or(""),
+                            "type": input["type"].as_str().unwrap_or("svg"),
+                            "parameters": input["parameters"].clone(),
+                        }));
+                    } else {
+                        let _ = app.emit("canvas-event", serde_json::json!({
+                            "title": input["title"].as_str().unwrap_or("Interactive Sandbox"),
+                            "content": input["html"].as_str().unwrap_or(""),
+                            "type": "sandbox",
+                            "sandboxState": input["initial_state"].clone(),
+                        }));
                     }
                 }
                 if name == "show_group_chat" {
-                    // Fallback: only emit if Skill layer didn't already send
-                    if !tools::canvas_event_was_sent(app) {
-                        if let Some(messages) = input["messages"].as_array() {
-                            let _ = app.emit("group-chat-event", serde_json::json!({ "messages": messages }));
-                        }
+                    if let Some(messages) = input["messages"].as_array() {
+                        let _ = app.emit("group-chat-event", serde_json::json!({ "messages": messages }));
                     }
                 }
                 let _ = app.emit("agent-event", AgentEvent::ToolCallStart {
@@ -623,8 +617,6 @@ pub async fn run_agent_turn(
     const GRACE_AFTER_RESPOND: usize = 3;
 
     for iteration in 0..MAX_TOOL_LOOPS {
-        // Reset canvas event state at the start of each iteration
-        tools::reset_canvas_event_state(app);
         println!("[Agent] Iteration {}/{}", iteration + 1, MAX_TOOL_LOOPS);
         // Step 1: Get response from AI provider
         let (content_blocks, stop_reason) = match provider {
@@ -724,7 +716,7 @@ pub async fn run_agent_turn(
                 println!("[Agent] respond_to_student called at iteration {}", iteration + 1);
             }
 
-            let (result, is_error) = tools::execute_tool(workspace_path, tool_name, input, Some(app));
+            let (result, is_error) = tools::execute_tool(workspace_path, tool_name, input);
 
             let _ = app.emit("agent-event", AgentEvent::ToolCallResult {
                 id: tool_id.clone(),
@@ -810,8 +802,6 @@ async fn run_phase_loop(
     let mut output_limiter = if use_limiter { Some(OutputLimiter::new()) } else { None };
 
     for iteration in 0..max_loops {
-        // Reset canvas event state at the start of each iteration
-        tools::reset_canvas_event_state(app);
         let phase_label = match phase {
             AgentPhase::Legacy => "Legacy",
             AgentPhase::Prep => "Prep",
@@ -911,7 +901,7 @@ async fn run_phase_loop(
                 }
             }
 
-            let (result, is_error) = tools::execute_tool(workspace_path, tool_name, input, Some(app));
+            let (result, is_error) = tools::execute_tool(workspace_path, tool_name, input);
 
             let _ = app.emit("agent-event", AgentEvent::ToolCallResult {
                 id: tool_id.clone(),

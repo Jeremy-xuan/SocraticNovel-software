@@ -99,7 +99,7 @@ fn tool_search_file() -> ToolDefinition {
 fn tool_render_canvas() -> ToolDefinition {
     ToolDefinition {
         name: "render_canvas".to_string(),
-        description: "Render a visual element (SVG diagram, chart, or Mermaid diagram) on the student's whiteboard/canvas panel. Supports raw SVG markup or Mermaid diagram syntax.".to_string(),
+        description: "Draw a diagram, chart, or visual on the student's canvas panel. Accepts Mermaid syntax (flowcharts, sequence diagrams, class diagrams) or raw SVG markup. Use this tool whenever explaining a concept that benefits from a visual — never describe a diagram in text when you can draw it.".to_string(),
         input_schema: json!({
             "type": "object",
             "properties": {
