@@ -176,7 +176,6 @@ impl OpenAiClient {
 
         let oai_tools: Option<Vec<serde_json::Value>> = tools.map(|defs| {
             defs.iter()
-                .filter(|t| t.name != "render_canvas")
                 .map(|t| {
                     serde_json::json!({
                         "type": "function",
