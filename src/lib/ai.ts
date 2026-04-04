@@ -29,6 +29,13 @@ export interface CanvasEvent {
   type?: 'svg' | 'mermaid' | 'interactive' | 'sandbox';
   parameters?: unknown[];
   sandboxState?: Record<string, unknown>;
+  streaming?: boolean;
+  toolCallId?: string;
+}
+
+export interface CanvasContentDelta {
+  toolCallId: string;
+  delta: string;
 }
 
 export interface GroupChatMessage {
@@ -149,6 +156,10 @@ export function onAgentEvent(callback: (event: AgentEvent) => void): Promise<Unl
 
 export function onCanvasEvent(callback: (event: CanvasEvent) => void): Promise<UnlistenFn> {
   return listen<CanvasEvent>('canvas-event', (e) => callback(e.payload));
+}
+
+export function onCanvasContentDelta(callback: (event: CanvasContentDelta) => void): Promise<UnlistenFn> {
+  return listen<CanvasContentDelta>('canvas-content-delta', (e) => callback(e.payload));
 }
 
 export function onGroupChatEvent(callback: (event: GroupChatEvent) => void): Promise<UnlistenFn> {

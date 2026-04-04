@@ -1,6 +1,6 @@
 [package]
 name = "socratic-novel"
-version = "0.4.1"
+version = "0.4.2"
 description = "SocraticNovel — Immersive AI Tutoring Desktop App"
 authors = ["SocraticNovel"]
 edition = "2021"
