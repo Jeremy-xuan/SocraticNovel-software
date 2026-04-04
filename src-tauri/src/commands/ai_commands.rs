@@ -878,6 +878,7 @@ pub struct SimpleChatPayload {
     pub provider: String,
     pub model: String,
     pub api_key: String,
+    pub custom_url: Option<String>,
 }
 
 /// Stateless non-streaming chat — no session, no tools, no history management.
@@ -899,9 +900,23 @@ pub async fn simple_chat(payload: SimpleChatPayload) -> Result<String, String> {
                 .send_message(&payload.system_prompt, messages, None)
                 .await?
         }
+        "custom-anthropic" => {
+            let url = payload.custom_url.ok_or_else(|| "custom_url is required for custom-anthropic provider".to_string())?;
+            let client = ClaudeClient::with_custom_url(payload.api_key, url, payload.model);
+            client
+                .send_message(&payload.system_prompt, messages, None)
+                .await?
+        }
         "openai" | "deepseek" | "google" | "github" => {
             let client =
                 OpenAiClient::with_model(payload.api_key, &payload.provider, &payload.model);
+            client
+                .send_message(&payload.system_prompt, messages, None)
+                .await?
+        }
+        "custom-openai" | "custom" => {
+            let url = payload.custom_url.ok_or_else(|| "custom_url is required for custom provider".to_string())?;
+            let client = OpenAiClient::with_custom_url(payload.api_key, url, payload.model);
             client
                 .send_message(&payload.system_prompt, messages, None)
                 .await?

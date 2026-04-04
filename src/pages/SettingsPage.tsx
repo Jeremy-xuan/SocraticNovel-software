@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
 import { setApiKey, hasApiKey, startGithubDeviceFlow, pollGithubDeviceFlow, checkGithubAuth, logoutGithub, updateCustomProvider, startCodexOAuth, pollCodexAuth, checkCodexAuth, logoutCodex } from '../lib/tauri';
-import { PROVIDER_MODELS } from '../lib/providerModels';
+import { detectCustomProviderProtocol, parseCustomModelList, stringifyCustomModelList } from '../lib/customProvider';
+import { getProviderModels } from '../lib/providerModels';
 import i18n from '../i18n';
 
 const MODEL_LABEL_SUFFIX: Record<string, string> = {
@@ -34,10 +35,12 @@ export default function SettingsPage() {
   const [customApiKeyInput, setCustomApiKeyInput] = useState('');
   const [customModelInput, setCustomModelInput] = useState('');
   const [customProtocol, setCustomProtocol] = useState<'openai-compatible' | 'anthropic-compatible'>('openai-compatible');
+  const [customAutoDetectProtocol, setCustomAutoDetectProtocol] = useState(true);
   // Codex OAuth state
   const [codexAuthed, setCodexAuthed] = useState(false);
   const [codexLoading, setCodexLoading] = useState(false);
   const [codexError, setCodexError] = useState<string | null>(null);
+  const showCodexOAuth = settings.aiProvider === 'openai';
 
   useEffect(() => {
     // Check if key exists for current provider
@@ -58,9 +61,28 @@ export default function SettingsPage() {
         updateSettings({ apiKeyConfigured: exists });
       });
     }
-    // Check Codex auth status
-    checkCodexAuth().then(setCodexAuthed);
+    // Check Codex auth status only for OpenAI provider UI
+    if (settings.aiProvider === 'openai') {
+      checkCodexAuth().then(setCodexAuthed).catch(() => setCodexAuthed(false));
+    } else {
+      setCodexError(null);
+      setCodexLoading(false);
+    }
   }, [settings.aiProvider]);
+
+  useEffect(() => {
+    const config = settings.customProviderConfig;
+    setCustomUrlInput(config?.customUrl ?? '');
+    setCustomApiKeyInput(config?.apiKey ?? '');
+    setCustomModelInput(stringifyCustomModelList(config?.models ?? (config?.model ? [config.model] : [])));
+    setCustomProtocol(config?.protocol ?? 'openai-compatible');
+    setCustomAutoDetectProtocol(config?.autoDetectProtocol ?? true);
+  }, [settings.customProviderConfig]);
+
+  useEffect(() => {
+    if (!customAutoDetectProtocol) return;
+    setCustomProtocol(detectCustomProviderProtocol(customUrlInput));
+  }, [customAutoDetectProtocol, customUrlInput]);
 
   const handleSaveKey = async () => {
     if (!apiKeyInput.trim()) return;
@@ -219,7 +241,7 @@ export default function SettingsPage() {
             </div>
           )}
           {(() => {
-            const models = PROVIDER_MODELS[settings.aiProvider] ?? [];
+            const models = getProviderModels(settings.aiProvider, settings.customProviderConfig);
             const selected = models.find((m) => m.id === settings.aiModel) ?? models.find((m) => m.default) ?? models[0];
             const selectedLabel = selected ? (MODEL_LABEL_SUFFIX[selected.id] ? t(MODEL_LABEL_SUFFIX[selected.id]) : selected.label) : '';
             return (
@@ -250,7 +272,20 @@ export default function SettingsPage() {
                           <button
                             key={m.id}
                             onClick={() => {
-                              updateSettings({ aiModel: m.default && settings.aiModel === null ? null : m.id });
+                              const nextModel = m.default && settings.aiModel === null ? null : m.id;
+                              updateSettings({
+                                aiModel: nextModel,
+                                customProviderConfig: settings.aiProvider === 'custom'
+                                  ? {
+                                    customUrl: settings.customProviderConfig?.customUrl || customUrlInput,
+                                    apiKey: settings.customProviderConfig?.apiKey || customApiKeyInput,
+                                    model: nextModel || m.id,
+                                    models: settings.customProviderConfig?.models ?? parseCustomModelList(customModelInput),
+                                    protocol: settings.customProviderConfig?.protocol || customProtocol,
+                                    autoDetectProtocol: settings.customProviderConfig?.autoDetectProtocol ?? customAutoDetectProtocol,
+                                  }
+                                  : settings.customProviderConfig,
+                              });
                               setModelListExpanded(false);
                             }}
                             className={`flex w-full items-center justify-between rounded-[8px] px-3 py-2.5 text-left text-[13px] transition-colors ${isActive
@@ -283,7 +318,7 @@ export default function SettingsPage() {
 
         {/* API Key / GitHub OAuth */}
         <section className="mb-8">
-          {settings.aiProvider === 'github' ? (
+          {settings.aiProvider === 'custom' ? null : settings.aiProvider === 'github' ? (
             <>
               <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
                 GitHub {t('settings.githubAuth')}
@@ -379,63 +414,70 @@ export default function SettingsPage() {
         </section>
 
         {/* Codex OAuth */}
-        <section className="mb-8">
-          <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
-            GPT Codex OAuth
-          </h2>
-          {codexAuthed ? (
-            <div className="flex items-center gap-3">
-              <span className="text-aux text-green-600 dark:text-green-400">
-                <svg className="inline h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Connected
-              </span>
-              <button
-                onClick={async () => { await logoutCodex(); setCodexAuthed(false); }}
-                className="rounded-btn border border-red-300 px-3 py-1.5 text-tag text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
-              >
-                Logout
-              </button>
-            </div>
-          ) : (
-            <div>
-              <button
-                onClick={async () => {
-                  setCodexLoading(true);
-                  setCodexError(null);
-                  try {
-                    await startCodexOAuth();
-                    // Poll for completion
-                    await pollCodexAuth();
-                    setCodexAuthed(true);
-                  } catch (e: unknown) {
-                    setCodexError(e instanceof Error ? e.message : String(e));
-                  } finally {
-                    setCodexLoading(false);
-                  }
-                }}
-                disabled={codexLoading}
-                className="flex items-center gap-2 rounded-btn bg-[#10A37F] px-5 py-2.5 text-aux font-medium text-white hover:bg-[#0D8A6A] disabled:opacity-60"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
-                  <path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.91 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073z" />
-                </svg>
-                {codexLoading ? 'Connecting...' : 'Connect with GPT Codex'}
-              </button>
-              {codexError && (
-                <p className="mt-2 text-tag text-red-500 dark:text-red-400">{codexError}</p>
-              )}
-            </div>
-          )}
-        </section>
+        {showCodexOAuth && (
+          <section className="mb-8">
+            <h2 className="mb-2 text-subtitle font-medium text-text-main dark:text-text-main-dark">
+              {t('settings.codexOauthTitle')}
+            </h2>
+            <p className="mb-4 text-tag tracking-[0.04em] text-text-placeholder">
+              {t('settings.codexOauthDesc')}
+            </p>
+            {codexAuthed ? (
+              <div className="flex items-center gap-3">
+                <span className="text-aux text-green-600 dark:text-green-400">
+                  <svg className="inline h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> {t('settings.codexConnected')}
+                </span>
+                <button
+                  onClick={async () => {
+                    await logoutCodex();
+                    setCodexAuthed(false);
+                  }}
+                  className="rounded-btn border border-red-300 px-3 py-1.5 text-tag text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                >
+                  {t('settings.codexLogout')}
+                </button>
+              </div>
+            ) : (
+              <div>
+                <button
+                  onClick={async () => {
+                    setCodexLoading(true);
+                    setCodexError(null);
+                    try {
+                      await startCodexOAuth();
+                      await pollCodexAuth();
+                      setCodexAuthed(true);
+                    } catch (e: unknown) {
+                      setCodexError(e instanceof Error ? e.message : String(e));
+                    } finally {
+                      setCodexLoading(false);
+                    }
+                  }}
+                  disabled={codexLoading}
+                  className="flex items-center gap-2 rounded-btn bg-[#10A37F] px-5 py-2.5 text-aux font-medium text-white hover:bg-[#0D8A6A] disabled:opacity-60"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
+                    <path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.91 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073z" />
+                  </svg>
+                  {codexLoading ? t('settings.codexConnecting') : t('settings.codexLogin')}
+                </button>
+                {codexError && (
+                  <p className="mt-2 text-tag text-red-500 dark:text-red-400">{codexError}</p>
+                )}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Custom Provider Config */}
         {settings.aiProvider === 'custom' && (
           <section className="mb-8">
             <h2 className="mb-4 text-subtitle font-medium text-text-main dark:text-text-main-dark">
-              Custom API Configuration
+              {t('settings.customApiConfigTitle')}
             </h2>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-tag text-text-placeholder">API URL</label>
+                <label className="mb-1 block text-tag text-text-placeholder">{t('settings.customApiUrl')}</label>
                 <input
                   type="url"
                   value={customUrlInput}
@@ -445,7 +487,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-tag text-text-placeholder">API Key</label>
+                <label className="mb-1 block text-tag text-text-placeholder">{t('settings.customApiKey')}</label>
                 <input
                   type="password"
                   value={customApiKeyInput}
@@ -455,14 +497,92 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-tag text-text-placeholder">Model</label>
+                <label className="mb-1 block text-tag text-text-placeholder">Models</label>
                 <input
                   type="text"
                   value={customModelInput}
-                  onChange={(e) => setCustomModelInput(e.target.value)}
-                  placeholder="gpt-4o, claude-3-opus, etc."
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const models = parseCustomModelList(value);
+                    const currentModel = settings.customProviderConfig?.model;
+                    const nextModel = currentModel && models.includes(currentModel)
+                      ? currentModel
+                      : (models[0] ?? '');
+
+                    setCustomModelInput(value);
+                    updateSettings({
+                      aiModel: nextModel || null,
+                      customProviderConfig: {
+                        customUrl: customUrlInput,
+                        apiKey: customApiKeyInput || settings.customProviderConfig?.apiKey || '',
+                        model: nextModel,
+                        models,
+                        protocol: customProtocol,
+                        autoDetectProtocol: customAutoDetectProtocol,
+                      },
+                    });
+                  }}
+                  placeholder="gpt-4o, gpt-4.1, claude-3-7-sonnet..."
                   className="w-full rounded-btn border border-border-light bg-surface-light px-4 py-2 text-aux text-text-main placeholder-text-placeholder focus:border-blue-500 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-main-dark"
                 />
+                <p className="mt-2 text-tag text-text-placeholder">
+                  {t('settings.customModelsHint')}
+                </p>
+              </div>
+              {parseCustomModelList(customModelInput).length > 0 && (
+                <div>
+                  <label className="mb-1 block text-tag text-text-placeholder">{t('settings.customCurrentModel')}</label>
+                  <div className="flex flex-wrap gap-2">
+                    {parseCustomModelList(customModelInput).map((model, index) => {
+                      const fallbackModel = parseCustomModelList(customModelInput)[0];
+                      const activeModel = settings.customProviderConfig?.model || fallbackModel;
+                      const isActive = activeModel === model;
+
+                      return (
+                        <button
+                          key={model}
+                          type="button"
+                          onClick={() => {
+                            updateSettings({
+                              aiModel: model,
+                              customProviderConfig: {
+                                customUrl: customUrlInput,
+                                apiKey: customApiKeyInput || settings.customProviderConfig?.apiKey || '',
+                                model,
+                                models: parseCustomModelList(customModelInput),
+                                protocol: customProtocol,
+                                autoDetectProtocol: customAutoDetectProtocol,
+                              },
+                            });
+                          }}
+                          className={`rounded-full border px-3 py-1.5 text-tag transition-colors ${isActive
+                            ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+                            : 'border-border-light text-text-sub hover:bg-bg-light dark:border-border-dark dark:text-text-main-dark'
+                            }`}
+                        >
+                          {model}
+                          {index === 0 && (
+                            <span className="ml-1.5 text-[10px] text-text-placeholder">{t('settings.customModelDefault')}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <div>
+                <label className="mb-2 flex items-center gap-2 text-tag text-text-placeholder">
+                  <input
+                    type="checkbox"
+                    checked={customAutoDetectProtocol}
+                    onChange={(e) => setCustomAutoDetectProtocol(e.target.checked)}
+                    className="text-blue-500"
+                  />
+                  {t('settings.customAutoDetectProtocol')}
+                </label>
+                <p className="text-tag text-text-placeholder">
+                  {t('settings.customAutoDetectHint')}
+                </p>
               </div>
               <div>
                 <label className="mb-1 block text-tag text-text-placeholder">Protocol</label>
@@ -471,7 +591,10 @@ export default function SettingsPage() {
                     <input
                       type="radio"
                       checked={customProtocol === 'openai-compatible'}
-                      onChange={() => setCustomProtocol('openai-compatible')}
+                      onChange={() => {
+                        setCustomAutoDetectProtocol(false);
+                        setCustomProtocol('openai-compatible');
+                      }}
                       className="text-blue-500"
                     />
                     <span className="text-aux text-text-main dark:text-text-main-dark">OpenAI Compatible</span>
@@ -480,7 +603,10 @@ export default function SettingsPage() {
                     <input
                       type="radio"
                       checked={customProtocol === 'anthropic-compatible'}
-                      onChange={() => setCustomProtocol('anthropic-compatible')}
+                      onChange={() => {
+                        setCustomAutoDetectProtocol(false);
+                        setCustomProtocol('anthropic-compatible');
+                      }}
                       className="text-blue-500"
                     />
                     <span className="text-aux text-text-main dark:text-text-main-dark">Anthropic Compatible</span>
@@ -490,18 +616,26 @@ export default function SettingsPage() {
               <button
                 onClick={async () => {
                   try {
+                    const customModels = parseCustomModelList(customModelInput);
+                    const selectedModel = settings.customProviderConfig?.model && customModels.includes(settings.customProviderConfig.model)
+                      ? settings.customProviderConfig.model
+                      : (customModels[0] ?? '');
+
                     await updateCustomProvider({
                       customUrl: customUrlInput,
                       apiKey: customApiKeyInput,
-                      model: customModelInput,
+                      model: selectedModel,
                       protocol: customProtocol,
                     });
                     updateSettings({
+                      aiModel: selectedModel || null,
                       customProviderConfig: {
                         customUrl: customUrlInput,
                         apiKey: customApiKeyInput,
-                        model: customModelInput,
+                        model: selectedModel,
+                        models: customModels,
                         protocol: customProtocol,
+                        autoDetectProtocol: customAutoDetectProtocol,
                       },
                       apiKeyConfigured: true,
                     });

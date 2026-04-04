@@ -143,8 +143,9 @@ export async function aiEnhanceText(
   apiKey: string,
   provider: string,
   model: string,
+  customUrl?: string,
 ): Promise<string> {
-  return invoke('ai_enhance_text', { text, apiKey, provider, model });
+  return invoke('ai_enhance_text', { text, apiKey, provider, model, customUrl });
 }
 
 export async function aiVisionEnhancePage(
@@ -153,8 +154,9 @@ export async function aiVisionEnhancePage(
   apiKey: string,
   provider: string,
   model: string,
+  customUrl?: string,
 ): Promise<string> {
-  return invoke('ai_vision_enhance_page', { pdfPath, pageNumber, apiKey, provider, model });
+  return invoke('ai_vision_enhance_page', { pdfPath, pageNumber, apiKey, provider, model, customUrl });
 }
 
 // ─── Custom Provider API ────────────────────────────────────────────
@@ -269,6 +271,7 @@ export async function simpleChat(
   provider: string,
   model: string,
   apiKey: string,
+  customUrl?: string,
 ): Promise<string> {
-  return invoke('simple_chat', { payload: { systemPrompt, messages, provider, model, apiKey } });
+  return invoke('simple_chat', { payload: { systemPrompt, messages, provider, model, apiKey, customUrl } });
 }

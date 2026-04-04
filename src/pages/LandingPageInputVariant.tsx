@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import i18n from '../i18n';
 import { useAppStore } from '../stores/appStore';
-import { initBuiltinWorkspace, listWorkspaces, createWorkspace, deleteWorkspace, updateWorkspaceMeta, hasApiKey, getReviewStats } from '../lib/tauri';
+import { initBuiltinWorkspace, listWorkspaces, createWorkspace, deleteWorkspace, updateWorkspaceMeta, getReviewStats } from '../lib/tauri';
+import { hasEffectiveApiKey } from '../lib/providerConfig';
 import type { ReviewStats } from '../types';
 
 export default function LandingPage() {
@@ -41,7 +42,7 @@ export default function LandingPage() {
           updateSettings({ currentWorkspaceId: activeWs.id, currentWorkspacePath: activeWs.path });
         }
 
-        const keyOk = await hasApiKey(settings.aiProvider);
+        const keyOk = await hasEffectiveApiKey(settings);
         updateSettings({ apiKeyConfigured: keyOk });
 
         if (activeWs) {

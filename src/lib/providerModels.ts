@@ -1,3 +1,6 @@
+import type { CustomProviderConfig } from '../types';
+import { getCustomProviderModels } from './customProvider';
+
 export interface ProviderModel {
   id: string;
   label: string;
@@ -47,4 +50,24 @@ export const PROVIDER_MODELS: Record<string, ProviderModel[]> = {
     { id: 'gemini-3-flash', label: 'Gemini 3 Flash (0.33×)' },
     { id: 'grok-code-fast-1', label: 'Grok Code Fast 1 (0.33×)' },
   ],
+  custom: [
+    { id: '__custom_model__', label: 'Custom Model', default: true },
+  ],
 };
+
+export function getProviderModels(provider: string, customProviderConfig?: CustomProviderConfig): ProviderModel[] {
+  if (provider !== 'custom') {
+    return PROVIDER_MODELS[provider] ?? [];
+  }
+
+  const customModels = getCustomProviderModels(customProviderConfig);
+  if (customModels.length === 0) {
+    return PROVIDER_MODELS.custom;
+  }
+
+  return customModels.map((model, index) => ({
+    id: model,
+    label: model,
+    default: index === 0,
+  }));
+}

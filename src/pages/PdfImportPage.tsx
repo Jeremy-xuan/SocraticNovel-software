@@ -9,9 +9,9 @@ import {
   renderPdfPage,
   aiEnhanceText,
   aiVisionEnhancePage,
-  getApiKey,
 } from '../lib/tauri';
-import { PROVIDER_MODELS } from '../lib/providerModels';
+import { getProviderModels } from '../lib/providerModels';
+import { getEffectiveApiKey, getEffectiveCustomUrl, getEffectiveModel, getEffectiveProvider } from '../lib/providerConfig';
 import { open } from '@tauri-apps/plugin-dialog';
 import type { PdfExtractResult } from '../types';
 
@@ -81,7 +81,7 @@ export default function PdfImportPage() {
   const [pagePreviewImage, setPagePreviewImage] = useState<string | null>(null);
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
-  const availableModels = PROVIDER_MODELS[settings.aiProvider] ?? [];
+  const availableModels = getProviderModels(settings.aiProvider, settings.customProviderConfig);
   const currentModelLabel = availableModels.find(m => m.id === enhanceModel)?.label
     ?? availableModels.find(m => m.default)?.label
     ?? enhanceModel;
@@ -140,13 +140,15 @@ export default function PdfImportPage() {
   const handleAiEnhance = async () => {
     if (!pdfPath || !result) return;
 
-    const apiKey = await getApiKey(settings.aiProvider);
+    const apiKey = await getEffectiveApiKey(settings);
     if (!apiKey) {
       setError(t('pdfImport.noApiKeyGuide', { provider: settings.aiProvider }));
       return;
     }
 
-    const model = enhanceModel || settings.aiModel || '';
+    const provider = getEffectiveProvider(settings);
+    const model = enhanceModel || getEffectiveModel(settings) || '';
+    const customUrl = getEffectiveCustomUrl(settings);
     setPhase('enhancing');
     setEnhanceProgress({ current: 0, total: result.pages.length });
     const newEnhanced = new Map<number, string>();
@@ -160,15 +162,17 @@ export default function PdfImportPage() {
             pdfPath,
             result.pages[i].page_number,
             apiKey,
-            settings.aiProvider,
+            provider,
             model,
+            customUrl,
           );
         } else {
           enhanced = await aiEnhanceText(
             result.pages[i].text,
             apiKey,
-            settings.aiProvider,
+            provider,
             model,
+            customUrl,
           );
         }
         newEnhanced.set(i, enhanced);

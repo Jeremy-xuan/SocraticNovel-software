@@ -8,7 +8,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { useAppStore } from '../stores/appStore';
 import { generateLessonNotes, generateAnkiCards } from '../lib/ai';
-import { getApiKey } from '../lib/tauri';
+import { getEffectiveApiKey } from '../lib/providerConfig';
 import { exportNotesPdf, type NoteStyle } from '../lib/notesTemplates';
 
 interface AnkiCard {
@@ -77,7 +77,7 @@ export default function NotesPage() {
     setError(null);
     try {
       const settings = useAppStore.getState().settings;
-      const apiKey = await getApiKey(settings.aiProvider);
+      const apiKey = await getEffectiveApiKey(settings);
       if (!apiKey) {
         setError(t('notes.configApiKeyFirst'));
         setLoading(false);
@@ -110,7 +110,7 @@ export default function NotesPage() {
     setAnkiStatus(null);
     try {
       const settings = useAppStore.getState().settings;
-      const apiKey = await getApiKey(settings.aiProvider);
+      const apiKey = await getEffectiveApiKey(settings);
       if (!apiKey) {
         setAnkiStatus(t('notes.ankiConfigApiKey'));
         setAnkiLoading(false);

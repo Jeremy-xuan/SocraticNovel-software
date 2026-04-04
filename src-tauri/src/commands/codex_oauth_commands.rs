@@ -5,14 +5,14 @@
 //! No temp files are written - follows system design requirement for memory storage.
 
 use crate::commands::credential_store;
-use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use rand::Rng;
 use reqwest::Client;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
-use tokio::sync::{Mutex as AsyncMutex, oneshot};
-use rand::Rng;
+use tokio::sync::{oneshot, Mutex as AsyncMutex};
 
 // =============================================================================
 // Constants
@@ -27,11 +27,16 @@ const OPENAI_AUTH_URL: &str = "https://auth.openai.com/oauth/authorize";
 /// OpenAI OAuth Token Endpoint
 const OPENAI_TOKEN_URL: &str = "https://auth.openai.com/oauth/token";
 
-/// Local callback URL with path
-const CALLBACK_URL: &str = "http://localhost:18901/auth/callback";
+/// Local callback URL with path.
+///
+/// OpenAI Codex OAuth expects the official localhost callback URI used by Codex CLI.
+const CALLBACK_URL: &str = "http://localhost:1455/auth/callback";
 
-/// Callback port - must match registered redirect URI
-const CALLBACK_PORT: u16 = 18901;
+/// Callback port - must match the registered redirect URI
+const CALLBACK_PORT: u16 = 1455;
+
+/// Callback path - used to validate inbound OAuth redirect requests
+const CALLBACK_PATH: &str = "/auth/callback";
 
 /// Token storage key
 const CODEX_TOKEN_KEY: &str = "codex_access_token";
@@ -40,11 +45,18 @@ const CODEX_TOKEN_KEY: &str = "codex_access_token";
 // In-Memory PKCE State (follows system design: Memory Storage, no disk writes)
 // =============================================================================
 
+#[derive(Debug)]
+struct AuthCallback {
+    code: String,
+    state: String,
+}
+
 /// PKCE state stored in memory - single use with guard.take() pattern
 pub(crate) struct PkceState {
     verifier: String,
-    /// Channel receiver to receive the auth code when callback arrives
-    code_rx: Option<oneshot::Receiver<String>>,
+    state: String,
+    /// Channel receiver to receive the callback result when redirect arrives
+    code_rx: Option<oneshot::Receiver<Result<AuthCallback, String>>>,
     /// Timestamp for 10-minute timeout
     created_at: std::time::Instant,
 }
@@ -102,51 +114,117 @@ struct TokenResponse {
 
 /// Start a local HTTP server to receive OAuth callback
 /// Returns the authorization code on success
-async fn wait_for_callback(port: u16) -> Result<String, String> {
-    let addr = format!("127.0.0.1:{}", port);
-    let listener = TcpListener::bind(&addr).await
-        .map_err(|e| format!("Failed to bind callback server on port {}: {}", port, e))?;
+async fn wait_for_callback(port: u16) -> Result<AuthCallback, String> {
+    let ipv4_addr = format!("127.0.0.1:{}", port);
+    let ipv6_addr = format!("[::1]:{}", port);
 
-    let (mut stream, _) = listener.accept().await
-        .map_err(|e| format!("Failed to accept connection: {}", e))?;
+    let ipv4_listener = TcpListener::bind(&ipv4_addr).await.ok();
+    let ipv6_listener = TcpListener::bind(&ipv6_addr).await.ok();
+
+    let mut stream = match (ipv4_listener, ipv6_listener) {
+        (Some(ipv4), Some(ipv6)) => {
+            tokio::select! {
+                incoming = ipv4.accept() => incoming.map(|(stream, _)| stream),
+                incoming = ipv6.accept() => incoming.map(|(stream, _)| stream),
+            }
+            .map_err(|e| format!("Failed to accept callback connection: {}", e))?
+        }
+        (Some(listener), None) | (None, Some(listener)) => listener
+            .accept()
+            .await
+            .map(|(stream, _)| stream)
+            .map_err(|e| format!("Failed to accept callback connection: {}", e))?,
+        (None, None) => {
+            return Err(format!(
+                "Failed to bind callback server on port {} (both 127.0.0.1 and ::1 unavailable)",
+                port
+            ));
+        }
+    };
 
     let mut buffer = [0u8; 4096];
-    let bytes_read = stream.read(&mut buffer).await
+    let bytes_read = stream
+        .read(&mut buffer)
+        .await
         .map_err(|e| format!("Failed to read request: {}", e))?;
 
     let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+    let path = extract_request_path(&request)
+        .ok_or_else(|| "Malformed OAuth callback request".to_string())?;
 
-    // Parse the callback URL from the request
-    // Format: GET /callback?code=XXX&state=XXX HTTP/1.1...
+    if !path.starts_with(CALLBACK_PATH) {
+        return Err(format!("Unexpected callback path: {}", path));
+    }
+
+    if let Some(error) = extract_query_param(&request, "error") {
+        let error_description = extract_query_param(&request, "error_description")
+            .map(|value| urlencoding::decode(&value).map(|v| v.into_owned()).unwrap_or(value))
+            .unwrap_or_default();
+
+        let message = if error_description.is_empty() {
+            format!("OAuth authorization failed: {}", error)
+        } else {
+            format!("OAuth authorization failed: {} ({})", error, error_description)
+        };
+
+        let response = "HTTP/1.1 400 Bad Request\r\n\
+                        Content-Type: text/html\r\n\
+                        Connection: close\r\n\
+                        \r\n\
+                        <html><body><h1>Authorization Failed</h1><p>You can close this window and return to the app.</p></body></html>";
+        stream
+            .write_all(response.as_bytes())
+            .await
+            .map_err(|e| format!("Failed to send error response: {}", e))?;
+        return Err(message);
+    }
+
     let code = extract_query_param(&request, "code")
         .ok_or_else(|| "No authorization code in callback".to_string())?;
+    let state = extract_query_param(&request, "state")
+        .ok_or_else(|| "No OAuth state in callback".to_string())?;
 
-    // Send 200 OK response
     let response = "HTTP/1.1 200 OK\r\n\
                     Content-Type: text/html\r\n\
                     Connection: close\r\n\
                     \r\n\
-                    <html><body><h1>Authorization Successful</h1><p>You can close this window.</p></body></html>";
-    stream.write_all(response.as_bytes()).await
+                    <html><body><h1>Authorization Successful</h1><p>You can close this window and return to the app.</p></body></html>";
+    stream
+        .write_all(response.as_bytes())
+        .await
         .map_err(|e| format!("Failed to send response: {}", e))?;
 
-    Ok(code)
+    Ok(AuthCallback {
+        code: urlencoding::decode(&code)
+            .map(|v| v.into_owned())
+            .unwrap_or(code),
+        state: urlencoding::decode(&state)
+            .map(|v| v.into_owned())
+            .unwrap_or(state),
+    })
+}
+
+/// Extract the request path from an HTTP request string
+pub(crate) fn extract_request_path(request: &str) -> Option<String> {
+    let request_line = request.lines().next()?;
+    let mut parts = request_line.split_whitespace();
+    let method = parts.next()?;
+    if method != "GET" {
+        return None;
+    }
+    parts.next().map(|path| path.to_string())
 }
 
 /// Extract a query parameter from an HTTP request string
 pub(crate) fn extract_query_param(request: &str, param: &str) -> Option<String> {
-    // Find the query line (first line)
-    let query_line = request.lines().next()?;
-    // Extract URL from GET line
-    let url_part = query_line.strip_prefix("GET ")?.split(' ').nth(1)?;
-    // Parse query string
-    let query = url_part.split('?').nth(1)?;
+    let path = extract_request_path(request)?;
+    let query = path.split('?').nth(1)?;
 
     for pair in query.split('&') {
-        let mut parts = pair.split('=');
+        let mut parts = pair.splitn(2, '=');
         let key = parts.next()?;
         if key == param {
-            return Some(parts.next()?.to_string());
+            return Some(parts.next().unwrap_or_default().to_string());
         }
     }
     None
@@ -172,14 +250,14 @@ pub async fn start_codex_oauth() -> Result<String, String> {
         [
             ("response_type", "code"),
             ("client_id", OPENAI_CLIENT_ID),
-            ("redirect_uri", &redirect_uri),
+            ("redirect_uri", redirect_uri),
             ("scope", "openid profile email offline_access"),
             ("code_challenge", &challenge),
             ("code_challenge_method", "S256"),
             ("state", &state),
             ("id_token_add_organizations", "true"),
             ("codex_cli_simplified_flow", "true"),
-            ("originator", "opencode"),
+            ("originator", "codex_cli_rs"),
         ]
         .iter()
         .map(|(k, v)| format!("{}={}", k, urlencoding::encode(v)))
@@ -187,41 +265,35 @@ pub async fn start_codex_oauth() -> Result<String, String> {
         .join("&")
     );
 
-    // Open browser
-    tauri_plugin_opener::open_url(&auth_url, None::<&str>)
-        .map_err(|e| format!("Failed to open browser: {}", e))?;
+    // Create oneshot channel for callback delivery
+    let (code_tx, code_rx) = oneshot::channel::<Result<AuthCallback, String>>();
 
-    // Create oneshot channel for code delivery
-    let (code_tx, code_rx) = oneshot::channel::<String>();
-
-    // Store PKCE state in memory (as per system design: Mutex<Option<PkceState>>)
-    // Store verifier + receiver (not sender) for poll_codex_auth to use
+    // Store PKCE state in memory before opening the browser so we don't race the redirect.
     {
         let mut pkce_guard = PKCE_STATE.lock().await;
         *pkce_guard = Some(PkceState {
-            verifier: verifier.clone(),
+            verifier,
+            state,
             code_rx: Some(code_rx),
             created_at: std::time::Instant::now(),
         });
     }
 
+    // Open browser
+    tauri_plugin_opener::open_url(&auth_url, None::<&str>)
+        .map_err(|e| format!("Failed to open browser: {}", e))?;
+
     // Spawn background callback server that waits for the auth code
-    // When callback arrives, we send it via the oneshot channel (in-memory).
-    // code_tx is owned by this task; code_rx is stored in PKCE_STATE for poll_codex_auth.
     tauri::async_runtime::spawn(async move {
         match wait_for_callback(CALLBACK_PORT).await {
-            Ok(code) => {
-                // Send code through channel - poll_codex_auth is waiting on code_rx
-                let _ = code_tx.send(code); // Ignore send error if receiver was already dropped
+            Ok(callback) => {
+                let _ = code_tx.send(Ok(callback));
             }
             Err(e) => {
-                eprintln!("Callback server error: {}", e);
+                let _ = code_tx.send(Err(e));
             }
         }
     });
-
-    // Store verifier separately for poll_codex_auth to retrieve (oneshot channel for code only)
-    // Note: verifier is stored in PKCE_STATE, code is delivered via channel
 
     Ok(format!("Browser opened. Waiting for callback on port {}...", CALLBACK_PORT))
 }
@@ -231,17 +303,17 @@ pub async fn start_codex_oauth() -> Result<String, String> {
 #[tauri::command]
 pub async fn poll_codex_auth() -> Result<String, String> {
     // Retrieve PKCE state from memory (as per system design: Mutex<Option<PkceState>>)
-    let (verifier, code_rx) = {
+    let (verifier, expected_state, code_rx) = {
         let mut pkce_guard = PKCE_STATE.lock().await;
-        match pkce_guard.take() { // guard.take() - one-time use as per system design
+        match pkce_guard.take() {
             Some(state) => {
-                // Check timeout (10 minutes as per system design)
                 if is_pkce_expired(&state) {
                     return Err("PKCE verifier expired - OAuth timeout".to_string());
                 }
-                // Take the receiver (one-time use pattern)
-                let rx = state.code_rx.ok_or_else(|| "No callback channel available".to_string())?;
-                (state.verifier, rx)
+                let rx = state
+                    .code_rx
+                    .ok_or_else(|| "No callback channel available".to_string())?;
+                (state.verifier, state.state, rx)
             }
             None => {
                 return Err("No active OAuth flow - call start_codex_oauth first".to_string());
@@ -249,15 +321,14 @@ pub async fn poll_codex_auth() -> Result<String, String> {
         }
     };
 
-    // Wait for callback with 5-minute timeout
-    // code_rx is a oneshot::Receiver which implements Future
-    let code = tokio::time::timeout(
-        std::time::Duration::from_secs(300),
-        code_rx
-    )
-    .await
-    .map_err(|_| "OAuth timeout - no callback received")?
-    .map_err(|e| format!("Failed to receive code: {}", e))?;
+    let callback = tokio::time::timeout(std::time::Duration::from_secs(300), code_rx)
+        .await
+        .map_err(|_| "OAuth timeout - no callback received")?
+        .map_err(|e| format!("Failed to receive code: {}", e))??;
+
+    if callback.state != expected_state {
+        return Err("OAuth state mismatch - please retry login".to_string());
+    }
 
     // Exchange code for token
     let redirect_uri = CALLBACK_URL;
@@ -268,9 +339,9 @@ pub async fn poll_codex_auth() -> Result<String, String> {
         .form(&[
             ("grant_type", "authorization_code"),
             ("client_id", OPENAI_CLIENT_ID),
-            ("code", &code),
-            ("redirect_uri", &redirect_uri),
-            ("code_verifier", &verifier),
+            ("code", callback.code.as_str()),
+            ("redirect_uri", redirect_uri),
+            ("code_verifier", verifier.as_str()),
         ])
         .send()
         .await
@@ -286,13 +357,24 @@ pub async fn poll_codex_auth() -> Result<String, String> {
     let token_resp: TokenResponse = serde_json::from_str(&body)
         .map_err(|e| format!("Parse error: {}", e))?;
 
+    let _ = (
+        &token_resp.token_type,
+        &token_resp.expires_in,
+        &token_resp.refresh_token,
+        &token_resp.scope,
+    );
+
     if let Some(access_token) = token_resp.access_token {
         credential_store::set_password(CODEX_TOKEN_KEY, &access_token)?;
         Ok(access_token)
     } else {
         let err = token_resp.error.unwrap_or_else(|| "Unknown error".to_string());
         let desc = token_resp.error_description.unwrap_or_default();
-        Err(format!("{}: {}", err, desc))
+        if desc.is_empty() {
+            Err(err)
+        } else {
+            Err(format!("{}: {}", err, desc))
+        }
     }
 }
 
@@ -340,17 +422,21 @@ mod test_utils {
         let mut guard = PKCE_STATE.lock().await;
         *guard = Some(PkceState {
             verifier,
+            state: "test-state".to_string(),
             code_rx: None,
             created_at: std::time::Instant::now(),
         });
     }
 
     /// Set up PKCE_STATE with a channel for testing (only for testing)
-    pub async fn set_pkce_state_with_channel(verifier: String) -> oneshot::Sender<String> {
-        let (code_tx, code_rx) = oneshot::channel::<String>();
+    pub async fn set_pkce_state_with_channel(
+        verifier: String,
+    ) -> oneshot::Sender<Result<AuthCallback, String>> {
+        let (code_tx, code_rx) = oneshot::channel::<Result<AuthCallback, String>>();
         let mut guard = PKCE_STATE.lock().await;
         *guard = Some(PkceState {
             verifier,
+            state: "test-state".to_string(),
             code_rx: Some(code_rx),
             created_at: std::time::Instant::now(),
         });

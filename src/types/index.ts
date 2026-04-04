@@ -74,6 +74,7 @@ export interface CanvasItem {
   timestamp: number;
   parameters?: InteractiveParameter[];
   sandboxState?: Record<string, unknown>;
+  status?: CanvasItemStatus;
 }
 
 // Interactive canvas parameters for student input
@@ -139,6 +140,8 @@ export interface CustomProviderConfig {
   apiKey: string;
   model: string;
   protocol: 'openai-compatible' | 'anthropic-compatible';
+  models?: string[];
+  autoDetectProtocol?: boolean;
 }
 
 // Extended AppSettings with custom provider support

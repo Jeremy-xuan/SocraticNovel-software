@@ -1,8 +1,9 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '../stores/appStore';
 import i18n from '../i18n';
-import { startAiSession, sendChatMessage, sendTeachingMessage, sendPracticeMessage, sendMetaPromptMessage, setPracticePrompt, setMetaPromptPrompt, runPrepPhase, runPostLesson, setTeachingPrompt, onAgentEvent, onCanvasEvent, onGroupChatEvent, getMetaPromptContent } from '../lib/ai';
-import { getApiKey, readFile, getGithubToken } from '../lib/tauri';
+import { startAiSession, sendChatMessage, sendTeachingMessage, sendPracticeMessage, sendMetaPromptMessage, setPracticePrompt, setMetaPromptPrompt, runPrepPhase, runPostLesson, setTeachingPrompt, onAgentEvent, onCanvasEvent, onCanvasContentDelta, onGroupChatEvent, getMetaPromptContent } from '../lib/ai';
+import { readFile } from '../lib/tauri';
+import { getEffectiveApiKey, getEffectiveCustomUrl, getEffectiveModel, getEffectiveProvider } from '../lib/providerConfig';
 import type { ChatMessage, CanvasItem } from '../types';
 
 // Shared workspace path — read from store (set by LandingPage via initBuiltinWorkspace)
@@ -12,20 +13,15 @@ function getWorkspacePath(): string {
   return path;
 }
 
-async function getProviderApiKey(provider: string): Promise<string> {
-  if (provider === 'github') {
-    const token = await getGithubToken();
-    if (!token) throw new Error('GitHub not authenticated. Please login in Settings.');
-    return token;
-  }
-  const key = await getApiKey(provider);
-  if (!key) throw new Error(`No API key configured for ${provider}`);
-  return key;
+async function getProviderApiKey(): Promise<string> {
+  return getEffectiveApiKey(useAppStore.getState().settings);
 }
 
 export function useAiAgent() {
-  const { addMessage, updateLastAssistantMessage, setStreaming, setThinkingStatus, setHasError, addCanvasItem, addGroupChatMessages, addAgentLog } = useAppStore();
+  const { addMessage, updateLastAssistantMessage, setStreaming, setThinkingStatus, setHasError, addCanvasItem, updateCanvasItem, addGroupChatMessages, addAgentLog } = useAppStore();
   const unlistenRef = useRef<Array<() => void>>([]);
+  // Map toolCallId → canvasItemId for streaming canvas updates
+  const canvasStreamMap = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
     // Listen for agent events from Rust backend
@@ -138,25 +134,62 @@ export function useAiAgent() {
       });
 
       const unlisten2 = await onCanvasEvent((event) => {
-        console.log('[CANVAS] canvas-event received:', event.type, event.title, 'content_len=' + event.content?.length);
-        const item: CanvasItem = {
-          id: crypto.randomUUID(),
-          type: event.type || 'svg',
-          content: event.content,
-          title: event.title,
-          timestamp: Date.now(),
-          parameters: event.parameters as CanvasItem['parameters'],
-          sandboxState: event.sandboxState,
-        };
-        console.log('[CANVAS] adding canvas item to store, id=' + item.id);
-        addCanvasItem(item);
+        console.log('[CANVAS] canvas-event received:', event.type, event.title, 'streaming=' + event.streaming, 'content_len=' + event.content?.length);
+
+        if (event.streaming && event.toolCallId) {
+          // Streaming start: create item with empty content and 'streaming' status
+          const itemId = crypto.randomUUID();
+          canvasStreamMap.current.set(event.toolCallId, itemId);
+          const item: CanvasItem = {
+            id: itemId,
+            type: event.type || 'svg',
+            content: event.content || '',
+            title: event.title,
+            timestamp: Date.now(),
+            parameters: event.parameters as CanvasItem['parameters'],
+            sandboxState: event.sandboxState,
+            status: 'streaming',
+          };
+          addCanvasItem(item);
+        } else if (!event.streaming && event.toolCallId && canvasStreamMap.current.has(event.toolCallId)) {
+          // Streaming complete: finalize the item
+          const itemId = canvasStreamMap.current.get(event.toolCallId)!;
+          canvasStreamMap.current.delete(event.toolCallId);
+          updateCanvasItem(itemId, {
+            content: event.content,
+            title: event.title,
+            status: 'idle',
+          });
+        } else {
+          // Non-streaming: add complete item directly
+          const item: CanvasItem = {
+            id: crypto.randomUUID(),
+            type: event.type || 'svg',
+            content: event.content,
+            title: event.title,
+            timestamp: Date.now(),
+            parameters: event.parameters as CanvasItem['parameters'],
+            sandboxState: event.sandboxState,
+            status: 'idle',
+          };
+          addCanvasItem(item);
+        }
+      });
+
+      const unlisten2b = await onCanvasContentDelta((event) => {
+        const itemId = canvasStreamMap.current.get(event.toolCallId);
+        if (itemId) {
+          const items = useAppStore.getState().canvasItems;
+          const current = items.find((i) => i.id === itemId);
+          updateCanvasItem(itemId, { content: (current?.content || '') + event.delta });
+        }
       });
 
       const unlisten3 = await onGroupChatEvent((event) => {
         addGroupChatMessages(event.messages);
       });
 
-      unlistenRef.current = [unlisten1, unlisten2, unlisten3];
+      unlistenRef.current = [unlisten1, unlisten2, unlisten2b, unlisten3];
     };
 
     setup();
@@ -171,16 +204,15 @@ export function useAiAgent() {
     await startAiSession({
       workspacePath,
       systemPrompt,
-      provider: settings.aiProvider,
-      model: settings.aiModel ?? undefined,
-      customUrl: settings.customProviderConfig?.customUrl,
+      provider: getEffectiveProvider(settings),
+      model: getEffectiveModel(settings),
+      customUrl: getEffectiveCustomUrl(settings),
     });
   }, []);
 
   /// Run prep phase: reads workspace files and generates a lesson brief
   const runPrep = useCallback(async (workspacePath: string): Promise<string | null> => {
-    const settings = useAppStore.getState().settings;
-    const apiKey = await getProviderApiKey(settings.aiProvider);
+    const apiKey = await getProviderApiKey();
     if (!apiKey) return null;
 
     try {
@@ -214,8 +246,7 @@ export function useAiAgent() {
 
   /// Send a message using the multi-agent teaching turn
   const sendTeaching = useCallback(async (text: string) => {
-    const settings = useAppStore.getState().settings;
-    const apiKey = await getProviderApiKey(settings.aiProvider);
+    const apiKey = await getProviderApiKey();
     if (!apiKey) {
       addMessage({
         id: crypto.randomUUID(),
@@ -256,8 +287,7 @@ export function useAiAgent() {
 
   /// Legacy send (backward compatible, no prep phase)
   const sendMessage = useCallback(async (text: string) => {
-    const settings = useAppStore.getState().settings;
-    const apiKey = await getProviderApiKey(settings.aiProvider);
+    const apiKey = await getProviderApiKey();
     if (!apiKey) {
       addMessage({
         id: crypto.randomUUID(),
@@ -298,8 +328,7 @@ export function useAiAgent() {
 
   /// Run post-lesson phase
   const runPostLesson_ = useCallback(async () => {
-    const settings = useAppStore.getState().settings;
-    const apiKey = await getProviderApiKey(settings.aiProvider);
+    const apiKey = await getProviderApiKey();
     if (!apiKey) return;
 
     const workspacePath = getWorkspacePath();
@@ -330,9 +359,9 @@ export function useAiAgent() {
     await startAiSession({
       workspacePath,
       systemPrompt: '',
-      provider: settings.aiProvider,
-      model: settings.aiModel ?? undefined,
-      customUrl: settings.customProviderConfig?.customUrl,
+      provider: getEffectiveProvider(settings),
+      model: getEffectiveModel(settings),
+      customUrl: getEffectiveCustomUrl(settings),
     });
 
     if (customPrompt !== undefined) {
@@ -354,8 +383,7 @@ export function useAiAgent() {
 
   /// Send a practice message (student question → AI Socratic guidance)
   const sendPractice = useCallback(async (text: string) => {
-    const settings = useAppStore.getState().settings;
-    const apiKey = await getProviderApiKey(settings.aiProvider);
+    const apiKey = await getProviderApiKey();
     if (!apiKey) {
       addMessage({
         id: crypto.randomUUID(),
@@ -400,9 +428,9 @@ export function useAiAgent() {
     await startAiSession({
       workspacePath,
       systemPrompt: '',
-      provider: settings.aiProvider,
-      model: settings.aiModel ?? undefined,
-      customUrl: settings.customProviderConfig?.customUrl,
+      provider: getEffectiveProvider(settings),
+      model: getEffectiveModel(settings),
+      customUrl: getEffectiveCustomUrl(settings),
     });
 
     // Load embedded META_PROMPT.md content from backend
@@ -412,8 +440,7 @@ export function useAiAgent() {
 
   /// Send a message during Meta Prompt guided workspace creation
   const sendMetaPrompt = useCallback(async (text: string) => {
-    const settings = useAppStore.getState().settings;
-    const apiKey = await getProviderApiKey(settings.aiProvider);
+    const apiKey = await getProviderApiKey();
     if (!apiKey) {
       addMessage({
         id: crypto.randomUUID(),

@@ -46,6 +46,7 @@ interface AppState {
 
   // Actions — Canvas
   addCanvasItem: (item: CanvasItem) => void;
+  updateCanvasItem: (id: string, updates: Partial<CanvasItem>) => void;
   clearCanvas: () => void;
 
   // Actions — Annotations
@@ -141,6 +142,11 @@ export const useAppStore = create<AppState>((set) => ({
 
   // Canvas
   addCanvasItem: (item) => set((state) => ({ canvasItems: [...state.canvasItems, item] })),
+  updateCanvasItem: (id, updates) => set((state) => ({
+    canvasItems: state.canvasItems.map((item) =>
+      item.id === id ? { ...item, ...updates } : item
+    ),
+  })),
   clearCanvas: () => set({ canvasItems: [] }),
 
   // Annotations

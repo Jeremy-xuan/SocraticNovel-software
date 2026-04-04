@@ -514,6 +514,7 @@ pub async fn ai_enhance_text(
     api_key: String,
     provider: String,
     model: String,
+    custom_url: Option<String>,
 ) -> Result<String, String> {
     let messages = vec![Message {
         role: "user".to_string(),
@@ -528,7 +529,7 @@ pub async fn ai_enhance_text(
         &model,
         AI_TEXT_ENHANCE_PROMPT,
         messages,
-        None,
+        custom_url.as_deref(),
     )
     .await
 }
@@ -541,6 +542,7 @@ pub async fn ai_vision_enhance_page(
     api_key: String,
     provider: String,
     model: String,
+    custom_url: Option<String>,
 ) -> Result<String, String> {
     // Render page to image
     let image_b64 = render_page_to_base64(&pdf_path, page_number, 300)?;
@@ -566,7 +568,7 @@ pub async fn ai_vision_enhance_page(
         &model,
         AI_VISION_ENHANCE_PROMPT,
         messages,
-        None,
+        custom_url.as_deref(),
     )
     .await
 }

@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { simpleChat, getApiKey, getGithubToken } from '../../lib/tauri';
+import { simpleChat } from '../../lib/tauri';
+import { getEffectiveApiKey, getEffectiveCustomUrl, getEffectiveModel, getEffectiveProvider } from '../../lib/providerConfig';
 import type { SimpleChatMessage } from '../../lib/tauri';
 import { useAppStore } from '../../stores/appStore';
-import { PROVIDER_MODELS } from '../../lib/providerModels';
+import { getProviderModels } from '../../lib/providerModels';
 import type { MetaPromptQuestionnaire, WorldSetting } from '../../types';
 import { TEACHING_STYLE_LABELS } from '../../types';
 
@@ -100,17 +101,6 @@ function parseWorldJson(text: string): Partial<WorldSetting> | null {
   }
 }
 
-async function getProviderApiKey(provider: string): Promise<string> {
-  if (provider === 'github') {
-    const token = await getGithubToken();
-    if (!token) throw new Error('GitHub not authenticated');
-    return token;
-  }
-  const key = await getApiKey(provider);
-  if (!key) throw new Error(`No API key for ${provider}`);
-  return key;
-}
-
 export default function StepWorldChat({ data, onChange }: Props) {
   const { t } = useTranslation();
   const settings = useAppStore(s => s.settings);
@@ -130,23 +120,24 @@ export default function StepWorldChat({ data, onChange }: Props) {
     }, 50);
   }, []);
 
-  const provider = settings.aiProvider;
-  const model = settings.aiModel
-    || PROVIDER_MODELS[provider as keyof typeof PROVIDER_MODELS]?.find(m => m.default)?.id
+  const provider = getEffectiveProvider(settings);
+  const model = getEffectiveModel(settings)
+    || getProviderModels(settings.aiProvider, settings.customProviderConfig).find((m) => m.default)?.id
     || '';
 
   const sendToAi = useCallback(async (allBubbles: ChatBubble[]) => {
     setLoading(true);
     setError('');
     try {
-      const apiKey = await getProviderApiKey(provider);
+      const apiKey = await getEffectiveApiKey(settings);
+      const customUrl = getEffectiveCustomUrl(settings);
       const messages: SimpleChatMessage[] = allBubbles.map(b => ({
         role: b.role === 'ai' ? 'assistant' as const : 'user' as const,
         text: b.text + (b.options?.length ? '\n' + b.options.map(o => `[选项:${o}]`).join(' ') : ''),
       }));
 
       const systemPrompt = buildSystemPrompt(data);
-      const response = await simpleChat(systemPrompt, messages, provider, model, apiKey);
+      const response = await simpleChat(systemPrompt, messages, provider, model, apiKey, customUrl);
 
       const { cleanText, options } = parseOptions(response);
       const aiBubble: ChatBubble = {
@@ -219,7 +210,7 @@ export default function StepWorldChat({ data, onChange }: Props) {
   useEffect(() => {
     (async () => {
       try {
-        await getProviderApiKey(provider);
+        await getEffectiveApiKey(settings);
         setHasKey(true);
       } catch {
         setHasKey(false);

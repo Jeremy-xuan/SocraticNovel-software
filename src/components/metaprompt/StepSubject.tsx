@@ -4,6 +4,7 @@ import type { MetaPromptQuestionnaire, UploadedMaterial } from '../../types';
 import { extractPdfText, aiVisionEnhancePage } from '../../lib/tauri';
 import { useAppStore } from '../../stores/appStore';
 import { open } from '@tauri-apps/plugin-dialog';
+import { getEffectiveApiKey, getEffectiveCustomUrl, getEffectiveProvider } from '../../lib/providerConfig';
 
 const IconFile = () => (
   <svg className="inline h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -28,7 +29,7 @@ const IconWarning = () => (
 );
 
 // Providers that support Vision API
-const VISION_PROVIDERS = new Set(['github', 'openai', 'google', 'anthropic']);
+const VISION_PROVIDERS = new Set(['github', 'openai', 'google', 'anthropic', 'custom-openai', 'custom-anthropic']);
 
 interface Props {
   data: MetaPromptQuestionnaire;
@@ -45,7 +46,8 @@ export default function StepSubject({ data, onChange }: Props) {
   const [ocrProcessing, setOcrProcessing] = useState<string | null>(null);
   const [ocrProgress, setOcrProgress] = useState<{ current: number; total: number } | null>(null);
 
-  const visionAvailable = VISION_PROVIDERS.has(settings.aiProvider);
+  const effectiveProvider = getEffectiveProvider(settings);
+  const visionAvailable = VISION_PROVIDERS.has(effectiveProvider);
 
   const formatOptions = [
     { value: 'pdf', label: t('stepSubject.formatPdf') },
@@ -114,13 +116,15 @@ export default function StepSubject({ data, onChange }: Props) {
     openai: 'gpt-4o',
     google: 'gemini-3-flash-preview',
     anthropic: 'claude-haiku-4-5-20251001',
+    'custom-openai': 'gpt-4o',
+    'custom-anthropic': 'claude-haiku-4-5-20251001',
   };
 
   const handleAiVisionOcr = async (filename: string) => {
     const material = course.uploadedMaterials.find(m => m.originalName === filename);
     if (!material) return;
 
-    const provider = settings.aiProvider;
+    const provider = effectiveProvider;
     if (!VISION_PROVIDERS.has(provider)) {
       setUploadError(t('stepSubject.aiVisionNoProvider'));
       return;
@@ -128,20 +132,20 @@ export default function StepSubject({ data, onChange }: Props) {
 
     try {
       setOcrProcessing(filename);
-      const { getApiKey } = await import('../../lib/tauri');
-      const apiKey = await getApiKey(provider);
+      const apiKey = await getEffectiveApiKey(settings);
       if (!apiKey) {
         setUploadError(t('stepSubject.aiVisionNoApiKey'));
         return;
       }
 
       const model = VISION_MODEL[provider] ?? 'gpt-4o';
+      const customUrl = getEffectiveCustomUrl(settings);
       const totalPages = material.pageCount;
       const pageTexts: string[] = [];
 
       for (let page = 1; page <= totalPages; page++) {
         setOcrProgress({ current: page, total: totalPages });
-        const text = await aiVisionEnhancePage(material.sourcePath, page, apiKey, provider, model);
+        const text = await aiVisionEnhancePage(material.sourcePath, page, apiKey, provider, model, customUrl);
         pageTexts.push(text);
       }
 
